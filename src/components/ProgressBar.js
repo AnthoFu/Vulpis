@@ -1,10 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { useProgress } from '@rntp/player';
 
-export default function ProgressBar() {
-  const { position, duration } = useProgress();
-
+export default function ProgressBar({ position, duration }) {
   const formatTime = (seconds) => {
     if (isNaN(seconds) || seconds < 0) return '00:00';
     const mins = Math.floor(seconds / 60);

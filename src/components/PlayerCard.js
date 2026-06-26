@@ -1,13 +1,10 @@
 import React from 'react';
 import { StyleSheet, Text, View, Image } from 'react-native';
-import { useActiveMediaItem } from '@rntp/player';
 import ProgressBar from './ProgressBar';
 import Controls from './Controls';
 import { trackQueue } from '../constants/tracks';
 
-export default function PlayerCard() {
-  const activeTrack = useActiveMediaItem();
-
+export default function PlayerCard({ activeTrack, isPlaying, position, duration }) {
   const currentTrackTitle = activeTrack?.title ?? trackQueue[0].title;
   const currentTrackArtist = activeTrack?.artist ?? trackQueue[0].artist;
   const currentTrackArtwork = activeTrack?.artworkUrl ?? trackQueue[0].artworkUrl;
@@ -29,8 +26,8 @@ export default function PlayerCard() {
         </Text>
       </View>
 
-      <ProgressBar />
-      <Controls />
+      <ProgressBar position={position} duration={duration} />
+      <Controls isPlaying={isPlaying} />
     </View>
   );
 }

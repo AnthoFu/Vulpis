@@ -1,18 +1,22 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, View, Image, TouchableOpacity, FlatList } from 'react-native';
-import TrackPlayer, { useActiveMediaItem } from '@rntp/player';
+import TrackPlayer from '@rntp/player';
 import { trackQueue } from '../constants/tracks';
 
-export default function QueueList() {
-  const activeTrack = useActiveMediaItem();
+export default function QueueList({ activeTrack }) {
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const selectTrack = async (index) => {
+    if (isProcessing) return;
+    setIsProcessing(true);
     try {
       console.log(`Selecting track at index: ${index}`);
       await TrackPlayer.skipToIndex(index);
       await TrackPlayer.play();
     } catch (e) {
       console.error('Error selecting track:', e);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -26,10 +30,12 @@ export default function QueueList() {
           const isCurrent = activeTrack ? activeTrack.mediaId === item.mediaId : index === 0;
           return (
             <TouchableOpacity
+              disabled={isProcessing}
               onPress={() => selectTrack(index)}
               style={[
                 styles.queueItem,
                 isCurrent && styles.queueItemActive,
+                isProcessing && styles.queueItemDisabled,
               ]}
             >
               <Image source={{ uri: item.artworkUrl }} style={styles.queueArtwork} />
@@ -85,6 +91,9 @@ const styles = StyleSheet.create({
   queueItemActive: {
     backgroundColor: '#1C1D2A',
     borderColor: '#3B3D54',
+  },
+  queueItemDisabled: {
+    opacity: 0.5,
   },
   queueArtwork: {
     width: 44,

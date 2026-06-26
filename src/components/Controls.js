@@ -1,12 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import TrackPlayer, { useIsPlaying } from '@rntp/player';
+import TrackPlayer from '@rntp/player';
 
-export default function Controls() {
-  const { playing } = useIsPlaying();
-  const isPlaying = playing ?? false;
+export default function Controls({ isPlaying }) {
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const togglePlayback = async () => {
+    if (isProcessing) return;
+    setIsProcessing(true);
     try {
       console.log('Toggling playback. Current isPlaying:', isPlaying);
       if (isPlaying) {
@@ -16,40 +17,50 @@ export default function Controls() {
       }
     } catch (e) {
       console.error('Error toggling playback:', e);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const playNext = async () => {
+    if (isProcessing) return;
+    setIsProcessing(true);
     try {
       console.log('Skipping to next track');
       await TrackPlayer.skipToNext();
       await TrackPlayer.play();
     } catch (e) {
       console.log('No next track or end of queue:', e);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const playPrevious = async () => {
+    if (isProcessing) return;
+    setIsProcessing(true);
     try {
       console.log('Skipping to previous track');
       await TrackPlayer.skipToPrevious();
       await TrackPlayer.play();
     } catch (e) {
       console.log('No previous track or start of queue:', e);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   return (
-    <View style={styles.controlsRow}>
-      <TouchableOpacity onPress={playPrevious} style={styles.controlButton}>
+    <View style={[styles.controlsRow, isProcessing && styles.controlsDisabled]}>
+      <TouchableOpacity onPress={playPrevious} style={styles.controlButton} disabled={isProcessing}>
         <Text style={styles.controlIconText}>⏮</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={togglePlayback} style={styles.playButton}>
+      <TouchableOpacity onPress={togglePlayback} style={styles.playButton} disabled={isProcessing}>
         <Text style={styles.playIconText}>{isPlaying ? '⏸' : '▶'}</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={playNext} style={styles.controlButton}>
+      <TouchableOpacity onPress={playNext} style={styles.controlButton} disabled={isProcessing}>
         <Text style={styles.controlIconText}>⏭</Text>
       </TouchableOpacity>
     </View>
@@ -62,6 +73,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '70%',
+  },
+  controlsDisabled: {
+    opacity: 0.5,
   },
   controlButton: {
     width: 44,

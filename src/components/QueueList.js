@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, Image, TouchableOpacity, FlatList } from 'react-native';
 import TrackPlayer from '@rntp/player';
-import { trackQueue } from '../constants/tracks';
 
-export default function QueueList({ activeTrack }) {
+export default function QueueList({ activeTrack, tracks, ListHeaderComponent, contentContainerStyle }) {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const selectTrack = async (index) => {
@@ -20,62 +19,70 @@ export default function QueueList({ activeTrack }) {
     }
   };
 
+  const displayTracks = tracks || [];
+
   return (
-    <View style={styles.queueContainer}>
-      <Text style={styles.queueHeader}>SIGUIENTE EN COLA</Text>
-      <FlatList
-        data={trackQueue}
-        keyExtractor={(item) => item.mediaId}
-        renderItem={({ item, index }) => {
-          const isCurrent = activeTrack ? activeTrack.mediaId === item.mediaId : index === 0;
-          return (
-            <TouchableOpacity
-              disabled={isProcessing}
-              onPress={() => selectTrack(index)}
-              style={[
-                styles.queueItem,
-                isCurrent && styles.queueItemActive,
-                isProcessing && styles.queueItemDisabled,
-              ]}
-            >
-              <Image source={{ uri: item.artworkUrl }} style={styles.queueArtwork} />
-              <View style={styles.queueDetails}>
-                <Text
-                  style={[
-                    styles.queueTitle,
-                    isCurrent && styles.queueTextActive,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {item.title}
-                </Text>
-                <Text style={styles.queueArtist} numberOfLines={1}>
-                  {item.artist}
-                </Text>
+    <FlatList
+      data={displayTracks}
+      keyExtractor={(item) => item.mediaId}
+      ListHeaderComponent={
+        <>
+          {ListHeaderComponent}
+          <Text style={styles.queueHeader}>SIGUIENTE EN COLA</Text>
+        </>
+      }
+      contentContainerStyle={[styles.listContent, contentContainerStyle]}
+      showsVerticalScrollIndicator={false}
+      renderItem={({ item, index }) => {
+        const isCurrent = activeTrack ? activeTrack.mediaId === item.mediaId : index === 0;
+        return (
+          <TouchableOpacity
+            disabled={isProcessing}
+            onPress={() => selectTrack(index)}
+            style={[
+              styles.queueItem,
+              isCurrent && styles.queueItemActive,
+              isProcessing && styles.queueItemDisabled,
+            ]}
+          >
+            <Image source={{ uri: item.artworkUrl }} style={styles.queueArtwork} />
+            <View style={styles.queueDetails}>
+              <Text
+                style={[
+                  styles.queueTitle,
+                  isCurrent && styles.queueTextActive,
+                ]}
+                numberOfLines={1}
+              >
+                {item.title}
+              </Text>
+              <Text style={styles.queueArtist} numberOfLines={1}>
+                {item.artist}
+              </Text>
+            </View>
+            {isCurrent && (
+              <View style={styles.playingIndicator}>
+                <Text style={styles.playingIndicatorText}>SONANDO</Text>
               </View>
-              {isCurrent && (
-                <View style={styles.playingIndicator}>
-                  <Text style={styles.playingIndicatorText}>SONANDO</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          );
-        }}
-      />
-    </View>
+            )}
+          </TouchableOpacity>
+        );
+      }}
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  queueContainer: {
-    flex: 1,
-    marginTop: 24,
+  listContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 40,
   },
   queueHeader: {
     color: '#5F6070',
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1.5,
+    marginTop: 24,
     marginBottom: 12,
   },
   queueItem: {

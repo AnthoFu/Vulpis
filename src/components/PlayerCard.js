@@ -2,12 +2,21 @@ import React from 'react';
 import { StyleSheet, Text, View, Image } from 'react-native';
 import ProgressBar from './ProgressBar';
 import Controls from './Controls';
-import { trackQueue } from '../constants/tracks';
 
-export default function PlayerCard({ activeTrack, isPlaying, position, duration }) {
-  const currentTrackTitle = activeTrack?.title ?? trackQueue[0].title;
-  const currentTrackArtist = activeTrack?.artist ?? trackQueue[0].artist;
-  const currentTrackArtwork = activeTrack?.artworkUrl ?? trackQueue[0].artworkUrl;
+export default function PlayerCard({
+  activeTrack,
+  isPlaying,
+  position,
+  duration,
+  repeatMode,
+  isShuffleActive,
+  tracks,
+}) {
+  const defaultTrack = tracks && tracks.length > 0 ? tracks[0] : { title: 'No Track', artist: 'No Artist', artworkUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&q=80' };
+  
+  const currentTrackTitle = activeTrack?.title ?? defaultTrack.title;
+  const currentTrackArtist = activeTrack?.artist ?? defaultTrack.artist;
+  const currentTrackArtwork = activeTrack?.artworkUrl ?? defaultTrack.artworkUrl;
 
   return (
     <View style={styles.playerCard}>
@@ -27,7 +36,11 @@ export default function PlayerCard({ activeTrack, isPlaying, position, duration 
       </View>
 
       <ProgressBar position={position} duration={duration} />
-      <Controls isPlaying={isPlaying} />
+      <Controls
+        isPlaying={isPlaying}
+        repeatMode={repeatMode}
+        isShuffleActive={isShuffleActive}
+      />
     </View>
   );
 }

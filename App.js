@@ -2,22 +2,25 @@ import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
   View,
-  SafeAreaView,
   ActivityIndicator,
   Text,
   StatusBar,
 } from 'react-native';
-import TrackPlayer, { PlayerCommand, Event } from '@rntp/player';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import TrackPlayer, { PlayerCommand, Event, RepeatMode } from '@rntp/player';
 import Header from './src/components/Header';
 import PlayerCard from './src/components/PlayerCard';
 import QueueList from './src/components/QueueList';
-import { trackQueue } from './src/constants/tracks';
+import { localTracks } from './src/constants/tracks';
 
-export default function App() {
+function MainApp() {
+  const insets = useSafeAreaInsets();
   const [isPlayerInitialized, setIsPlayerInitialized] = useState(false);
   const [activeTrack, setActiveTrack] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState({ position: 0, duration: 0 });
+  const [repeatMode, setRepeatMode] = useState(RepeatMode.Off);
+  const [isShuffleActive, setIsShuffleActive] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -46,13 +49,13 @@ export default function App() {
         console.log('[App] Setting media items into player queue...');
         // Limpiamos la cola para evitar duplicados en recargas (Fast Refresh)
         await TrackPlayer.clear();
-        await TrackPlayer.setMediaItems(trackQueue);
+        await TrackPlayer.setMediaItems(localTracks);
         // Hacemos skip al primer elemento para que getActiveMediaItem() no retorne undefined
         await TrackPlayer.skipToIndex(0);
 
         console.log('[App] TrackPlayer setup completed successfully!');
         
-        // Registrar listeners de depuración (pueden no dispararse en Android debido al bug)
+        // Registrar listeners de depuración
         sub1 = TrackPlayer.addEventListener(Event.MediaItemTransition, (event) => {
           console.log('[DEBUG] MediaItemTransition:', event);
         });
@@ -95,19 +98,25 @@ export default function App() {
         const currentActive = TrackPlayer.getActiveMediaItem();
         const currentPlaying = TrackPlayer.isPlaying();
         const currentProgress = TrackPlayer.getProgress();
+        const currentRepeat = TrackPlayer.getRepeatMode();
+        const currentShuffle = TrackPlayer.isShuffleEnabled();
         
         tick++;
-        if (tick % 4 === 0) { // log only once every second
+        if (tick % 8 === 0) { // log only once every 2 seconds
           console.log('[DEBUG-POLL]', {
             activeTrack: currentActive,
             state: TrackPlayer.getPlaybackState(),
             isPlaying: currentPlaying,
-            position: currentProgress?.position
+            position: currentProgress?.position,
+            repeatMode: currentRepeat,
+            isShuffleActive: currentShuffle,
           });
         }
 
         setActiveTrack(currentActive);
         setIsPlaying(currentPlaying);
+        setRepeatMode(currentRepeat);
+        setIsShuffleActive(currentShuffle);
         setProgress({
           position: currentProgress?.position ?? 0,
           duration: currentProgress?.duration ?? 0,
@@ -133,17 +142,42 @@ export default function App() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#090A0F" />
-      <Header />
-      <PlayerCard
+      
+      <QueueList
         activeTrack={activeTrack}
-        isPlaying={isPlaying}
-        position={progress.position}
-        duration={progress.duration}
+        tracks={localTracks}
+        contentContainerStyle={{
+          paddingTop: Math.max(insets.top, 20),
+          paddingBottom: Math.max(insets.bottom, 20),
+          paddingLeft: Math.max(insets.left, 20),
+          paddingRight: Math.max(insets.right, 20),
+        }}
+        ListHeaderComponent={
+          <>
+            <Header />
+            <PlayerCard
+              activeTrack={activeTrack}
+              isPlaying={isPlaying}
+              position={progress.position}
+              duration={progress.duration}
+              repeatMode={repeatMode}
+              isShuffleActive={isShuffleActive}
+              tracks={localTracks}
+            />
+          </>
+        }
       />
-      <QueueList activeTrack={activeTrack} />
-    </SafeAreaView>
+    </View>
+  );
+}
+
+export default function App() {
+  return (
+    <SafeAreaProvider>
+      <MainApp />
+    </SafeAreaProvider>
   );
 }
 
@@ -151,7 +185,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#090A0F',
-    paddingHorizontal: 20,
   },
   loadingContainer: {
     flex: 1,

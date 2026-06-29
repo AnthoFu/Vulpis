@@ -58,4 +58,50 @@ Antes de conectar tu teléfono, debes habilitar los permisos necesarios:
 4. **Durante la instalación:** Presta atención a la pantalla de tu móvil. Cuando el proceso en tu terminal esté finalizando y diga `Installing...`, aparecerá una advertencia de seguridad en tu teléfono: **"¿Instalar a través de USB?"**. Debes presionar **Instalar** (tienes un límite de 10 segundos).
 
 ¡Listo! La aplicación se abrirá automáticamente en tu teléfono móvil y cualquier cambio que realices en el código se actualizará instantáneamente.
- 
+
+---
+
+## 🎵 Arquitectura del Reproductor de Audio (Vulpis Player)
+
+Hemos implementado un reproductor de audio robusto que soporta reproducción en segundo plano, controles de notificación (pantalla de bloqueo) y compatibilidad total con la **Nueva Arquitectura** de React Native (React Native 0.85 / Expo 56). 
+
+A continuación se detalla cómo está construido y las decisiones de diseño tomadas:
+
+### 1. La Biblioteca: `@rntp/player` (v5.6+)
+En versiones recientes de React Native, el *Bridge* (arquitectura legacy) ha sido removido. Bibliotecas clásicas como `react-native-track-player` v4 ya no compilan. Para Vulpis, usamos **`@rntp/player` v5.6+**, que es la reescritura moderna basada completamente en JSI (JavaScript Interface), Fabric y TurboModules. Esto nos brinda un rendimiento síncrono ultra-rápido para consultar datos del reproductor en C++.
+
+### 2. Inicialización Diferida
+En el archivo `index.js`, registramos el servicio asíncrono de audio de fondo (`service.js`) utilizando un callback diferido:
+```javascript
+TrackPlayer.registerPlaybackService(() => require('./service').default);
+```
+Esto evita fallos de hilo donde el módulo nativo intenta acceder al entorno JavaScript antes de que React Native esté totalmente montado.
+
+### 3. Solución a la Sincronización de Interfaz (Polling JSI)
+La versión 5 de TrackPlayer en Android tiene un *bug* donde el evento `DeviceEventEmitter` no emite correctamente las transiciones de pista a React. Por lo tanto, ganchos (hooks) como `useActiveMediaItem()` fallan y la interfaz no se actualiza automáticamente.
+
+**Nuestra solución en `App.js`:**
+1. **Polling Activo:** Dado que las funciones JSI son síncronas y tienen cero latencia (no cruzan un puente serializado), creamos un `setInterval` cada 250ms que consulta activamente el motor en C++/Kotlin:
+   - `TrackPlayer.getActiveMediaItem()`
+   - `TrackPlayer.isPlaying()`
+   - `TrackPlayer.getProgress()`
+2. **Propagación en Cascada:** Almacenamos esos datos en el estado central (`useState` en `App.js`) y lo inyectamos hacia abajo como propiedades (`props`) a los componentes visuales (`<PlayerCard />`, `<QueueList />`, `<Controls />`). Así evitamos que cada componente tenga que lidiar con lógica nativa.
+
+### 4. Inicialización Resiliente y `skipToIndex(0)`
+En un entorno de desarrollo (con *Fast Refresh*), la aplicación se recarga constantemente. Al hacer esto, el TrackPlayer ya estará montado en la RAM, lo que lanza el error `"Player is already set up"`.
+En la función `init()` de `App.js`, capturamos silenciosamente este error para no quebrar el renderizado de la UI. 
+Después de inyectar las pistas con `TrackPlayer.setMediaItems()`, ejecutamos `await TrackPlayer.skipToIndex(0)`. **Esto es obligatorio:** Si no seleccionamos activamente el índice 0 de la cola, ExoPlayer asume que no hay ninguna pista cargada y `getActiveMediaItem()` devuelve `undefined`.
+
+### 5. Prevención de Concurrencia (Debouncing)
+En `src/components/Controls.js` y `src/components/QueueList.js` hemos implementado un estado `isProcessing`. 
+Al presionar Siguiente, Anterior o Play, establecemos `isProcessing = true`, lo cual desactiva (aplica `disabled` y una leve transparencia) todos los botones mientras los comandos asíncronos esperan la respuesta del reproductor de audio nativo. Esto previene *"race conditions"* (condiciones de carrera) y previene que los usuarios bloqueen la interfaz apretando mil veces "Siguiente" antes de que la canción siquiera termine de cargar el *buffer*.
+
+### 6. Estructura de Componentes
+El código se ha refactorizado para ser totalmente modular y limpio:
+- **`App.js`**: Controlador de estado maestro, inyector de dependencias nativas y *Layout Wrapper*.
+- **`src/components/Controls.js`**: Botones de manipulación de playback (Play/Pause/Skip) con debounce nativo.
+- **`src/components/ProgressBar.js`**: Renderiza la barra con `duration` y `position` de la canción en tiempo real.
+- **`src/components/PlayerCard.js`**: Despliega el cover art interactivo y los metadatos de la pista actual.
+- **`src/components/QueueList.js`**: Visualiza la lista de la cola, indicando cuál está sonando y permitiendo selección directa con un toque.
+- **`src/constants/tracks.js`**: Almacena el diccionario / array base inicial con identificadores `mediaId`.--
+

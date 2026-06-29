@@ -11,7 +11,8 @@ import TrackPlayer, { PlayerCommand, Event, RepeatMode } from '@rntp/player';
 import Header from './src/components/Header';
 import PlayerCard from './src/components/PlayerCard';
 import QueueList from './src/components/QueueList';
-import { localTracks } from './src/constants/tracks';
+import SidebarDrawer from './src/components/SidebarDrawer';
+import { localTracks, privateTracks, publicTracks } from './src/constants/tracks';
 
 function MainApp() {
   const insets = useSafeAreaInsets();
@@ -21,6 +22,12 @@ function MainApp() {
   const [progress, setProgress] = useState({ position: 0, duration: 0 });
   const [repeatMode, setRepeatMode] = useState(RepeatMode.Off);
   const [isShuffleActive, setIsShuffleActive] = useState(false);
+
+  // Navigation Drawer & Source states
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [currentSource, setCurrentSource] = useState('local'); // 'local' | 'private' | 'public'
+  const [tracks, setTracks] = useState(localTracks);
+  const [isSourceChanging, setIsSourceChanging] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -47,15 +54,12 @@ function MainApp() {
         });
         
         console.log('[App] Setting media items into player queue...');
-        // Limpiamos la cola para evitar duplicados en recargas (Fast Refresh)
         await TrackPlayer.clear();
         await TrackPlayer.setMediaItems(localTracks);
-        // Hacemos skip al primer elemento para que getActiveMediaItem() no retorne undefined
         await TrackPlayer.skipToIndex(0);
 
         console.log('[App] TrackPlayer setup completed successfully!');
         
-        // Registrar listeners de depuración
         sub1 = TrackPlayer.addEventListener(Event.MediaItemTransition, (event) => {
           console.log('[DEBUG] MediaItemTransition:', event);
         });
@@ -132,6 +136,35 @@ function MainApp() {
     return () => clearInterval(interval);
   }, [isPlayerInitialized]);
 
+  const handleSourceChange = async (source) => {
+    if (source === currentSource || isSourceChanging) return;
+    setIsSourceChanging(true);
+    setCurrentSource(source);
+    
+    let selectedQueue = [];
+    if (source === 'local') selectedQueue = localTracks;
+    else if (source === 'private') selectedQueue = privateTracks;
+    else if (source === 'public') selectedQueue = publicTracks;
+
+    setTracks(selectedQueue);
+    
+    try {
+      console.log(`[App] Switching source to ${source}...`);
+      await TrackPlayer.clear();
+      await TrackPlayer.setMediaItems(selectedQueue);
+      await TrackPlayer.skipToIndex(0);
+      
+      if (isPlaying) {
+        await TrackPlayer.play();
+      }
+      console.log(`[App] Source switched to ${source} successfully.`);
+    } catch (e) {
+      console.error('[App] Error switching tracks source:', e);
+    } finally {
+      setIsSourceChanging(false);
+    }
+  };
+
   if (!isPlayerInitialized) {
     return (
       <View style={styles.loadingContainer}>
@@ -147,7 +180,8 @@ function MainApp() {
       
       <QueueList
         activeTrack={activeTrack}
-        tracks={localTracks}
+        tracks={tracks}
+        isLoading={isSourceChanging}
         contentContainerStyle={{
           paddingTop: Math.max(insets.top, 20),
           paddingBottom: Math.max(insets.bottom, 20),
@@ -156,7 +190,7 @@ function MainApp() {
         }}
         ListHeaderComponent={
           <>
-            <Header />
+            <Header onMenuPress={() => setIsDrawerOpen(true)} />
             <PlayerCard
               activeTrack={activeTrack}
               isPlaying={isPlaying}
@@ -164,10 +198,18 @@ function MainApp() {
               duration={progress.duration}
               repeatMode={repeatMode}
               isShuffleActive={isShuffleActive}
-              tracks={localTracks}
+              tracks={tracks}
             />
           </>
         }
+      />
+
+      {/* Navigation Drawer Menu */}
+      <SidebarDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        currentSource={currentSource}
+        onSelectSource={handleSourceChange}
       />
     </View>
   );

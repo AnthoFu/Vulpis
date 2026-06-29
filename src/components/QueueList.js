@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, Image, TouchableOpacity, FlatList } from 'react-native';
+import { StyleSheet, Text, View, Image, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
 import TrackPlayer from '@rntp/player';
 
-export default function QueueList({ activeTrack, tracks, ListHeaderComponent, contentContainerStyle }) {
+export default function QueueList({ activeTrack, tracks, ListHeaderComponent, contentContainerStyle, isLoading }) {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const selectTrack = async (index) => {
@@ -23,12 +23,18 @@ export default function QueueList({ activeTrack, tracks, ListHeaderComponent, co
 
   return (
     <FlatList
-      data={displayTracks}
+      data={isLoading ? [] : displayTracks}
       keyExtractor={(item) => item.mediaId}
       ListHeaderComponent={
         <>
           {ListHeaderComponent}
           <Text style={styles.queueHeader}>SIGUIENTE EN COLA</Text>
+          {isLoading && (
+            <View style={styles.loadingWrapper}>
+              <ActivityIndicator size="small" color="#8B5CF6" />
+              <Text style={styles.loadingText}>Conectando con la nube...</Text>
+            </View>
+          )}
         </>
       }
       contentContainerStyle={[styles.listContent, contentContainerStyle]}
@@ -137,5 +143,15 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '700',
     letterSpacing: 0.5,
+  },
+  loadingWrapper: {
+    paddingVertical: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#5F6070',
+    fontSize: 13,
+    marginTop: 12,
   },
 });

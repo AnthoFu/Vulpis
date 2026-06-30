@@ -2,7 +2,7 @@
   "expo": {
     "name": "Vulpis",
     "slug": "Vulpis",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "newArchEnabled": false,
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -26,12 +26,22 @@
       "permissions": [
         "WAKE_LOCK",
         "FOREGROUND_SERVICE",
-        "FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+        "FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "READ_MEDIA_AUDIO",
+        "READ_EXTERNAL_STORAGE"
       ],
       "package": "com.anthofu.Vulpis"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-media-library",
+        {
+          "granularPermissions": ["audio"]
+        }
+      ]
+    ]
   }
 }

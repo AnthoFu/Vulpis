@@ -4,8 +4,8 @@ Ahora que tenemos una base sólida, las siguientes características recomendadas
 
 1. **Barra de Progreso Interactiva (Slider):**
    - Reemplazar la actual barra estática por un componente deslizador (ej. `react-native-slider` o `react-native-gesture-handler`) para que el usuario pueda adelantar o retroceder la canción manualmente (usando `TrackPlayer.seekTo()`).
-2. **Obtención Dinámica de Canciones:**
-   - Dejar de usar `src/constants/tracks.js` estático y conectar la cola del reproductor a una API real, Firebase o a los archivos de audio locales del dispositivo usando `expo-media-library`.
+2. **[COMPLETADO] Obtención Dinámica de Canciones (Biblioteca Local):**
+   - Dejar de usar `src/constants/tracks.js` estático y conectar la cola del reproductor a los archivos de audio locales del dispositivo (.mp3) usando `expo-media-library` y `expo-document-picker`, persistiendo la lista en `AsyncStorage`.
 3. **Controles Avanzados:**
    - Añadir botones de **Aleatorio (Shuffle)** y **Repetir (Repeat)**.
    - Reflejar estos modos globalmente en el reproductor invocando `TrackPlayer.setRepeatMode()` y gestionando colas aleatorias.

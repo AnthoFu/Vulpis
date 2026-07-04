@@ -20,6 +20,7 @@ import MiniPlayer from './src/components/MiniPlayer';
 import QueueList from './src/components/QueueList';
 import SidebarDrawer from './src/components/SidebarDrawer';
 import { localTracks, privateTracks, publicTracks } from './src/constants/tracks';
+import { extractMetadata } from './src/utils/metadata';
 
 function MainApp() {
   const insets = useSafeAreaInsets();
@@ -324,20 +325,27 @@ function MainApp() {
         first: 100, // retrieve up to 100 tracks
       });
 
-      const newTracks = media.assets
-        .filter(asset => asset.filename && asset.filename.toLowerCase().endsWith('.mp3'))
-        .map((asset, idx) => ({
-          mediaId: asset.id || `local-scanned-${idx}-${Date.now()}`,
-          url: asset.uri,
-          title: asset.filename.replace(/\.mp3$/i, ''),
-          artist: 'Audio Escaneado',
-          artworkUrl: defaultCover,
-        }));
+      const assetsList = media.assets.filter(
+        asset => asset.filename && asset.filename.toLowerCase().endsWith('.mp3')
+      );
 
-      if (newTracks.length === 0) {
+      if (assetsList.length === 0) {
         Alert.alert('Escaneo Completado', 'No se encontraron archivos .mp3 en el dispositivo.');
         setIsSourceChanging(false);
         return;
+      }
+
+      const newTracks = [];
+      for (let i = 0; i < assetsList.length; i++) {
+        const asset = assetsList[i];
+        const meta = await extractMetadata(asset.uri);
+        newTracks.push({
+          mediaId: asset.id || `local-scanned-${i}-${Date.now()}`,
+          url: asset.uri,
+          title: meta.title || asset.filename.replace(/\.mp3$/i, ''),
+          artist: meta.artist || 'Audio Escaneado',
+          artworkUrl: meta.artworkUrl || defaultCover,
+        });
       }
 
       await saveLocalTracks(newTracks);
@@ -366,13 +374,18 @@ function MainApp() {
 
       setIsSourceChanging(true);
       
-      const importedTracks = res.assets.map((asset, idx) => ({
-        mediaId: `imported-${Date.now()}-${idx}`,
-        url: asset.uri,
-        title: asset.name.replace(/\.mp3$/i, ''),
-        artist: 'Archivo Importado',
-        artworkUrl: defaultCover,
-      }));
+      const importedTracks = [];
+      for (let i = 0; i < res.assets.length; i++) {
+        const asset = res.assets[i];
+        const meta = await extractMetadata(asset.uri);
+        importedTracks.push({
+          mediaId: `imported-${Date.now()}-${i}`,
+          url: asset.uri,
+          title: meta.title || asset.name.replace(/\.mp3$/i, ''),
+          artist: meta.artist || 'Archivo Importado',
+          artworkUrl: meta.artworkUrl || defaultCover,
+        });
+      }
 
       // Append to existing local library
       const existingCustom = hasCustomLocalTracks ? localLibraryTracks : [];

@@ -29,6 +29,7 @@ function MainApp() {
   const [repeatMode, setRepeatMode] = useState(RepeatMode.Off);
   const [isShuffleActive, setIsShuffleActive] = useState(false);
   const [isFullPlayerVisible, setIsFullPlayerVisible] = useState(false);
+  const [playQueue, setPlayQueue] = useState([]);
 
   // Navigation Drawer & Source states
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -39,6 +40,60 @@ function MainApp() {
   // Local library tracks & customization state
   const [localLibraryTracks, setLocalLibraryTracks] = useState(localTracks);
   const [hasCustomLocalTracks, setHasCustomLocalTracks] = useState(false);
+
+  // Custom toast notification & queue management
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message) => {
+    setToast(message);
+    setTimeout(() => {
+      setToast(null);
+    }, 2500);
+  };
+
+  const handleAddToQueue = async (item) => {
+    try {
+      let activeIndex = TrackPlayer.getActiveMediaItemIndex();
+      if (activeIndex === null || activeIndex === -1) {
+        activeIndex = 0;
+      }
+      
+      const uniqueId = `${item.mediaId}-queued-${Date.now()}`;
+      const queuedItem = {
+        ...item,
+        mediaId: uniqueId,
+      };
+
+      console.log(`[App] Adding track ${item.title} to queue after index ${activeIndex}`);
+      await TrackPlayer.insertMediaItem(activeIndex + 1, queuedItem);
+
+      // Update playQueue state
+      const updatedQueue = [...playQueue];
+      updatedQueue.splice(activeIndex + 1, 0, queuedItem);
+      setPlayQueue(updatedQueue);
+
+      showToast(`Añadido a la cola: ${item.title}`);
+    } catch (e) {
+      console.error('[App] Error adding track to queue:', e);
+      Alert.alert('Error', 'No se pudo agregar la canción a la cola.');
+    }
+  };
+
+  const handleRemoveFromQueue = async (item, index) => {
+    try {
+      console.log(`[App] Removing track from queue at index ${index}: ${item.title}`);
+      await TrackPlayer.removeMediaItem(index);
+      
+      const updatedQueue = [...playQueue];
+      updatedQueue.splice(index, 1);
+      setPlayQueue(updatedQueue);
+
+      showToast(`Eliminado de la cola: ${item.title}`);
+    } catch (e) {
+      console.error('[App] Error removing track from queue:', e);
+      Alert.alert('Error', 'No se pudo eliminar la canción de la cola.');
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -135,6 +190,7 @@ function MainApp() {
         const currentProgress = TrackPlayer.getProgress();
         const currentRepeat = TrackPlayer.getRepeatMode();
         const currentShuffle = TrackPlayer.isShuffleEnabled();
+        const currentQueue = TrackPlayer.getQueue();
         
         tick++;
         if (tick % 8 === 0) { // log only once every 2 seconds
@@ -145,6 +201,7 @@ function MainApp() {
             position: currentProgress?.position,
             repeatMode: currentRepeat,
             isShuffleActive: currentShuffle,
+            playQueueLength: currentQueue?.length,
           });
         }
 
@@ -152,6 +209,7 @@ function MainApp() {
         setIsPlaying(currentPlaying);
         setRepeatMode(currentRepeat);
         setIsShuffleActive(currentShuffle);
+        setPlayQueue(currentQueue || []);
         setProgress({
           position: currentProgress?.position ?? 0,
           duration: currentProgress?.duration ?? 0,
@@ -359,15 +417,24 @@ function MainApp() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#090A0F" />
       
+      {toast && (
+        <View style={[styles.toastContainer, { top: Math.max(insets.top + 10, 40) }]}>
+          <Text style={styles.toastText}>{toast}</Text>
+        </View>
+      )}
+      
       <QueueList
         activeTrack={activeTrack}
         tracks={tracks}
+        playQueue={playQueue}
         isLoading={isSourceChanging}
         currentSource={currentSource}
         onScanLocal={handleScanLocal}
         onImportMp3={handleImportMp3}
         onResetLocal={handleResetLocal}
         hasCustomLocalTracks={hasCustomLocalTracks}
+        onAddToQueue={handleAddToQueue}
+        onRemoveFromQueue={handleRemoveFromQueue}
         contentContainerStyle={{
           paddingTop: Math.max(insets.top, 20),
           paddingBottom: Math.max(insets.bottom, 20) + (activeTrack ? 80 : 0),
@@ -402,6 +469,8 @@ function MainApp() {
           repeatMode={repeatMode}
           isShuffleActive={isShuffleActive}
           tracks={tracks}
+          playQueue={playQueue}
+          onRemoveFromQueue={handleRemoveFromQueue}
           onClose={() => setIsFullPlayerVisible(false)}
         />
       </Modal>
@@ -429,6 +498,25 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#090A0F',
+  },
+  toastContainer: {
+    position: 'absolute',
+    alignSelf: 'center',
+    backgroundColor: '#8B5CF6',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    zIndex: 99999,
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  toastText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 14,
   },
   loadingContainer: {
     flex: 1,

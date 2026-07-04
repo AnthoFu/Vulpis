@@ -7,6 +7,7 @@ import {
   StatusBar,
   Alert,
   Modal,
+  Image,
 } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import TrackPlayer, { PlayerCommand, Event, RepeatMode } from '@rntp/player';
@@ -22,6 +23,7 @@ import { localTracks, privateTracks, publicTracks } from './src/constants/tracks
 
 function MainApp() {
   const insets = useSafeAreaInsets();
+  const defaultCover = Image.resolveAssetSource(require('./assets/default-cover.jpg')).uri;
   const [isPlayerInitialized, setIsPlayerInitialized] = useState(false);
   const [activeTrack, setActiveTrack] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -329,7 +331,7 @@ function MainApp() {
           url: asset.uri,
           title: asset.filename.replace(/\.mp3$/i, ''),
           artist: 'Audio Escaneado',
-          artworkUrl: 'https://images.unsplash.com/photo-1510915228340-29c85a43dcfe?w=400&q=80', // default artwork
+          artworkUrl: defaultCover,
         }));
 
       if (newTracks.length === 0) {
@@ -369,7 +371,7 @@ function MainApp() {
         url: asset.uri,
         title: asset.name.replace(/\.mp3$/i, ''),
         artist: 'Archivo Importado',
-        artworkUrl: 'https://images.unsplash.com/photo-1487180142328-054b783fc471?w=400&q=80', // default artwork
+        artworkUrl: defaultCover,
       }));
 
       // Append to existing local library

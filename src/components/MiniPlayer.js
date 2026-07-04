@@ -53,7 +53,8 @@ export default function MiniPlayer({ activeTrack, isPlaying, position, duration,
   };
 
   const progressPercent = duration > 0 ? (position / duration) * 100 : 0;
-  const currentArtwork = activeTrack.artworkUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&q=80';
+  const defaultCover = Image.resolveAssetSource(require('../../assets/default-cover.jpg')).uri;
+  const currentArtwork = activeTrack.artworkUrl || defaultCover;
 
   return (
     <TouchableOpacity

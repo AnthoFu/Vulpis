@@ -20,7 +20,8 @@ export default function PlayerCard({
 }) {
   const insets = useSafeAreaInsets();
   const [isQueueVisible, setIsQueueVisible] = useState(false);
-  const defaultTrack = tracks && tracks.length > 0 ? tracks[0] : { title: 'No Track', artist: 'No Artist', artworkUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&q=80' };
+  const defaultCover = Image.resolveAssetSource(require('../../assets/default-cover.jpg')).uri;
+  const defaultTrack = tracks && tracks.length > 0 ? tracks[0] : { title: 'No Track', artist: 'No Artist', artworkUrl: defaultCover };
   
   const currentTrackTitle = activeTrack?.title ?? defaultTrack.title;
   const currentTrackArtist = activeTrack?.artist ?? defaultTrack.artist;

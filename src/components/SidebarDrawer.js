@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
+  Image,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -93,7 +94,11 @@ export default function SidebarDrawer({ isOpen, onClose, currentSource, onSelect
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.logoContainer}>
-              <MaterialCommunityIcons name="firefox" size={32} color="#8B5CF6" />
+              <Image
+                source={require('../../assets/AnthoFu-Icon-Purple.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
             </View>
             <View style={styles.headerTextContainer}>
               <Text style={styles.title}>VULPIS</Text>
@@ -199,6 +204,10 @@ const styles = StyleSheet.create({
     marginRight: 12,
     borderWidth: 1,
     borderColor: 'rgba(139, 92, 246, 0.2)',
+  },
+  logoImage: {
+    width: 32,
+    height: 32,
   },
   headerTextContainer: {
     justifyContent: 'center',

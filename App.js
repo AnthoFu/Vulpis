@@ -6,6 +6,7 @@ import {
   Text,
   StatusBar,
   Alert,
+  Modal,
 } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import TrackPlayer, { PlayerCommand, Event, RepeatMode } from '@rntp/player';
@@ -14,6 +15,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Header from './src/components/Header';
 import PlayerCard from './src/components/PlayerCard';
+import MiniPlayer from './src/components/MiniPlayer';
 import QueueList from './src/components/QueueList';
 import SidebarDrawer from './src/components/SidebarDrawer';
 import { localTracks, privateTracks, publicTracks } from './src/constants/tracks';
@@ -26,6 +28,7 @@ function MainApp() {
   const [progress, setProgress] = useState({ position: 0, duration: 0 });
   const [repeatMode, setRepeatMode] = useState(RepeatMode.Off);
   const [isShuffleActive, setIsShuffleActive] = useState(false);
+  const [isFullPlayerVisible, setIsFullPlayerVisible] = useState(false);
 
   // Navigation Drawer & Source states
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -367,25 +370,41 @@ function MainApp() {
         hasCustomLocalTracks={hasCustomLocalTracks}
         contentContainerStyle={{
           paddingTop: Math.max(insets.top, 20),
-          paddingBottom: Math.max(insets.bottom, 20),
+          paddingBottom: Math.max(insets.bottom, 20) + (activeTrack ? 80 : 0),
           paddingLeft: Math.max(insets.left, 20),
           paddingRight: Math.max(insets.right, 20),
         }}
         ListHeaderComponent={
-          <>
-            <Header onMenuPress={() => setIsDrawerOpen(true)} />
-            <PlayerCard
-              activeTrack={activeTrack}
-              isPlaying={isPlaying}
-              position={progress.position}
-              duration={progress.duration}
-              repeatMode={repeatMode}
-              isShuffleActive={isShuffleActive}
-              tracks={tracks}
-            />
-          </>
+          <Header onMenuPress={() => setIsDrawerOpen(true)} />
         }
       />
+
+      {/* Floating MiniPlayer */}
+      <MiniPlayer
+        activeTrack={activeTrack}
+        isPlaying={isPlaying}
+        position={progress.position}
+        duration={progress.duration}
+        onPress={() => setIsFullPlayerVisible(true)}
+      />
+
+      {/* Full Screen Player Modal */}
+      <Modal
+        visible={isFullPlayerVisible}
+        animationType="slide"
+        onRequestClose={() => setIsFullPlayerVisible(false)}
+      >
+        <PlayerCard
+          activeTrack={activeTrack}
+          isPlaying={isPlaying}
+          position={progress.position}
+          duration={progress.duration}
+          repeatMode={repeatMode}
+          isShuffleActive={isShuffleActive}
+          tracks={tracks}
+          onClose={() => setIsFullPlayerVisible(false)}
+        />
+      </Modal>
 
       {/* Navigation Drawer Menu */}
       <SidebarDrawer

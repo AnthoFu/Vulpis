@@ -41,13 +41,12 @@ export default function QueueList({
         await TrackPlayer.play();
       } else {
         const originalIndex = (tracks || []).findIndex(t => t.mediaId === item.mediaId);
-        if (originalIndex !== -1) {
-          console.log(`Selecting track at original index: ${originalIndex}`);
-          await TrackPlayer.skipToIndex(originalIndex);
-          await TrackPlayer.play();
-        } else {
-          console.warn('Track not found in current queue:', item.mediaId);
-        }
+        const idx = originalIndex !== -1 ? originalIndex : 0;
+        console.log(`Resetting queue and playing library track at index: ${idx}`);
+        await TrackPlayer.clear();
+        await TrackPlayer.setMediaItems(tracks);
+        await TrackPlayer.skipToIndex(idx);
+        await TrackPlayer.play();
       }
     } catch (e) {
       console.error('Error selecting track:', e);

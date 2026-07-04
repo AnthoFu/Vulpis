@@ -225,6 +225,25 @@ function MainApp() {
     return () => clearInterval(interval);
   }, [isPlayerInitialized]);
 
+  // Automatically restore library tracks if the play queue becomes completely empty
+  useEffect(() => {
+    if (!isPlayerInitialized || isSourceChanging) return;
+    
+    if (playQueue.length === 0 && tracks && tracks.length > 0) {
+      console.log('[App] Queue is empty. Automatically restoring library tracks...');
+      const restoreLibrary = async () => {
+        try {
+          await TrackPlayer.clear();
+          await TrackPlayer.setMediaItems(tracks);
+          await TrackPlayer.skipToIndex(0);
+        } catch (err) {
+          console.error('[App] Error restoring library tracks:', err);
+        }
+      };
+      restoreLibrary();
+    }
+  }, [playQueue.length, tracks, isPlayerInitialized, isSourceChanging]);
+
   const handleSourceChange = async (source) => {
     if (source === currentSource || isSourceChanging) return;
     setIsSourceChanging(true);

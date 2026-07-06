@@ -7,6 +7,7 @@ import {
   TouchableWithoutFeedback,
   View,
   Image,
+  Modal,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,8 +18,17 @@ export default function SidebarDrawer({ isOpen, onClose, currentSource, onSelect
   const [visible, setVisible] = useState(isOpen);
   const slideAnim = useRef(new Animated.Value(-290)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const isFirstRender = useRef(true);
 
   useEffect(() => {
+    // Avoid running the animation on the initial render if the drawer is closed
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      if (!isOpen) {
+        return;
+      }
+    }
+
     if (isOpen) {
       setVisible(true);
       Animated.parallel([
@@ -46,7 +56,11 @@ export default function SidebarDrawer({ isOpen, onClose, currentSource, onSelect
           duration: 220,
           useNativeDriver: true,
         }),
-      ]).start(() => setVisible(false));
+      ]).start(({ finished }) => {
+        if (finished) {
+          setVisible(false);
+        }
+      });
     }
   }, [isOpen]);
 
@@ -74,7 +88,13 @@ export default function SidebarDrawer({ isOpen, onClose, currentSource, onSelect
   ];
 
   return (
-    <View style={styles.overlay}>
+    <Modal
+      transparent={true}
+      visible={visible}
+      animationType="none"
+      onRequestClose={onClose}
+    >
+      <View style={styles.overlay}>
       {/* Backdrop */}
       <TouchableWithoutFeedback onPress={onClose}>
         <Animated.View style={[styles.backdrop, { opacity: fadeAnim }]} />
@@ -155,6 +175,7 @@ export default function SidebarDrawer({ isOpen, onClose, currentSource, onSelect
         </View>
       </Animated.View>
     </View>
+    </Modal>
   );
 }
 

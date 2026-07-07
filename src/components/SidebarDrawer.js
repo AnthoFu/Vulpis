@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import appConfig from '../../app.json';
 
 export default function SidebarDrawer({ isOpen, onClose, currentSource, onSelectSource }) {
   const insets = useSafeAreaInsets();
@@ -75,15 +74,9 @@ export default function SidebarDrawer({ isOpen, onClose, currentSource, onSelect
     },
     {
       id: 'private',
-      label: 'Nube Privada (NAS)',
-      icon: 'cloud-lock-outline',
-      description: 'Tu almacenamiento privado',
-    },
-    {
-      id: 'public',
-      label: 'Nube Pública',
-      icon: 'earth',
-      description: 'Stream global y compartidos',
+      label: 'Nube Privada',
+      icon: 'google-drive',
+      description: 'Música en tu Google Drive',
     },
   ];
 
@@ -171,7 +164,7 @@ export default function SidebarDrawer({ isOpen, onClose, currentSource, onSelect
             <MaterialCommunityIcons name="cog-outline" size={20} color="#8E8F9E" />
             <Text style={styles.settingsLabel}>Ajustes</Text>
           </TouchableOpacity>
-          <Text style={styles.versionText}>v{appConfig.expo.version}</Text>
+          <Text style={styles.versionText}>v0.2.0</Text>
         </View>
       </Animated.View>
     </View>

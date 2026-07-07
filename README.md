@@ -1,20 +1,128 @@
-# Vulpis 🦊
+# Vulpis 🦊 - Reproductor de Audio Premium
 
-Este proyecto está desarrollado con **React Native** y **Expo**.
+<p align="center">
+    <img src="./assets/AnthoFu-Icon-Purple.png" alt="Logo Vulpis" width="150" height="150" />
+</p>
+
+> Un reproductor de audio robusto para dispositivos móviles desarrollado con React Native y Expo, diseñado con soporte de reproducción en segundo plano, persistencia local y sincronización en tiempo real para una experiencia premium.
 
 ---
 
-## Guía de Configuración y Ejecución en Dispositivo Físico (Vía USB)
+- **Autor: [AnthoFu🦊](https://github.com/AnthoFu)**
+- **Última actualización: 5 de julio de 2026**
 
-Si tu computadora tiene recursos limitados o no deseas usar emuladores pesados como Android Studio, la mejor opción es ejecutar el proyecto directamente en tu teléfono físico a través de depuración USB.
+## 🚀 Funcionalidades
 
-A continuación, se detalla el paso a paso para configurar tu entorno en Linux (Bash/Zsh) y correr la aplicación:
+- **Múltiples Fuentes de Audio:** Cambia fácilmente entre biblioteca local, servidor privado (nube/NAS) y biblioteca pública de demostración.
+- **Sincronización con Google Drive:** Conéctate de forma segura a tu cuenta de Google Drive usando OAuth 2.0 y PKCE para reproducir tu música desde la nube privada.
+- **Caché Inteligente (En Demanda):** Descarga y almacena en caché local las canciones de Drive en tu dispositivo para ahorrar datos móviles y permitir reproducción sin buffering.
+- **Escaneo y Búsqueda Local:** Escanea automáticamente tu dispositivo en busca de archivos `.mp3` utilizando [expo-media-library](https://docs.expo.dev/versions/unversioned/sdk/media-library/).
+- **Importador de Canciones:** Selecciona e importa archivos de audio específicos desde el almacenamiento de tu teléfono mediante [expo-document-picker](https://docs.expo.dev/versions/unversioned/sdk/document-picker/).
+- **Persistencia en Almacenamiento:** Tus pistas escaneadas e importadas se guardan de forma persistente utilizando [AsyncStorage](https://react-native-async-storage.github.io/async-storage/).
+- **Gestión Avanzada de Cola de Reproducción:** Agrega canciones a la cola dinámica o elimínalas al instante, con estados visuales claros que indican la pista activa actual.
+- **Controles de Audio Premium:** Play/Pause, canción anterior, canción siguiente, y modos de reproducción aleatoria (Shuffle) y repetición (Repeat).
+- **Evitación de Condiciones de Carrera (Debouncing):** Sistema inteligente de bloqueo de interfaz (`isProcessing`) mientras el reproductor procesa comandos nativos para evitar clics accidentales.
+- **Reproducción en Segundo Plano:** El audio sigue sonando incluso si bloqueas la pantalla o minimizas la aplicación gracias a los servicios en segundo plano integrados.
 
-### 1. Configuración del Entorno en la Computadora (Linux)
+## 📸 Capturas de Pantalla
 
-Asegúrate de tener definidas las variables de entorno en tu archivo de configuración de terminal (ej. `~/.bashrc` o `~/.zshrc`). Las variables deben apuntar al SDK local y a la versión correcta de Java (**Java 21** para evitar problemas de compatibilidad con Gradle):
+<table align="center">
+  <tr>
+    <td align="center"><strong>Biblioteca Local</strong><br><img src="./assets/screenshots/biblioteca_local.jpeg" alt="Biblioteca Local" width="240"/></td>
+    <td align="center"><strong>Biblioteca Google Drive</strong><br><img src="./assets/screenshots/biblioteca_drive.jpeg" alt="Biblioteca Google Drive" width="240"/></td>
+    <td align="center"><strong>Cola de Reproducción</strong><br><img src="./assets/screenshots/cola_local.jpeg" alt="Cola de Reproducción" width="240"/></td>
+  </tr>
+</table>
 
-Abre tu archivo `~/.bashrc` (o ejecuta `nano ~/.bashrc`) y asegúrate de agregar las siguientes líneas al final:
+## 🛠️ Stack de Tecnología
+
+- **Framework:** [React Native](https://reactnative.dev/) con [Expo](https://expo.dev/) (SDK 56)
+- **Lenguaje:** [JavaScript](https://developer.mozilla.org/es/docs/Web/JavaScript) (ES6+)
+- **Motor de Audio:** [@rntp/player](https://github.com/react-native-track-player/react-native-track-player) (v5.6.0) basado en JSI, Fabric y TurboModules
+- **Descargas y Sistema de Archivos:** [expo-file-system/legacy](https://docs.expo.dev/versions/unversioned/sdk/filesystem/) (para descargas nativas resilientes en caché y resolución de redirecciones de Google Drive)
+- **Lectura de Metadatos:** [jsmediatags](https://github.com/aadsm/jsmediatags) (para extraer metadatos ID3 de archivos MP3)
+- **Almacenamiento Local:** [AsyncStorage](https://react-native-async-storage.github.io/async-storage/)
+
+## 🎵 Arquitectura de Audio
+
+Vulpis utiliza una arquitectura de audio avanzada adaptada a la **Nueva Arquitectura** de React Native 0.85+ y Expo 56.
+
+### 1. Inicialización Diferida e Inyección Resiliente
+En [index.js](file:///home/anthofu/Escritorio/git/Vulpis/index.js), el playback service se carga de forma diferida (`require('./service').default`) para asegurar que el motor nativo del dispositivo esté listo antes de arrancar los servicios de JavaScript. 
+
+En [App.js](file:///home/anthofu/Escritorio/git/Vulpis/App.js), la inicialización captura cualquier excepción de duplicidad (común al usar *Fast Refresh*) y aplica un `skipToIndex(0)` obligatorio para garantizar que ExoPlayer (Android) configure la pista inicial correctamente.
+
+### 2. Sincronización mediante Polling JSI (Zero Latency)
+Debido a fallos inherentes en los emisores de eventos nativos (`DeviceEventEmitter`) en Android al notificar transiciones de pista en la v5.6+, implementamos un sistema de **Polling Activo** en [App.js](file:///home/anthofu/Escritorio/git/Vulpis/App.js). 
+
+Aprovechando que `@rntp/player` está implementado sobre JSI, las llamadas a getters como `TrackPlayer.getActiveMediaItem()` y `TrackPlayer.getProgress()` son **síncronas en C++** y tienen latencia cero. El polling consulta el motor nativo cada 250ms y actualiza el estado de React en cascada a todos los componentes hijos:
+* [PlayerCard.js](file:///home/anthofu/Escritorio/git/Vulpis/src/components/PlayerCard.js) (Reproductor expandido)
+* [MiniPlayer.js](file:///home/anthofu/Escritorio/git/Vulpis/src/components/MiniPlayer.js) (Mini reproductor flotante)
+* [ProgressBar.js](file:///home/anthofu/Escritorio/git/Vulpis/src/components/ProgressBar.js) (Progreso de la pista)
+* [QueueList.js](file:///home/anthofu/Escritorio/git/Vulpis/src/components/QueueList.js) (Lista e importaciones)
+
+### 3. Prevención de Concurrencia (Debouncing)
+Para prevenir *race conditions*, los botones de control de [Controls.js](file:///home/anthofu/Escritorio/git/Vulpis/src/components/Controls.js) and [QueueList.js](file:///home/anthofu/Escritorio/git/Vulpis/src/components/QueueList.js) se inhabilitan visualmente bajo la bandera `isProcessing` durante la ejecución de promesas de cambio de pista o reproducción.
+
+---
+
+## ☁️ Integración con Google Drive y Caché en Demanda
+
+Vulpis implementa un cliente de Google Drive nativo robusto para la nube privada, solucionando limitaciones de seguridad críticas de los reproductores móviles.
+
+### 1. Autenticación Segura (OAuth 2.0 con PKCE)
+Para integrarse de manera segura con repositorios públicos y evitar credenciales estáticas ("hardcoded"):
+- **Configuración Dinámica (`app.config.js`):** La app genera su esquema de URL de callback dinámicamente (`com.googleusercontent.apps.[CLIENT_ID_PREFIX]`) a partir de variables de entorno (`process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID`).
+- **Flujo PKCE (Proof Key for Code Exchange):** Implementa el flujo de Código de Autorización con desafío PKCE (`plain`) para intercambiar de manera segura el código devuelto por Google por un token de acceso a nivel de aplicación nativa.
+
+### 2. Evitación del Bloqueo por Redirección (ExoPlayer Cross-Domain Workaround)
+Cuando ExoPlayer (Android) intenta reproducir archivos de Google Drive usando `https://www.googleapis.com/drive/v3/files/FILE_ID?alt=media` con la cabecera `Authorization: Bearer <token>`, el servidor de Google redirige temporalmente a un subdominio de `*.googleusercontent.com`.
+Por seguridad, ExoPlayer **elimina automáticamente la cabecera de autenticación** al cambiar de dominio (`googleapis.com` -> `googleusercontent.com`), lo que causa un error `403 Forbidden` en la descarga real y congela la reproducción en bucle de `buffering`.
+
+Para solucionarlo, Vulpis implementa un flujo de **Caché en Demanda**:
+1. **Interceptor en Reproducción:** Al seleccionar un archivo de Drive, la app intercepta el evento.
+2. **Descarga Nativa Segura:** Utiliza `FileSystem.createDownloadResumable` de [expo-file-system/legacy](https://docs.expo.dev/versions/unversioned/sdk/filesystem/) pasándole la cabecera de autenticación. El gestor de descargas del OS sigue la redirección y mantiene las credenciales correctas en la capa nativa para descargar el archivo `.mp3`.
+3. **Caché Persistente:** Guarda el archivo localmente en `FileSystem.cacheDirectory`. Si el usuario reproduce la canción más de una vez, la app detecta el archivo local y lo reproduce instantáneamente desde la caché del dispositivo, ahorrando ancho de banda.
+4. **Reproducción Local Confiable:** Se le entrega a `TrackPlayer` una URL de tipo archivo local (`file:///...`), eliminando la necesidad de streaming autenticado sobre HTTP.
+
+---
+
+## 🏁 Cómo Empezar
+
+### Prerrequisitos
+
+- [Node.js](https://nodejs.org/) (v18 o superior)
+- Un cable USB y tu teléfono Android físico.
+
+### Configuración de Variables de Entorno (Google Drive API)
+
+Para habilitar la sincronización con Google Drive, debes crear un archivo `.env` en la raíz del proyecto (este archivo ya está configurado en `.gitignore` para evitar filtraciones de claves en repositorios públicos):
+
+1. Crea un archivo llamado `.env` en el directorio raíz de tu proyecto.
+2. Agrega la siguiente variable de entorno con tu ID de Cliente de Google:
+   ```env
+   EXPO_PUBLIC_GOOGLE_CLIENT_ID=tu_client_id_de_google.apps.googleusercontent.com
+   ```
+   > [!NOTE]
+   > Para permitir flujos OAuth nativos e intercambiar tokens correctamente mediante PKCE sin requerir habilitar orígenes adicionales inseguros, te recomendamos utilizar un **identificador de tipo cliente de iOS** en la consola de Google Cloud Developer Console.
+
+### Instalación del Proyecto
+
+1. Clona el repositorio:
+   ```bash
+   git clone https://github.com/AnthoFu/Vulpis.git
+   ```
+2. Instala las dependencias:
+   ```bash
+   npm install
+   ```
+
+### Configuración del Entorno de Depuración (Linux / Android)
+
+Para compilar y correr el reproductor nativo directamente en tu dispositivo físico, sigue estos pasos:
+
+#### 1. Variables de Entorno en Linux (Computadora)
+Asegúrate de agregar las siguientes líneas en tu archivo de terminal (ej. `~/.bashrc` o `~/.zshrc`) para apuntar al SDK y a la versión correcta de Java (**Java 21** para soporte con Gradle):
 
 ```bash
 # Configuración del Android SDK
@@ -23,85 +131,91 @@ export PATH="$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator"
 export JAVA_HOME="/usr/lib/jvm/java-21-openjdk"
 ```
 
-Guarda los cambios y recarga la terminal con:
+Guarda los cambios y recarga tu terminal:
 ```bash
 source ~/.bashrc
 ```
 
----
+#### 2. Configuración en tu Teléfono Android
+Habilita los permisos de desarrollador en tu dispositivo:
+1. **Activar opciones de desarrollador:** Entra a *Ajustes* -> *Acerca del teléfono* y presiona **Número de compilación** 7 veces seguidas.
+2. **Habilitar Depuración USB:** En *Opciones de desarrollador*, activa la **Depuración USB**.
+3. **Instalar vía USB:** Habilita **Instalar vía USB** (obligatorio en dispositivos Xiaomi/Redmi/Realme para transferir la app desde tu PC).
 
-### 2. Configuración en tu Teléfono Android
-
-Antes de conectar tu teléfono, debes habilitar los permisos necesarios:
-
-1. **Activar las Opciones de Desarrollador:**
-   * Entra a **Ajustes** -> **Acerca del teléfono** (o *Información del dispositivo*).
-   * Busca la línea **Número de compilación** (o *Versión de MIUI/OS* en teléfonos Xiaomi) y presiónala **7 veces seguidas** hasta que aparezca el aviso de que eres desarrollador.
-
-2. **Habilitar la Depuración USB:**
-   * Regresa al menú principal de Ajustes y entra a **Opciones de desarrollador** (suele estar en *Ajustes del sistema* o *Ajustes adicionales*).
-   * Busca y activa la opción **Depuración USB** (USB Debugging).
-
-3. **Permitir Instalación por USB:**
-   * En el mismo menú de Opciones de desarrollador, busca y activa **Instalar vía USB** (o *Install via USB*). *Este paso es obligatorio en dispositivos Xiaomi, Redmi, POCO y Realme para permitir que la laptop envíe la aplicación al móvil*.
-
----
-
-### 3. Conexión y Ejecución de la App
-
-1. **Conecta tu teléfono a la computadora** mediante un cable USB.
-2. Desbloquea tu teléfono. Debería aparecer una ventana emergente preguntando: **"¿Permitir depuración USB?"**. Marca la casilla de *"Permitir siempre desde esta computadora"* y pulsa **Aceptar**.
-3. Abre una terminal en la raíz del proyecto y ejecuta el comando de inicio:
+#### 3. Ejecución de la App
+1. Conecta tu teléfono a la computadora con el cable USB.
+2. Autoriza la computadora en el aviso que aparece en tu teléfono.
+3. Corre el comando en la raíz del proyecto:
    ```bash
    npx expo run:android
    ```
-4. **Durante la instalación:** Presta atención a la pantalla de tu móvil. Cuando el proceso en tu terminal esté finalizando y diga `Installing...`, aparecerá una advertencia de seguridad en tu teléfono: **"¿Instalar a través de USB?"**. Debes presionar **Instalar** (tienes un límite de 10 segundos).
-
-¡Listo! La aplicación se abrirá automáticamente en tu teléfono móvil y cualquier cambio que realices en el código se actualizará instantáneamente.
+4. **Importante:** Mantente atento a la pantalla de tu móvil. Cuando diga `Installing...` en la terminal, pulsa **Instalar** en la ventana emergente que aparecerá en tu teléfono.
 
 ---
 
-## 🎵 Arquitectura del Reproductor de Audio (Vulpis Player)
+## 🤝 Contribuciones
 
-Hemos implementado un reproductor de audio robusto que soporta reproducción en segundo plano, controles de notificación (pantalla de bloqueo) y compatibilidad total con la **Nueva Arquitectura** de React Native (React Native 0.85 / Expo 56). 
+¡Las contribuciones son bienvenidas! Siéntete libre de abrir un "issue" o enviar un "pull request".
 
-A continuación se detalla cómo está construido y las decisiones de diseño tomadas:
+## 📄 Licencia
 
-### 1. La Biblioteca: `@rntp/player` (v5.6+)
-En versiones recientes de React Native, el *Bridge* (arquitectura legacy) ha sido removido. Bibliotecas clásicas como `react-native-track-player` v4 ya no compilan. Para Vulpis, usamos **`@rntp/player` v5.6+**, que es la reescritura moderna basada completamente en JSI (JavaScript Interface), Fabric y TurboModules. Esto nos brinda un rendimiento síncrono ultra-rápido para consultar datos del reproductor en C++.
+Este proyecto está bajo la Licencia MIT. Consulta el archivo [LICENSE](LICENSE) para más detalles.
 
-### 2. Inicialización Diferida
-En el archivo `index.js`, registramos el servicio asíncrono de audio de fondo (`service.js`) utilizando un callback diferido:
-```javascript
-TrackPlayer.registerPlaybackService(() => require('./service').default);
+## 📊 Diagramas de Flujo
+
+### 1. Flujo de Inicialización y Polling JSI
+```mermaid
+graph TD
+    A[Inicio de la App] --> B{¿TrackPlayer configurado?}
+    B -- No --> C[Llamar setupPlayer]
+    B -- Sí / Error --> D[Atrapar Excepción y Continuar]
+    C --> E[Establecer Capabilities/Comandos]
+    D --> E
+    E --> F[Cargar canciones locales de AsyncStorage]
+    F --> G{¿Existen personalizadas?}
+    G -- Sí --> H[Usar canciones guardadas]
+    G -- No --> I[Usar localTracks por defecto]
+    H --> J[TrackPlayer.clear & setMediaItems]
+    I --> J
+    J --> K[skipToIndex 0 obligatoriamente]
+    K --> L[Iniciar Polling JSI cada 250ms]
+    L --> M[Actualizar activeTrack, isPlaying, progress, repeatMode, queue]
+    M --> N[Actualización instantánea en UI]
 ```
-Esto evita fallos de hilo donde el módulo nativo intenta acceder al entorno JavaScript antes de que React Native esté totalmente montado.
 
-### 3. Solución a la Sincronización de Interfaz (Polling JSI)
-La versión 5 de TrackPlayer en Android tiene un *bug* donde el evento `DeviceEventEmitter` no emite correctamente las transiciones de pista a React. Por lo tanto, ganchos (hooks) como `useActiveMediaItem()` fallan y la interfaz no se actualiza automáticamente.
+### 2. Flujo de Interacción y Gestión de Cola
+```mermaid
+graph TD
+    A[Usuario interactúa con la UI] --> B{¿Acción de Control?}
+    B -- Reproducir / Pausa / Skip --> C[Establecer isProcessing = true]
+    C --> D[Llamar Comando TrackPlayer Nativo]
+    D --> E[Esperar Promesa Nativa]
+    E --> F[Establecer isProcessing = false]
+    
+    B -- Agregar a Cola --> G[Obtener activeIndex actual]
+    G --> H[Generar ID Único para canción]
+    H --> I[Insertar después de activeIndex en TrackPlayer]
+    I --> J[Actualizar cola en estado de React]
+    
+    B -- Cambiar Fuente --> K[Establecer isSourceChanging = true]
+    K --> L[Seleccionar Cola: Local / Private / Public]
+    L --> M[TrackPlayer.clear & setMediaItems]
+    M --> N[skipToIndex 0]
+    N --> O[Establecer isSourceChanging = false]
+```
 
-**Nuestra solución en `App.js`:**
-1. **Polling Activo:** Dado que las funciones JSI son síncronas y tienen cero latencia (no cruzan un puente serializado), creamos un `setInterval` cada 250ms que consulta activamente el motor en C++/Kotlin:
-   - `TrackPlayer.getActiveMediaItem()`
-   - `TrackPlayer.isPlaying()`
-   - `TrackPlayer.getProgress()`
-2. **Propagación en Cascada:** Almacenamos esos datos en el estado central (`useState` en `App.js`) y lo inyectamos hacia abajo como propiedades (`props`) a los componentes visuales (`<PlayerCard />`, `<QueueList />`, `<Controls />`). Así evitamos que cada componente tenga que lidiar con lógica nativa.
-
-### 4. Inicialización Resiliente y `skipToIndex(0)`
-En un entorno de desarrollo (con *Fast Refresh*), la aplicación se recarga constantemente. Al hacer esto, el TrackPlayer ya estará montado en la RAM, lo que lanza el error `"Player is already set up"`.
-En la función `init()` de `App.js`, capturamos silenciosamente este error para no quebrar el renderizado de la UI. 
-Después de inyectar las pistas con `TrackPlayer.setMediaItems()`, ejecutamos `await TrackPlayer.skipToIndex(0)`. **Esto es obligatorio:** Si no seleccionamos activamente el índice 0 de la cola, ExoPlayer asume que no hay ninguna pista cargada y `getActiveMediaItem()` devuelve `undefined`.
-
-### 5. Prevención de Concurrencia (Debouncing)
-En `src/components/Controls.js` y `src/components/QueueList.js` hemos implementado un estado `isProcessing`. 
-Al presionar Siguiente, Anterior o Play, establecemos `isProcessing = true`, lo cual desactiva (aplica `disabled` y una leve transparencia) todos los botones mientras los comandos asíncronos esperan la respuesta del reproductor de audio nativo. Esto previene *"race conditions"* (condiciones de carrera) y previene que los usuarios bloqueen la interfaz apretando mil veces "Siguiente" antes de que la canción siquiera termine de cargar el *buffer*.
-
-### 6. Estructura de Componentes
-El código se ha refactorizado para ser totalmente modular y limpio:
-- **`App.js`**: Controlador de estado maestro, inyector de dependencias nativas y *Layout Wrapper*.
-- **`src/components/Controls.js`**: Botones de manipulación de playback (Play/Pause/Skip) con debounce nativo.
-- **`src/components/ProgressBar.js`**: Renderiza la barra con `duration` y `position` de la canción en tiempo real.
-- **`src/components/PlayerCard.js`**: Despliega el cover art interactivo y los metadatos de la pista actual.
-- **`src/components/QueueList.js`**: Visualiza la lista de la cola, indicando cuál está sonando y permitiendo selección directa con un toque.
-- **`src/constants/tracks.js`**: Almacena el diccionario / array base inicial con identificadores `mediaId`.--
-
+### 3. Flujo de Descarga y Caché de Google Drive
+```mermaid
+graph TD
+    A[Usuario selecciona canción de Drive] --> B{¿Está descargada en caché local?}
+    B -- Sí --> C[Obtener URI local del archivo: file:///...]
+    B -- No --> D[Mostrar Toast de descarga y activar Spinner]
+    D --> E[Llamar a FileSystem.createDownloadResumable]
+    E --> F[OS descarga archivo enviando cabecera Authorization en redirección]
+    F --> G[Guardar archivo .mp3 en cacheDirectory]
+    G --> C
+    C --> H[Actualizar URL en la lista de pistas a la URI local]
+    H --> I[TrackPlayer.clear & setMediaItems con la lista actualizada]
+    I --> J[skipToIndex & TrackPlayer.play]
+    J --> K[Reproducción local instantánea con cero buffering]
+```

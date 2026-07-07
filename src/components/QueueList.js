@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -26,27 +26,125 @@ export default function QueueList({
   hasCustomLocalTracks,
   onAddToQueue,
   onRemoveFromQueue,
+  isDriveConnected,
+  onConnectDrive,
+  onDisconnectDrive,
+  onRefreshDrive,
+  isDriveLoading,
+  googleClientId,
+  googleRedirectUri,
+  onSelectTrack,
 }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('library'); // 'library' | 'queue'
 
+  const renderGoogleDrivePanel = () => {
+    if (isDriveConnected) {
+      return (
+        <View style={styles.driveHeaderBanner}>
+          <View style={styles.driveStatusCol}>
+            <View style={styles.driveStatusIndicator}>
+              <MaterialCommunityIcons name="google-drive" size={20} color="#A78BFA" />
+              <Text style={styles.driveStatusText}>Conectado a Google Drive</Text>
+            </View>
+            <Text style={styles.driveInfoText}>Listo para transmitir canciones</Text>
+          </View>
+          <View style={styles.driveActionsCol}>
+            <TouchableOpacity
+              onPress={onRefreshDrive}
+              disabled={isDriveLoading || isLoading}
+              style={[styles.driveActionBtn, styles.driveRefreshBtn]}
+              activeOpacity={0.7}
+            >
+              {isDriveLoading || isLoading ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <MaterialCommunityIcons name="refresh" size={18} color="#FFFFFF" />
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={onDisconnectDrive}
+              disabled={isDriveLoading || isLoading}
+              style={[styles.driveActionBtn, styles.driveDisconnectBtn]}
+              activeOpacity={0.7}
+            >
+              <MaterialCommunityIcons name="logout" size={18} color="#EF4444" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+
+    const isConfigured = googleClientId && !googleClientId.startsWith('YOUR_GOOGLE_CLIENT_ID');
+
+    return (
+      <View style={styles.driveConnectCard}>
+        <View style={styles.driveCardHeader}>
+          <View style={styles.driveIconWrapper}>
+            <MaterialCommunityIcons name="google-drive" size={32} color="#8B5CF6" />
+          </View>
+          <View style={styles.driveCardTitleCol}>
+            <Text style={styles.driveCardTitle}>Nube Privada</Text>
+            <Text style={styles.driveCardSubtitle}>Transmite tu música desde Google Drive</Text>
+          </View>
+        </View>
+
+        <Text style={styles.driveDescriptionText}>
+          Conecta tu cuenta para sincronizar y transmitir directamente tus archivos de audio (.mp3) guardados en Google Drive. Tus datos y archivos se manejan con total privacidad.
+        </Text>
+
+        {!isConfigured && (
+          <View style={styles.devWarningBox}>
+            <MaterialCommunityIcons name="alert-circle-outline" size={18} color="#F59E0B" style={{ marginRight: 8 }} />
+            <Text style={styles.devWarningText}>
+              <Text style={{ fontWeight: '700' }}>Desarrollador:</Text> Configura tu Client ID real en el archivo <Text style={{ fontFamily: 'monospace', color: '#A78BFA' }}>src/constants/config.js</Text> para habilitar la conexión.
+            </Text>
+          </View>
+        )}
+
+        <TouchableOpacity
+          style={[
+            styles.driveConnectBtn,
+            (!isConfigured || isDriveLoading) && styles.driveConnectBtnDisabled
+          ]}
+          disabled={!isConfigured || isDriveLoading}
+          onPress={() => onConnectDrive(googleClientId, googleRedirectUri)}
+          activeOpacity={0.8}
+        >
+          {isDriveLoading ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <>
+              <MaterialCommunityIcons name="google-drive" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Text style={styles.driveConnectBtnText}>Conectar Google Drive</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   const selectTrack = async (item, index) => {
     if (isProcessing) return;
     setIsProcessing(true);
     try {
-      if (activeTab === 'queue') {
-        console.log(`Selecting track from queue at index: ${index}`);
-        await TrackPlayer.skipToIndex(index);
-        await TrackPlayer.play();
+      if (onSelectTrack) {
+        await onSelectTrack(item, index, activeTab);
       } else {
-        const originalIndex = (tracks || []).findIndex(t => t.mediaId === item.mediaId);
-        const idx = originalIndex !== -1 ? originalIndex : 0;
-        console.log(`Resetting queue and playing library track at index: ${idx}`);
-        await TrackPlayer.clear();
-        await TrackPlayer.setMediaItems(tracks);
-        await TrackPlayer.skipToIndex(idx);
-        await TrackPlayer.play();
+        if (activeTab === 'queue') {
+          console.log(`Selecting track from queue at index: ${index}`);
+          await TrackPlayer.skipToIndex(index);
+          await TrackPlayer.play();
+        } else {
+          const originalIndex = (tracks || []).findIndex(t => t.mediaId === item.mediaId);
+          const idx = originalIndex !== -1 ? originalIndex : 0;
+          console.log(`Resetting queue and playing library track at index: ${idx}`);
+          await TrackPlayer.clear();
+          await TrackPlayer.setMediaItems(tracks);
+          await TrackPlayer.skipToIndex(idx);
+          await TrackPlayer.play();
+        }
       }
     } catch (e) {
       console.error('Error selecting track:', e);
@@ -158,6 +256,9 @@ export default function QueueList({
                   )}
                 </View>
               )}
+
+              {/* Google Drive / Private Cloud Buttons and Connection UI */}
+              {currentSource === 'private' && renderGoogleDrivePanel()}
             </>
           )}
 
@@ -174,12 +275,15 @@ export default function QueueList({
             </View>
           )}
 
-          {!isLoading && activeTab === 'library' && displayTracks.length === 0 && (
+          {!isLoading && activeTab === 'library' && displayTracks.length === 0 && (currentSource !== 'private' || isDriveConnected) && (
             <View style={styles.emptyWrapper}>
               <MaterialCommunityIcons name="music-off" size={48} color="#3F4052" />
               <Text style={styles.emptyText}>No se encontraron canciones</Text>
               {currentSource === 'local' && !searchQuery && (
                 <Text style={styles.emptySubText}>Usa "Escanear Audio" o "Importar MP3" para cargar música local.</Text>
+              )}
+              {currentSource === 'private' && isDriveConnected && !searchQuery && (
+                <Text style={styles.emptySubText}>No se encontraron archivos .mp3 en tu Google Drive.</Text>
               )}
             </View>
           )}
@@ -447,5 +551,139 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 6,
     paddingHorizontal: 20,
+  },
+  driveHeaderBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#161722',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#2C2D3C',
+    padding: 16,
+    marginBottom: 20,
+  },
+  driveStatusCol: {
+    flex: 1,
+  },
+  driveStatusIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  driveStatusText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+    marginLeft: 8,
+  },
+  driveInfoText: {
+    color: '#8E8F9E',
+    fontSize: 12,
+    marginLeft: 28,
+  },
+  driveActionsCol: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  driveActionBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  driveRefreshBtn: {
+    backgroundColor: '#8B5CF6',
+    borderColor: '#A78BFA',
+  },
+  driveDisconnectBtn: {
+    backgroundColor: '#232433',
+    borderColor: '#3B3D54',
+  },
+  driveConnectCard: {
+    backgroundColor: '#161722',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#2C2D3C',
+    padding: 20,
+    marginBottom: 20,
+  },
+  driveCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  driveIconWrapper: {
+    width: 50,
+    height: 50,
+    borderRadius: 12,
+    backgroundColor: 'rgba(139, 92, 246, 0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.2)',
+  },
+  driveCardTitleCol: {
+    flex: 1,
+  },
+  driveCardTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  driveCardSubtitle: {
+    color: '#8E8F9E',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  driveDescriptionText: {
+    color: '#8E8F9E',
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  devWarningBox: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(245, 158, 11, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.2)',
+    borderRadius: 10,
+    padding: 12,
+    alignItems: 'flex-start',
+    marginBottom: 20,
+  },
+  devWarningText: {
+    flex: 1,
+    color: '#F59E0B',
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  driveConnectBtn: {
+    flexDirection: 'row',
+    backgroundColor: '#8B5CF6',
+    borderRadius: 12,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  driveConnectBtnDisabled: {
+    backgroundColor: '#2A2B3D',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  driveConnectBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });

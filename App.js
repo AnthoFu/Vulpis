@@ -14,13 +14,25 @@ import TrackPlayer, { PlayerCommand, Event, RepeatMode } from '@rntp/player';
 import * as MediaLibrary from 'expo-media-library/legacy';
 import * as DocumentPicker from 'expo-document-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system/legacy';
 import Header from './src/components/Header';
 import PlayerCard from './src/components/PlayerCard';
 import MiniPlayer from './src/components/MiniPlayer';
 import QueueList from './src/components/QueueList';
 import SidebarDrawer from './src/components/SidebarDrawer';
-import { localTracks, privateTracks, publicTracks } from './src/constants/tracks';
+import { GOOGLE_OAUTH_CONFIG } from './src/constants/config';
+import { localTracks, privateTracks } from './src/constants/tracks';
 import { extractMetadata } from './src/utils/metadata';
+import {
+  getGoogleConfig,
+  saveGoogleConfig,
+  getStoredToken,
+  signInWithGoogle,
+  fetchDriveMp3Files,
+  mapDriveFileToTrack,
+  clearAllCredentials,
+  getDriveRedirectUrl,
+} from './src/utils/drive';
 
 function MainApp() {
   const insets = useSafeAreaInsets();
@@ -36,9 +48,15 @@ function MainApp() {
 
   // Navigation Drawer & Source states
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [currentSource, setCurrentSource] = useState('local'); // 'local' | 'private' | 'public'
+  const [currentSource, setCurrentSource] = useState('local'); // 'local' | 'private'
   const [tracks, setTracks] = useState(localTracks);
   const [isSourceChanging, setIsSourceChanging] = useState(false);
+
+  // Google Drive Integration States
+  const [isDriveConnected, setIsDriveConnected] = useState(false);
+  const [googleClientId, setGoogleClientId] = useState(GOOGLE_OAUTH_CONFIG.clientId);
+  const [googleRedirectUri, setGoogleRedirectUri] = useState(GOOGLE_OAUTH_CONFIG.redirectUri);
+  const [isDriveLoading, setIsDriveLoading] = useState(false);
 
   // Local library tracks & customization state
   const [localLibraryTracks, setLocalLibraryTracks] = useState(localTracks);
@@ -180,6 +198,120 @@ function MainApp() {
     };
   }, []);
 
+  // Load Google Drive configuration on app start
+  useEffect(() => {
+    async function loadGoogleConfigData() {
+      try {
+        const config = await getGoogleConfig();
+        setGoogleClientId(config.clientId);
+        setGoogleRedirectUri(config.redirectUri);
+
+        const token = await getStoredToken();
+        if (token) {
+          setIsDriveConnected(true);
+        }
+      } catch (err) {
+        console.error('[App] Error loading initial Google Drive config:', err);
+      }
+    }
+    loadGoogleConfigData();
+  }, []);
+
+  const loadDriveFiles = async (token, forceUpdatePlayer = false) => {
+    setIsDriveLoading(true);
+    setIsSourceChanging(true);
+    try {
+      const files = await fetchDriveMp3Files(token);
+      const driveTracks = await Promise.all(
+        files.map(async (file) => {
+          const resolvedUrl = await getDriveRedirectUrl(file.id, token);
+          return mapDriveFileToTrack(file, token, defaultCover, resolvedUrl);
+        })
+      );
+      
+      setTracks(driveTracks);
+      
+      // Update the TrackPlayer queue
+      if (forceUpdatePlayer || currentSource === 'private') {
+        await TrackPlayer.clear();
+        if (driveTracks.length > 0) {
+          await TrackPlayer.setMediaItems(driveTracks);
+          await TrackPlayer.skipToIndex(0);
+        }
+      }
+    } catch (err) {
+      console.error('[App] Error loading Drive files:', err);
+      if (err.message === 'AUTH_EXPIRED') {
+        setIsDriveConnected(false);
+        setTracks([]);
+        Alert.alert('Sesión Expirada', 'Tu sesión de Google Drive ha expirado. Por favor, conéctate de nuevo.');
+      } else {
+        Alert.alert('Error', 'No se pudieron obtener las canciones de Google Drive.');
+      }
+    } finally {
+      setIsDriveLoading(false);
+      setIsSourceChanging(false);
+    }
+  };
+
+  const handleConnectDrive = async (clientId, redirectUri) => {
+    setIsDriveLoading(true);
+    try {
+      const token = await signInWithGoogle(clientId, redirectUri);
+      if (token) {
+        setIsDriveConnected(true);
+        setGoogleClientId(clientId);
+        setGoogleRedirectUri(redirectUri);
+        showToast('Google Drive conectado exitosamente');
+        await loadDriveFiles(token);
+      }
+    } catch (err) {
+      console.error('[App] Connect Google Drive error:', err);
+      Alert.alert('Error de Conexión', err.message || 'No se pudo conectar a Google Drive.');
+    } finally {
+      setIsDriveLoading(false);
+    }
+  };
+
+  const handleDisconnectDrive = async () => {
+    Alert.alert(
+      'Desconectar Nube Privada',
+      '¿Estás seguro de que quieres desconectar tu cuenta de Google Drive?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Desconectar',
+          style: 'destructive',
+          onPress: async () => {
+            setIsDriveLoading(true);
+            try {
+              await clearAllCredentials();
+              setIsDriveConnected(false);
+              setTracks([]);
+              await TrackPlayer.clear();
+              showToast('Google Drive desconectado');
+            } catch (err) {
+              console.error('[App] Disconnect error:', err);
+            } finally {
+              setIsDriveLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleRefreshDrive = async () => {
+    const token = await getStoredToken();
+    if (token) {
+      await loadDriveFiles(token);
+      showToast('Biblioteca de Drive actualizada');
+    } else {
+      setIsDriveConnected(false);
+      Alert.alert('No Conectado', 'Por favor, conéctate a Google Drive primero.');
+    }
+  };
+
   // Polling JSI Getters para sincronizar el estado en Android
   useEffect(() => {
     if (!isPlayerInitialized) return;
@@ -253,26 +385,40 @@ function MainApp() {
     setCurrentSource(source);
     
     let selectedQueue = [];
-    if (source === 'local') selectedQueue = localLibraryTracks;
-    else if (source === 'private') selectedQueue = privateTracks;
-    else if (source === 'public') selectedQueue = publicTracks;
-
-    setTracks(selectedQueue);
-    
-    try {
-      console.log(`[App] Switching source to ${source}...`);
-      await TrackPlayer.clear();
-      await TrackPlayer.setMediaItems(selectedQueue);
-      await TrackPlayer.skipToIndex(0);
+    if (source === 'local') {
+      selectedQueue = localLibraryTracks;
+      setTracks(selectedQueue);
       
-      if (isPlaying) {
-        await TrackPlayer.play();
+      try {
+        console.log(`[App] Switching source to local...`);
+        await TrackPlayer.clear();
+        await TrackPlayer.setMediaItems(selectedQueue);
+        await TrackPlayer.skipToIndex(0);
+        
+        if (isPlaying) {
+          await TrackPlayer.play();
+        }
+        console.log(`[App] Source switched to local successfully.`);
+      } catch (e) {
+        console.error('[App] Error switching tracks source to local:', e);
+      } finally {
+        setIsSourceChanging(false);
       }
-      console.log(`[App] Source switched to ${source} successfully.`);
-    } catch (e) {
-      console.error('[App] Error switching tracks source:', e);
-    } finally {
-      setIsSourceChanging(false);
+    } else if (source === 'private') {
+      const token = await getStoredToken();
+      if (token) {
+        setIsDriveConnected(true);
+        await loadDriveFiles(token, true);
+      } else {
+        setIsDriveConnected(false);
+        setTracks([]);
+        try {
+          await TrackPlayer.clear();
+        } catch (e) {
+          console.error('[App] Error clearing player queue:', e);
+        }
+        setIsSourceChanging(false);
+      }
     }
   };
 
@@ -438,6 +584,89 @@ function MainApp() {
     );
   };
 
+  const downloadDriveFile = async (fileId, title, accessToken) => {
+    const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
+    const localUri = FileSystem.cacheDirectory + `${fileId}.mp3`;
+    
+    try {
+      const fileInfo = await FileSystem.getInfoAsync(localUri);
+      if (fileInfo.exists) {
+        console.log('[Drive] File already cached locally:', localUri);
+        return localUri;
+      }
+      
+      console.log('[Drive] Downloading file to cache:', localUri);
+      const downloadResumable = FileSystem.createDownloadResumable(
+        url,
+        localUri,
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+        }
+      );
+      
+      const { uri } = await downloadResumable.downloadAsync();
+      console.log('[Drive] File downloaded successfully:', uri);
+      return uri;
+    } catch (error) {
+      console.error('[Drive] Error downloading file:', error);
+      return null;
+    }
+  };
+
+  const handleSelectTrack = async (item, index, activeTab) => {
+    if (item.mediaId.startsWith('drive-') && !item.url.startsWith('file://')) {
+      try {
+        showToast(`Descargando canción: ${item.title}...`);
+        setIsSourceChanging(true);
+        
+        const token = await getStoredToken();
+        const fileId = item.mediaId.replace('drive-', '');
+        const localUri = await downloadDriveFile(fileId, item.title, token);
+        
+        if (localUri) {
+          const updatedTracks = tracks.map(t => {
+            if (t.mediaId === item.mediaId) {
+              return { ...t, url: localUri };
+            }
+            return t;
+          });
+          setTracks(updatedTracks);
+          
+          console.log('[App] Loading track with local cached file:', localUri);
+          await TrackPlayer.clear();
+          await TrackPlayer.setMediaItems(updatedTracks);
+          
+          const newIdx = updatedTracks.findIndex(t => t.mediaId === item.mediaId);
+          await TrackPlayer.skipToIndex(newIdx !== -1 ? newIdx : index);
+          await TrackPlayer.play();
+        } else {
+          Alert.alert('Error', 'No se pudo descargar el archivo de Google Drive.');
+        }
+      } catch (err) {
+        console.error('[App] Error in handleSelectTrack download:', err);
+        Alert.alert('Error', 'No se pudo reproducir la canción.');
+      } finally {
+        setIsSourceChanging(false);
+      }
+    } else {
+      try {
+        if (activeTab === 'queue') {
+          await TrackPlayer.skipToIndex(index);
+          await TrackPlayer.play();
+        } else {
+          await TrackPlayer.clear();
+          await TrackPlayer.setMediaItems(tracks);
+          await TrackPlayer.skipToIndex(index);
+          await TrackPlayer.play();
+        }
+      } catch (e) {
+        console.error('[App] Error selecting track:', e);
+      }
+    }
+  };
+
   if (!isPlayerInitialized) {
     return (
       <View style={styles.loadingContainer}>
@@ -469,6 +698,14 @@ function MainApp() {
         hasCustomLocalTracks={hasCustomLocalTracks}
         onAddToQueue={handleAddToQueue}
         onRemoveFromQueue={handleRemoveFromQueue}
+        isDriveConnected={isDriveConnected}
+        onConnectDrive={handleConnectDrive}
+        onDisconnectDrive={handleDisconnectDrive}
+        onRefreshDrive={handleRefreshDrive}
+        isDriveLoading={isDriveLoading}
+        googleClientId={googleClientId}
+        googleRedirectUri={googleRedirectUri}
+        onSelectTrack={handleSelectTrack}
         contentContainerStyle={{
           paddingTop: Math.max(insets.top, 20),
           paddingBottom: Math.max(insets.bottom, 20) + (activeTrack ? 80 : 0),

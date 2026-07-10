@@ -8,6 +8,8 @@ import {
   FlatList,
   ActivityIndicator,
   TextInput,
+  Modal,
+  Alert,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import TrackPlayer from '@rntp/player';
@@ -34,10 +36,29 @@ export default function QueueList({
   googleClientId,
   googleRedirectUri,
   onSelectTrack,
+  playlists = [],
+  onCreatePlaylist,
+  onDeletePlaylist,
+  onAddTrackToPlaylist,
+  onRemoveTrackFromPlaylist,
 }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('library'); // 'library' | 'queue'
+
+  // Playlists States
+  const [selectedPlaylistId, setSelectedPlaylistId] = useState(null);
+  const [showCreateInput, setShowCreateInput] = useState(false);
+  const [newPlaylistName, setNewPlaylistName] = useState('');
+  const [selectedTrackForOptions, setSelectedTrackForOptions] = useState(null);
+  const [isPlaylistPickerVisible, setIsPlaylistPickerVisible] = useState(false);
+  const [inlineNewPlaylistName, setInlineNewPlaylistName] = useState('');
+
+  // Reset selected playlist if source changes
+  useEffect(() => {
+    setSelectedPlaylistId(null);
+    setSearchQuery('');
+  }, [currentSource]);
 
   const renderGoogleDrivePanel = () => {
     if (isDriveConnected) {
@@ -125,31 +146,64 @@ export default function QueueList({
     );
   };
 
-  const selectTrack = async (item, index) => {
+  const selectTrack = async (item, index, playlistTracks) => {
     if (isProcessing) return;
     setIsProcessing(true);
     try {
       if (onSelectTrack) {
-        await onSelectTrack(item, index, activeTab);
+        await onSelectTrack(item, index, playlistTracks);
       } else {
-        if (activeTab === 'queue') {
-          console.log(`Selecting track from queue at index: ${index}`);
-          await TrackPlayer.skipToIndex(index);
-          await TrackPlayer.play();
-        } else {
-          const originalIndex = (tracks || []).findIndex(t => t.mediaId === item.mediaId);
-          const idx = originalIndex !== -1 ? originalIndex : 0;
-          console.log(`Resetting queue and playing library track at index: ${idx}`);
-          await TrackPlayer.clear();
-          await TrackPlayer.setMediaItems(tracks);
-          await TrackPlayer.skipToIndex(idx);
-          await TrackPlayer.play();
-        }
+        const trackList = playlistTracks || tracks;
+        await TrackPlayer.clear();
+        await TrackPlayer.setMediaItems(trackList);
+        await TrackPlayer.skipToIndex(index);
+        await TrackPlayer.play();
       }
     } catch (e) {
       console.error('Error selecting track:', e);
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const handlePlayPlaylist = async (playlist) => {
+    if (!playlist || playlist.tracks.length === 0) {
+      Alert.alert('Playlist vacía', 'Añade canciones a esta playlist antes de reproducirla.');
+      return;
+    }
+    if (isProcessing) return;
+    setIsProcessing(true);
+    try {
+      await TrackPlayer.clear();
+      await TrackPlayer.setMediaItems(playlist.tracks);
+      await TrackPlayer.skipToIndex(0);
+      await TrackPlayer.play();
+    } catch (e) {
+      console.error('Error playing playlist:', e);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleCreateNewPlaylist = async () => {
+    if (!newPlaylistName || newPlaylistName.trim() === '') return;
+    if (onCreatePlaylist) {
+      await onCreatePlaylist(newPlaylistName);
+      setNewPlaylistName('');
+      setShowCreateInput(false);
+    }
+  };
+
+  const handleCreateAndAdd = async () => {
+    if (!inlineNewPlaylistName || inlineNewPlaylistName.trim() === '') return;
+    if (onCreatePlaylist && onAddTrackToPlaylist && selectedTrackForOptions) {
+      const created = await onCreatePlaylist(inlineNewPlaylistName);
+      if (created) {
+        await onAddTrackToPlaylist(created.id, selectedTrackForOptions);
+      }
+      setInlineNewPlaylistName('');
+      setIsPlaylistPickerVisible(false);
+      setSelectedTrackForOptions(null);
     }
   };
 
@@ -162,203 +216,573 @@ export default function QueueList({
     return title.includes(query) || artist.includes(query);
   });
 
-  const listData = activeTab === 'library' 
-    ? (isLoading ? [] : displayTracks) 
-    : playQueue;
-
   const defaultArtwork = Image.resolveAssetSource(require('../../assets/default-cover.jpg')).uri;
 
-  return (
-    <FlatList
-      data={listData}
-      keyExtractor={(item, index) => `${item.mediaId}-${index}`}
-      ListHeaderComponent={
-        <>
-          {ListHeaderComponent}
+  // --- RENDER PLAYLISTS BROWSING MODE ---
+  if (currentSource === 'playlists') {
+    const selectedPlaylist = playlists.find(p => p.id === selectedPlaylistId);
+    const horizontalPadding = {
+      paddingLeft: contentContainerStyle?.paddingLeft ?? 20,
+      paddingRight: contentContainerStyle?.paddingRight ?? 20,
+    };
 
-          {/* Tabs Selector */}
-          <View style={styles.tabsContainer}>
-            <TouchableOpacity
-              onPress={() => {
-                setActiveTab('library');
-                setSearchQuery('');
-              }}
-              style={[styles.tabButton, activeTab === 'library' && styles.tabButtonActive]}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.tabLabel, activeTab === 'library' && styles.tabLabelActive]}>
-                Biblioteca
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setActiveTab('queue')}
-              style={[styles.tabButton, activeTab === 'queue' && styles.tabButtonActive]}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.tabLabel, activeTab === 'queue' && styles.tabLabelActive]}>
-                Cola de reproducción
-              </Text>
-            </TouchableOpacity>
-          </View>
+    // 1. Details of a single selected playlist
+    if (selectedPlaylist) {
+      const filteredPlaylistTracks = selectedPlaylist.tracks.filter(track => {
+        if (!searchQuery) return true;
+        const title = (track.title || '').toLowerCase();
+        const artist = (track.artist || '').toLowerCase();
+        const query = searchQuery.toLowerCase();
+        return title.includes(query) || artist.includes(query);
+      });
 
-          {/* Render Library elements ONLY when library tab is active */}
-          {activeTab === 'library' && (
+      return (
+        <FlatList
+          data={filteredPlaylistTracks}
+          keyExtractor={(item, index) => `${item.mediaId}-${index}`}
+          contentContainerStyle={[styles.listContent, contentContainerStyle]}
+          showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
             <>
-              {/* Search Bar Component */}
-              <View style={styles.searchSection}>
+              {ListHeaderComponent}
+
+              {/* Back button & Title */}
+              <View style={[styles.playlistDetailHeader, { paddingHorizontal: 0 }]}>
+                <TouchableOpacity
+                  onPress={() => setSelectedPlaylistId(null)}
+                  style={styles.playlistBackBtn}
+                  activeOpacity={0.7}
+                >
+                  <MaterialCommunityIcons name="arrow-left" size={24} color="#FFFFFF" />
+                </TouchableOpacity>
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={styles.playlistDetailName} numberOfLines={1}>{selectedPlaylist.name}</Text>
+                  <Text style={styles.playlistDetailCount}>{selectedPlaylist.tracks.length} canciones</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => handlePlayPlaylist(selectedPlaylist)}
+                  disabled={selectedPlaylist.tracks.length === 0}
+                  style={[styles.playlistPlayBtn, selectedPlaylist.tracks.length === 0 && styles.playlistPlayBtnDisabled]}
+                  activeOpacity={0.8}
+                >
+                  <MaterialCommunityIcons name="play" size={24} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
+
+              {/* Search bar */}
+              {selectedPlaylist.tracks.length > 0 && (
+                <View style={[styles.searchSection, { marginBottom: 16 }]}>
+                  <View style={styles.searchContainer}>
+                    <MaterialCommunityIcons name="magnify" size={20} color="#5F6070" style={styles.searchIcon} />
+                    <TextInput
+                      placeholder="Buscar en playlist..."
+                      placeholderTextColor="#5F6070"
+                      value={searchQuery}
+                      onChangeText={setSearchQuery}
+                      style={styles.searchInput}
+                    />
+                  </View>
+                </View>
+              )}
+            </>
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyWrapper}>
+              <MaterialCommunityIcons name="music-note-plus" size={48} color="#3F4052" />
+              <Text style={styles.emptyText}>Playlist vacía</Text>
+              <Text style={styles.emptySubText}>Añade canciones desde tu Biblioteca Local o Google Drive pulsando en los tres puntos de cada pista.</Text>
+            </View>
+          }
+          renderItem={({ item, index }) => {
+            const isCurrent = activeTrack ? activeTrack.mediaId === item.mediaId : false;
+            return (
+              <View style={[styles.queueItem, isCurrent && styles.queueItemActive]}>
+                <TouchableOpacity
+                  disabled={isProcessing}
+                  onPress={() => selectTrack(item, index, selectedPlaylist.tracks)}
+                  style={styles.itemMainContent}
+                  activeOpacity={0.7}
+                >
+                  <Image source={{ uri: item.artworkUrl || defaultArtwork }} style={styles.queueArtwork} />
+                  <View style={styles.queueDetails}>
+                    <Text style={[styles.queueTitle, isCurrent && styles.queueTextActive]} numberOfLines={1}>
+                      {item.title}
+                    </Text>
+                    <Text style={styles.queueArtist} numberOfLines={1}>
+                      {item.artist}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+
+                <View style={styles.rightActionsRow}>
+                  {isCurrent && (
+                    <View style={styles.playingIndicator}>
+                      <Text style={styles.playingIndicatorText}>SONANDO</Text>
+                    </View>
+                  )}
+                  <TouchableOpacity
+                    onPress={() => onRemoveTrackFromPlaylist && onRemoveTrackFromPlaylist(selectedPlaylistId, item.mediaId)}
+                    style={styles.addToQueueButton}
+                    activeOpacity={0.6}
+                  >
+                    <MaterialCommunityIcons name="trash-can-outline" size={22} color="#EF4444" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            );
+          }}
+        />
+      );
+    }
+
+    // 2. Playlists List view
+    const filteredPlaylists = playlists.filter(p => {
+      if (!searchQuery) return true;
+      return p.name.toLowerCase().includes(searchQuery.toLowerCase());
+    });
+    
+    return (
+      <FlatList
+        data={filteredPlaylists}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={[styles.listContent, contentContainerStyle]}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={
+          <>
+            {ListHeaderComponent}
+
+            {/* Header Title & Add Button */}
+            <View style={[styles.playlistsHeaderRow, { paddingHorizontal: 0 }]}>
+              <Text style={styles.playlistsTitle}>MIS LISTAS</Text>
+              <TouchableOpacity
+                onPress={() => setShowCreateInput(!showCreateInput)}
+                style={styles.createPlaylistToggleBtn}
+                activeOpacity={0.7}
+              >
+                <MaterialCommunityIcons name={showCreateInput ? "close" : "plus"} size={22} color="#A78BFA" />
+                <Text style={styles.createPlaylistToggleText}>{showCreateInput ? "Cancelar" : "Nueva"}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Input box to create playlist */}
+            {showCreateInput && (
+              <View style={styles.createPlaylistInputRow}>
+                <TextInput
+                  placeholder="Nombre de la playlist..."
+                  placeholderTextColor="#5F6070"
+                  value={newPlaylistName}
+                  onChangeText={setNewPlaylistName}
+                  style={styles.createPlaylistInput}
+                  autoFocus
+                />
+                <TouchableOpacity
+                  onPress={handleCreateNewPlaylist}
+                  disabled={!newPlaylistName || newPlaylistName.trim() === ''}
+                  style={[styles.createPlaylistBtn, (!newPlaylistName || newPlaylistName.trim() === '') && styles.createPlaylistBtnDisabled]}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.createPlaylistBtnText}>Crear</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Search bar */}
+            {playlists.length > 0 && (
+              <View style={[styles.searchSection, { marginBottom: 16 }]}>
                 <View style={styles.searchContainer}>
-                  <MaterialCommunityIcons name="magnify" size={20} color="#8E8F9E" style={styles.searchIcon} />
+                  <MaterialCommunityIcons name="magnify" size={20} color="#5F6070" style={styles.searchIcon} />
                   <TextInput
-                    style={styles.searchInput}
-                    placeholder="Buscar en la biblioteca..."
+                    placeholder="Buscar playlist..."
                     placeholderTextColor="#5F6070"
                     value={searchQuery}
                     onChangeText={setSearchQuery}
-                    autoCorrect={false}
+                    style={styles.searchInput}
                   />
-                  {searchQuery.length > 0 && (
-                    <TouchableOpacity onPress={() => setSearchQuery('')} activeOpacity={0.7}>
-                      <MaterialCommunityIcons name="close-circle" size={18} color="#8E8F9E" />
-                    </TouchableOpacity>
-                  )}
                 </View>
               </View>
-
-              {/* Local Library Action Buttons */}
-              {currentSource === 'local' && (
-                <View style={styles.localActionsRow}>
-                  <TouchableOpacity
-                    onPress={onScanLocal}
-                    style={styles.actionButton}
-                    activeOpacity={0.8}
-                  >
-                    <MaterialCommunityIcons name="folder-music" size={18} color="#A78BFA" />
-                    <Text style={styles.actionButtonText}>Escanear Audio</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    onPress={onImportMp3}
-                    style={styles.actionButton}
-                    activeOpacity={0.8}
-                  >
-                    <MaterialCommunityIcons name="file-plus" size={18} color="#A78BFA" />
-                    <Text style={styles.actionButtonText}>Importar MP3</Text>
-                  </TouchableOpacity>
-
-                  {hasCustomLocalTracks && (
-                    <TouchableOpacity
-                      onPress={onResetLocal}
-                      style={[styles.actionButton, styles.resetButton]}
-                      activeOpacity={0.8}
-                    >
-                      <MaterialCommunityIcons name="restore" size={18} color="#EF4444" />
-                    </TouchableOpacity>
-                  )}
-                </View>
-              )}
-
-              {/* Google Drive / Private Cloud Buttons and Connection UI */}
-              {currentSource === 'private' && renderGoogleDrivePanel()}
-            </>
-          )}
-
-          <Text style={styles.queueHeader}>
-            {activeTab === 'library' 
-              ? (searchQuery ? `RESULTADOS DE BÚSQUEDA (${displayTracks.length})` : 'CANCIONES DISPONIBLES') 
-              : 'COLA ACTUAL DE REPRODUCCIÓN'}
-          </Text>
-
-          {isLoading && activeTab === 'library' && (
-            <View style={styles.loadingWrapper}>
-              <ActivityIndicator size="small" color="#8B5CF6" />
-              <Text style={styles.loadingText}>Conectando con la fuente...</Text>
-            </View>
-          )}
-
-          {!isLoading && activeTab === 'library' && displayTracks.length === 0 && (currentSource !== 'private' || isDriveConnected) && (
-            <View style={styles.emptyWrapper}>
-              <MaterialCommunityIcons name="music-off" size={48} color="#3F4052" />
-              <Text style={styles.emptyText}>No se encontraron canciones</Text>
-              {currentSource === 'local' && !searchQuery && (
-                <Text style={styles.emptySubText}>Usa "Escanear Audio" o "Importar MP3" para cargar música local.</Text>
-              )}
-              {currentSource === 'private' && isDriveConnected && !searchQuery && (
-                <Text style={styles.emptySubText}>No se encontraron archivos .mp3 en tu Google Drive.</Text>
-              )}
-            </View>
-          )}
-
-          {activeTab === 'queue' && (playQueue || []).length === 0 && (
-            <View style={styles.emptyWrapper}>
-              <MaterialCommunityIcons name="playlist-remove" size={48} color="#3F4052" />
-              <Text style={styles.emptyText}>La cola está vacía</Text>
-              <Text style={styles.emptySubText}>Añade canciones a la cola desde la Biblioteca.</Text>
-            </View>
-          )}
-        </>
-      }
-      contentContainerStyle={[styles.listContent, contentContainerStyle]}
-      showsVerticalScrollIndicator={false}
-      renderItem={({ item, index }) => {
-        const isCurrent = activeTrack ? activeTrack.mediaId === item.mediaId : false;
-        return (
-          <View
-            style={[
-              styles.queueItem,
-              isCurrent && styles.queueItemActive,
-              isProcessing && styles.queueItemDisabled,
-            ]}
-          >
+            )}
+          </>
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyWrapper}>
+            <MaterialCommunityIcons name="playlist-music-outline" size={48} color="#3F4052" />
+            <Text style={styles.emptyText}>No hay playlists</Text>
+            <Text style={styles.emptySubText}>Crea tu primera lista de reproducción arriba para empezar a organizar tu música.</Text>
+          </View>
+        }
+        renderItem={({ item }) => (
+          <View style={styles.playlistRow}>
             <TouchableOpacity
-              disabled={isProcessing}
-              onPress={() => selectTrack(item, index)}
-              style={styles.itemMainContent}
+              onPress={() => setSelectedPlaylistId(item.id)}
+              style={styles.playlistRowMain}
               activeOpacity={0.7}
             >
-              <Image source={{ uri: item.artworkUrl || defaultArtwork }} style={styles.queueArtwork} />
-              <View style={styles.queueDetails}>
-                <Text
-                  style={[
-                    styles.queueTitle,
-                    isCurrent && styles.queueTextActive,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {item.title}
-                </Text>
-                <Text style={styles.queueArtist} numberOfLines={1}>
-                  {item.artist}
-                </Text>
+              <View style={styles.playlistIconWrapper}>
+                <MaterialCommunityIcons name="playlist-music" size={26} color="#8B5CF6" />
+              </View>
+              <View style={styles.playlistRowDetails}>
+                <Text style={styles.playlistRowName} numberOfLines={1}>{item.name}</Text>
+                <Text style={styles.playlistRowSub}>{item.tracks.length} canciones</Text>
               </View>
             </TouchableOpacity>
-
-            {isCurrent ? (
-              <View style={styles.playingIndicator}>
-                <Text style={styles.playingIndicatorText}>SONANDO</Text>
-              </View>
-            ) : (
-              activeTab === 'library' ? (
-                <TouchableOpacity
-                  onPress={() => onAddToQueue && onAddToQueue(item)}
-                  style={styles.addToQueueButton}
-                  activeOpacity={0.6}
-                >
-                  <MaterialCommunityIcons name="playlist-plus" size={24} color="#A78BFA" />
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity
-                  onPress={() => onRemoveFromQueue && onRemoveFromQueue(item, index)}
-                  style={styles.addToQueueButton}
-                  activeOpacity={0.6}
-                >
-                  <MaterialCommunityIcons name="close" size={22} color="#EF4444" />
-                </TouchableOpacity>
-              )
-            )}
+            
+            <View style={styles.playlistRowActions}>
+              <TouchableOpacity
+                onPress={() => handlePlayPlaylist(item)}
+                disabled={item.tracks.length === 0}
+                style={[styles.playlistActionIconBtn, item.tracks.length === 0 && styles.playlistActionIconBtnDisabled]}
+                activeOpacity={0.7}
+              >
+                <MaterialCommunityIcons name="play" size={22} color={item.tracks.length === 0 ? "#3F4052" : "#A78BFA"} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  Alert.alert(
+                    'Eliminar playlist',
+                    `¿Seguro que deseas eliminar "${item.name}"?`,
+                    [
+                      { text: 'Cancelar', style: 'cancel' },
+                      { text: 'Eliminar', style: 'destructive', onPress: () => onDeletePlaylist && onDeletePlaylist(item.id) }
+                    ]
+                  );
+                }}
+                style={styles.playlistActionIconBtn}
+                activeOpacity={0.7}
+              >
+                <MaterialCommunityIcons name="trash-can-outline" size={22} color="#EF4444" />
+              </TouchableOpacity>
+            </View>
           </View>
-        );
-      }}
-    />
+        )}
+      />
+    );
+  }
+
+  // --- RENDER REGULAR MUSIC LIBRARY / QUEUE ---
+  const listData = activeTab === 'library'
+    ? (isLoading ? [] : displayTracks)
+    : playQueue;
+
+  return (
+    <>
+      <FlatList
+        data={listData}
+        keyExtractor={(item, index) => `${item.mediaId}-${index}`}
+        ListHeaderComponent={
+          <>
+            {ListHeaderComponent}
+
+            {/* Tabs Selector */}
+            <View style={styles.tabsContainer}>
+              <TouchableOpacity
+                onPress={() => {
+                  setActiveTab('library');
+                  setSearchQuery('');
+                }}
+                style={[styles.tabButton, activeTab === 'library' && styles.tabButtonActive]}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.tabLabel, activeTab === 'library' && styles.tabLabelActive]}>
+                  Biblioteca
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setActiveTab('queue')}
+                style={[styles.tabButton, activeTab === 'queue' && styles.tabButtonActive]}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.tabLabel, activeTab === 'queue' && styles.tabLabelActive]}>
+                  Cola de reproducción
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Google Drive Status Panel (only under private source library tab) */}
+            {currentSource === 'private' && activeTab === 'library' && renderGoogleDrivePanel()}
+
+            {/* Actions for local library */}
+            {currentSource === 'local' && activeTab === 'library' && !isLoading && (
+              <View style={styles.localActionsRow}>
+                <TouchableOpacity onPress={onScanLocal} style={styles.actionButton} activeOpacity={0.7}>
+                  <MaterialCommunityIcons name="magnify" size={16} color="#A78BFA" />
+                  <Text style={styles.actionButtonText}>Escanear Audio</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={onImportMp3} style={styles.actionButton} activeOpacity={0.7}>
+                  <MaterialCommunityIcons name="file-import-outline" size={16} color="#A78BFA" />
+                  <Text style={styles.actionButtonText}>Importar MP3</Text>
+                </TouchableOpacity>
+                {hasCustomLocalTracks && (
+                  <TouchableOpacity onPress={onResetLocal} style={[styles.actionButton, styles.resetButton]} activeOpacity={0.7}>
+                    <MaterialCommunityIcons name="cached" size={16} color="#EF4444" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+
+            {/* Search Input (only visible in library view) */}
+            {activeTab === 'library' && (currentSource === 'local' || (currentSource === 'private' && isDriveConnected)) && (
+              <View style={styles.searchSection}>
+                <View style={styles.searchContainer}>
+                  <MaterialCommunityIcons name="magnify" size={20} color="#5F6070" style={styles.searchIcon} />
+                  <TextInput
+                    placeholder="Buscar canción o artista..."
+                    placeholderTextColor="#5F6070"
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    style={styles.searchInput}
+                  />
+                </View>
+              </View>
+            )}
+
+            {/* Section Header */}
+            {activeTab === 'queue' && (playQueue || []).length > 0 && (
+              <Text style={styles.queueHeader}>PISTAS EN COLA</Text>
+            )}
+
+            {/* Loading Indicator */}
+            {isLoading && activeTab === 'library' && (
+              <View style={styles.loadingWrapper}>
+                <ActivityIndicator size="large" color="#8B5CF6" />
+                <Text style={styles.loadingText}>Buscando pistas de audio...</Text>
+              </View>
+            )}
+
+            {/* Empty state handlers */}
+            {activeTab === 'library' && !isLoading && displayTracks.length === 0 && (
+              <View style={styles.emptyWrapper}>
+                <MaterialCommunityIcons name="music-off" size={48} color="#3F4052" />
+                <Text style={styles.emptyText}>No se encontraron canciones</Text>
+                {currentSource === 'local' && !searchQuery && (
+                  <Text style={styles.emptySubText}>Usa "Escanear Audio" o "Importar MP3" para cargar música local.</Text>
+                )}
+                {currentSource === 'private' && isDriveConnected && !searchQuery && (
+                  <Text style={styles.emptySubText}>No se encontraron archivos .mp3 en tu Google Drive.</Text>
+                )}
+              </View>
+            )}
+
+            {activeTab === 'queue' && (playQueue || []).length === 0 && (
+              <View style={styles.emptyWrapper}>
+                <MaterialCommunityIcons name="playlist-remove" size={48} color="#3F4052" />
+                <Text style={styles.emptyText}>La cola está vacía</Text>
+                <Text style={styles.emptySubText}>Añade canciones a la cola desde la Biblioteca.</Text>
+              </View>
+            )}
+          </>
+        }
+        contentContainerStyle={[styles.listContent, contentContainerStyle]}
+        showsVerticalScrollIndicator={false}
+        renderItem={({ item, index }) => {
+          const isCurrent = activeTrack ? activeTrack.mediaId === item.mediaId : false;
+          return (
+            <View
+              style={[
+                styles.queueItem,
+                isCurrent && styles.queueItemActive,
+                isProcessing && styles.queueItemDisabled,
+              ]}
+            >
+              <TouchableOpacity
+                disabled={isProcessing}
+                onPress={() => selectTrack(item, index)}
+                style={styles.itemMainContent}
+                activeOpacity={0.7}
+              >
+                <Image source={{ uri: item.artworkUrl || defaultArtwork }} style={styles.queueArtwork} />
+                <View style={styles.queueDetails}>
+                  <Text
+                    style={[
+                      styles.queueTitle,
+                      isCurrent && styles.queueTextActive,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {item.title}
+                  </Text>
+                  <Text style={styles.queueArtist} numberOfLines={1}>
+                    {item.artist}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              <View style={styles.rightActionsRow}>
+                {isCurrent && (
+                  <View style={styles.playingIndicator}>
+                    <Text style={styles.playingIndicatorText}>SONANDO</Text>
+                  </View>
+                )}
+                {activeTab === 'library' ? (
+                  <TouchableOpacity
+                    onPress={() => setSelectedTrackForOptions(item)}
+                    style={styles.addToQueueButton}
+                    activeOpacity={0.6}
+                  >
+                    <MaterialCommunityIcons name="dots-vertical" size={24} color="#8E8F9E" />
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    onPress={() => onRemoveFromQueue && onRemoveFromQueue(item, index)}
+                    style={styles.addToQueueButton}
+                    activeOpacity={0.6}
+                  >
+                    <MaterialCommunityIcons name="close" size={22} color="#EF4444" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          );
+        }}
+      />
+
+      {/* TRACK OPTIONS MODAL */}
+      <Modal
+        visible={selectedTrackForOptions !== null}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setSelectedTrackForOptions(null)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setSelectedTrackForOptions(null)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle} numberOfLines={1}>
+              {selectedTrackForOptions?.title}
+            </Text>
+            <Text style={styles.modalSubtitle} numberOfLines={1}>
+              {selectedTrackForOptions?.artist}
+            </Text>
+            
+            <View style={styles.modalDivider} />
+
+            <TouchableOpacity
+              onPress={() => {
+                if (onAddToQueue && selectedTrackForOptions) {
+                  onAddToQueue(selectedTrackForOptions);
+                }
+                setSelectedTrackForOptions(null);
+              }}
+              style={styles.modalOption}
+              activeOpacity={0.7}
+            >
+              <MaterialCommunityIcons name="playlist-plus" size={22} color="#A78BFA" />
+              <Text style={styles.modalOptionText}>Añadir a la cola</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => {
+                setIsPlaylistPickerVisible(true);
+              }}
+              style={styles.modalOption}
+              activeOpacity={0.7}
+            >
+              <MaterialCommunityIcons name="playlist-music-outline" size={22} color="#A78BFA" />
+              <Text style={styles.modalOptionText}>Añadir a una playlist...</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => setSelectedTrackForOptions(null)}
+              style={[styles.modalOption, styles.modalCancelOption]}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.modalCancelText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* PLAYLIST PICKER MODAL */}
+      <Modal
+        visible={isPlaylistPickerVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsPlaylistPickerVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => {
+            setIsPlaylistPickerVisible(false);
+            setSelectedTrackForOptions(null);
+          }}
+        >
+          <View style={[styles.modalContent, { maxHeight: '75%' }]}>
+            <Text style={styles.modalTitle}>Añadir a playlist</Text>
+            <Text style={styles.modalSubtitle} numberOfLines={1}>
+              Selecciona una lista de reproducción
+            </Text>
+
+            <View style={styles.modalDivider} />
+
+            {/* List of playlists */}
+            <FlatList
+              data={playlists}
+              keyExtractor={(item) => item.id}
+              showsVerticalScrollIndicator={false}
+              style={{ width: '100%', maxHeight: 240 }}
+              ListEmptyComponent={
+                <Text style={styles.emptyPlaylistsModalText}>No tienes playlists creadas.</Text>
+              }
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  onPress={async () => {
+                    if (onAddTrackToPlaylist && selectedTrackForOptions) {
+                      await onAddTrackToPlaylist(item.id, selectedTrackForOptions);
+                    }
+                    setIsPlaylistPickerVisible(false);
+                    setSelectedTrackForOptions(null);
+                  }}
+                  style={styles.playlistPickerOption}
+                  activeOpacity={0.7}
+                >
+                  <MaterialCommunityIcons name="playlist-music" size={20} color="#8B5CF6" />
+                  <Text style={styles.playlistPickerName} numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                  <Text style={styles.playlistPickerCount}>
+                    ({item.tracks.length})
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
+
+            <View style={styles.modalDivider} />
+
+            {/* Inline creation input inside picker */}
+            <View style={styles.inlineCreateWrapper}>
+              <TextInput
+                placeholder="Nueva playlist..."
+                placeholderTextColor="#5F6070"
+                value={inlineNewPlaylistName}
+                onChangeText={setInlineNewPlaylistName}
+                style={styles.inlineCreateInput}
+              />
+              <TouchableOpacity
+                onPress={handleCreateAndAdd}
+                disabled={!inlineNewPlaylistName || inlineNewPlaylistName.trim() === ''}
+                style={[styles.inlineCreateBtn, (!inlineNewPlaylistName || inlineNewPlaylistName.trim() === '') && styles.inlineCreateBtnDisabled]}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.inlineCreateBtnText}>Crear</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              onPress={() => {
+                setIsPlaylistPickerVisible(false);
+                setSelectedTrackForOptions(null);
+              }}
+              style={[styles.modalOption, styles.modalCancelOption, { marginTop: 10 }]}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.modalCancelText}>Atrás</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </>
   );
 }
 
@@ -479,6 +903,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 8,
+  },
+  rightActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   queueItemActive: {
     backgroundColor: '#1C1D2A',
@@ -684,6 +1112,300 @@ const styles = StyleSheet.create({
   driveConnectBtnText: {
     color: '#FFFFFF',
     fontSize: 15,
+    fontWeight: '700',
+  },
+
+  // Playlists specific styles
+  playlistDetailContainer: {
+    flex: 1,
+  },
+  playlistDetailHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingHorizontal: 8,
+    marginTop: 8,
+  },
+  playlistBackBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#12131A',
+    borderWidth: 1,
+    borderColor: '#1F202E',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  playlistDetailName: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  playlistDetailCount: {
+    color: '#5F6070',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  playlistPlayBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#8B5CF6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  playlistPlayBtnDisabled: {
+    backgroundColor: '#2A2B3D',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  playlistsHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    marginBottom: 16,
+    paddingHorizontal: 8,
+  },
+  playlistsTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  createPlaylistToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(139, 92, 246, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.2)',
+    borderRadius: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    gap: 4,
+  },
+  createPlaylistToggleText: {
+    color: '#A78BFA',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  createPlaylistInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#12131A',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#1F202E',
+    paddingLeft: 12,
+    paddingRight: 4,
+    height: 48,
+    marginBottom: 16,
+  },
+  createPlaylistInput: {
+    flex: 1,
+    color: '#E2E3E9',
+    fontSize: 14,
+    height: '100%',
+  },
+  createPlaylistBtn: {
+    backgroundColor: '#8B5CF6',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  createPlaylistBtnDisabled: {
+    backgroundColor: '#2A2B3D',
+  },
+  createPlaylistBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  playlistRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderRadius: 14,
+    backgroundColor: '#12131A',
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  playlistRowMain: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  playlistIconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    backgroundColor: 'rgba(139, 92, 246, 0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.2)',
+  },
+  playlistRowDetails: {
+    flex: 1,
+  },
+  playlistRowName: {
+    color: '#E2E3E9',
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  playlistRowSub: {
+    color: '#5F6070',
+    fontSize: 12,
+  },
+  playlistRowActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  playlistActionIconBtn: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  playlistActionIconBtnDisabled: {
+    opacity: 0.3,
+  },
+
+  // Modal styles for Track Options & Playlist Picker
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#0C0D14',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderWidth: 1,
+    borderColor: '#1F202E',
+    padding: 24,
+    paddingBottom: 40,
+    alignItems: 'center',
+    width: '100%',
+  },
+  modalTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '800',
+    textAlign: 'center',
+    width: '100%',
+  },
+  modalSubtitle: {
+    color: '#8E8F9E',
+    fontSize: 14,
+    marginTop: 4,
+    textAlign: 'center',
+    width: '100%',
+  },
+  modalDivider: {
+    height: 1,
+    backgroundColor: '#1F202E',
+    width: '100%',
+    marginVertical: 16,
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#12131A',
+    borderWidth: 1,
+    borderColor: '#1F202E',
+    borderRadius: 14,
+    width: '100%',
+    paddingVertical: 14,
+    marginBottom: 10,
+    gap: 8,
+  },
+  modalOptionText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  modalCancelOption: {
+    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+    borderColor: 'rgba(239, 68, 68, 0.2)',
+    marginTop: 6,
+  },
+  modalCancelText: {
+    color: '#EF4444',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  emptyPlaylistsModalText: {
+    color: '#5F6070',
+    fontSize: 13,
+    textAlign: 'center',
+    marginVertical: 16,
+  },
+  playlistPickerOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#12131A',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(31, 32, 46, 0.8)',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 8,
+    width: '100%',
+    gap: 8,
+  },
+  playlistPickerName: {
+    flex: 1,
+    color: '#E2E3E9',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  playlistPickerCount: {
+    color: '#5F6070',
+    fontSize: 12,
+  },
+  inlineCreateWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#12131A',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1F202E',
+    paddingLeft: 12,
+    paddingRight: 4,
+    height: 44,
+    width: '100%',
+    marginTop: 4,
+  },
+  inlineCreateInput: {
+    flex: 1,
+    color: '#E2E3E9',
+    fontSize: 13,
+    height: '100%',
+  },
+  inlineCreateBtn: {
+    backgroundColor: '#8B5CF6',
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  inlineCreateBtnDisabled: {
+    backgroundColor: '#2A2B3D',
+  },
+  inlineCreateBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
     fontWeight: '700',
   },
 });

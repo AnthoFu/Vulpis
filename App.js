@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -63,6 +63,7 @@ function MainApp() {
   const [hasCustomLocalTracks, setHasCustomLocalTracks] = useState(false);
 
   // Custom toast notification & queue management
+  const [playlists, setPlaylists] = useState([]);
   const [toast, setToast] = useState(null);
 
   const showToast = (message) => {
@@ -70,6 +71,76 @@ function MainApp() {
     setTimeout(() => {
       setToast(null);
     }, 2500);
+  };
+
+  // Playlists Helper Functions
+  useEffect(() => {
+    async function loadPlaylists() {
+      try {
+        const stored = await AsyncStorage.getItem('vulpis_playlists');
+        if (stored) {
+          setPlaylists(JSON.parse(stored));
+        }
+      } catch (err) {
+        console.error('[App] Error loading playlists:', err);
+      }
+    }
+    loadPlaylists();
+  }, []);
+
+  const handleCreatePlaylist = async (name) => {
+    if (!name || name.trim() === '') return null;
+    const newPlaylist = {
+      id: `playlist-${Date.now()}`,
+      name: name.trim(),
+      tracks: [],
+    };
+    const updated = [...playlists, newPlaylist];
+    setPlaylists(updated);
+    await AsyncStorage.setItem('vulpis_playlists', JSON.stringify(updated));
+    showToast(`Playlist "${name}" creada`);
+    return newPlaylist;
+  };
+
+  const handleDeletePlaylist = async (id) => {
+    const updated = playlists.filter((p) => p.id !== id);
+    setPlaylists(updated);
+    await AsyncStorage.setItem('vulpis_playlists', JSON.stringify(updated));
+    showToast('Playlist eliminada');
+  };
+
+  const handleAddTrackToPlaylist = async (playlistId, track) => {
+    const updated = playlists.map((p) => {
+      if (p.id === playlistId) {
+        if (p.tracks.some((t) => t.mediaId === track.mediaId)) {
+          showToast('La canción ya está en esta playlist');
+          return p;
+        }
+        showToast(`Añadida a: ${p.name}`);
+        return {
+          ...p,
+          tracks: [...p.tracks, track],
+        };
+      }
+      return p;
+    });
+    setPlaylists(updated);
+    await AsyncStorage.setItem('vulpis_playlists', JSON.stringify(updated));
+  };
+
+  const handleRemoveTrackFromPlaylist = async (playlistId, trackId) => {
+    const updated = playlists.map((p) => {
+      if (p.id === playlistId) {
+        return {
+          ...p,
+          tracks: p.tracks.filter((t) => t.mediaId !== trackId),
+        };
+      }
+      return p;
+    });
+    setPlaylists(updated);
+    await AsyncStorage.setItem('vulpis_playlists', JSON.stringify(updated));
+    showToast('Canción eliminada de la playlist');
   };
 
   const handleAddToQueue = async (item) => {
@@ -161,9 +232,82 @@ function MainApp() {
           console.error('[App] Error reading initial local tracks:', storageErr);
         }
 
+        // Now load saved player state if it exists
+        let savedState = null;
+        try {
+          const storedState = await AsyncStorage.getItem('vulpis_player_state');
+          if (storedState) {
+            savedState = JSON.parse(storedState);
+          }
+        } catch (stateErr) {
+          console.error('[App] Error reading saved player state:', stateErr);
+        }
+
+        // Check if we have a stored token for Drive
+        let hasDriveToken = false;
+        try {
+          const token = await getStoredToken();
+          if (token) {
+            hasDriveToken = true;
+          }
+        } catch (tokenErr) {
+          console.error('[App] Error checking Drive token:', tokenErr);
+        }
+
         await TrackPlayer.clear();
-        await TrackPlayer.setMediaItems(initialTracks);
-        await TrackPlayer.skipToIndex(0);
+
+        if (savedState && savedState.playQueue && savedState.playQueue.length > 0) {
+          console.log('[App] Restoring saved player state...');
+          
+          let sourceToRestore = savedState.currentSource || 'local';
+          if (sourceToRestore === 'private' && !hasDriveToken) {
+            console.log('[App] Saved source is private but no token found, falling back to local');
+            sourceToRestore = 'local';
+          }
+
+          if (isMounted) {
+            setCurrentSource(sourceToRestore);
+            
+            if (sourceToRestore === 'private') {
+              setPlayQueue(savedState.playQueue);
+              setTracks(savedState.tracksList || savedState.playQueue);
+            } else {
+              setPlayQueue(savedState.playQueue);
+              setTracks(initialTracks);
+            }
+          }
+
+          await TrackPlayer.setMediaItems(savedState.playQueue);
+          
+          // Find the index of active track
+          let activeIndex = 0;
+          if (savedState.activeTrackId) {
+            const idx = savedState.playQueue.findIndex(t => t.mediaId === savedState.activeTrackId);
+            if (idx !== -1) {
+              activeIndex = idx;
+            }
+          }
+          await TrackPlayer.skipToIndex(activeIndex);
+
+          if (savedState.progressPosition && savedState.progressPosition > 0) {
+            console.log(`[App] Seeking to saved position: ${savedState.progressPosition}`);
+            await TrackPlayer.seekTo(savedState.progressPosition);
+            if (isMounted) {
+              const activeTrackItem = savedState.playQueue[activeIndex];
+              setProgress({
+                position: savedState.progressPosition,
+                duration: activeTrackItem ? (activeTrackItem.duration || 0) : 0,
+              });
+            }
+          }
+        } else {
+          // Default setup
+          await TrackPlayer.setMediaItems(initialTracks);
+          await TrackPlayer.skipToIndex(0);
+          if (isMounted) {
+            setPlayQueue(initialTracks);
+          }
+        }
 
         console.log('[App] TrackPlayer setup completed successfully!');
         
@@ -231,12 +375,15 @@ function MainApp() {
       
       setTracks(driveTracks);
       
-      // Update the TrackPlayer queue
-      if (forceUpdatePlayer || currentSource === 'private') {
-        await TrackPlayer.clear();
-        if (driveTracks.length > 0) {
-          await TrackPlayer.setMediaItems(driveTracks);
-          await TrackPlayer.skipToIndex(0);
+      // Update the TrackPlayer queue ONLY if forceUpdatePlayer is true AND there is no active track playing
+      if (forceUpdatePlayer) {
+        const active = TrackPlayer.getActiveMediaItem();
+        if (!active) {
+          await TrackPlayer.clear();
+          if (driveTracks.length > 0) {
+            await TrackPlayer.setMediaItems(driveTracks);
+            await TrackPlayer.skipToIndex(0);
+          }
         }
       }
     } catch (err) {
@@ -312,11 +459,25 @@ function MainApp() {
     }
   };
 
+  const currentSourceRef = useRef(currentSource);
+  const tracksRef = useRef(tracks);
+
+  useEffect(() => {
+    currentSourceRef.current = currentSource;
+  }, [currentSource]);
+
+  useEffect(() => {
+    tracksRef.current = tracks;
+  }, [tracks]);
+
   // Polling JSI Getters para sincronizar el estado en Android
   useEffect(() => {
     if (!isPlayerInitialized) return;
     
     let tick = 0;
+    let lastSavedSec = -1;
+    let lastSavedTrackId = null;
+    let lastSavedQueueLen = -1;
 
     const updatePlayerState = () => {
       try {
@@ -349,6 +510,31 @@ function MainApp() {
           position: currentProgress?.position ?? 0,
           duration: currentProgress?.duration ?? 0,
         });
+
+        // State persistence check
+        const pos = currentProgress?.position ?? 0;
+        const trackId = currentActive?.mediaId ?? null;
+        const queueLen = currentQueue ? currentQueue.length : 0;
+        
+        // Save if track changed, or if progress moved by >= 5 seconds, or if queue length changed
+        const timeDiff = Math.abs(pos - lastSavedSec);
+        if (trackId !== lastSavedTrackId || timeDiff >= 5 || queueLen !== lastSavedQueueLen) {
+          lastSavedSec = pos;
+          lastSavedTrackId = trackId;
+          lastSavedQueueLen = queueLen;
+          
+          const stateToSave = {
+            currentSource: currentSourceRef.current,
+            playQueue: currentQueue || [],
+            tracksList: tracksRef.current,
+            activeTrackId: trackId,
+            progressPosition: pos,
+          };
+          
+          AsyncStorage.setItem('vulpis_player_state', JSON.stringify(stateToSave))
+            .catch(err => console.error('[App] Error saving player state:', err));
+        }
+
       } catch (e) {
         console.log('[App] Error actualizando estado de TrackPlayer:', e);
       }
@@ -384,41 +570,21 @@ function MainApp() {
     setIsSourceChanging(true);
     setCurrentSource(source);
     
-    let selectedQueue = [];
     if (source === 'local') {
-      selectedQueue = localLibraryTracks;
-      setTracks(selectedQueue);
-      
-      try {
-        console.log(`[App] Switching source to local...`);
-        await TrackPlayer.clear();
-        await TrackPlayer.setMediaItems(selectedQueue);
-        await TrackPlayer.skipToIndex(0);
-        
-        if (isPlaying) {
-          await TrackPlayer.play();
-        }
-        console.log(`[App] Source switched to local successfully.`);
-      } catch (e) {
-        console.error('[App] Error switching tracks source to local:', e);
-      } finally {
-        setIsSourceChanging(false);
-      }
+      setTracks(localLibraryTracks);
+      setIsSourceChanging(false);
     } else if (source === 'private') {
       const token = await getStoredToken();
       if (token) {
         setIsDriveConnected(true);
-        await loadDriveFiles(token, true);
+        await loadDriveFiles(token, false);
       } else {
         setIsDriveConnected(false);
         setTracks([]);
-        try {
-          await TrackPlayer.clear();
-        } catch (e) {
-          console.error('[App] Error clearing player queue:', e);
-        }
         setIsSourceChanging(false);
       }
+    } else if (source === 'playlists') {
+      setIsSourceChanging(false);
     }
   };
 
@@ -615,7 +781,110 @@ function MainApp() {
     }
   };
 
-  const handleSelectTrack = async (item, index, activeTab) => {
+  // Background Buffering for Google Drive files
+  useEffect(() => {
+    if (!isPlayerInitialized) return;
+    if (!activeTrack) return;
+
+    let isMounted = true;
+
+    async function prefetchNextTrack() {
+      try {
+        const activeIndex = TrackPlayer.getActiveMediaItemIndex();
+        if (activeIndex === null || activeIndex === -1) return;
+
+        const currentQueue = TrackPlayer.getQueue();
+        if (!currentQueue || currentQueue.length <= 1) return;
+
+        // Calculate next index
+        let nextIndex = activeIndex + 1;
+        if (nextIndex >= currentQueue.length) {
+          // If repeat queue is on, wrap around to 0
+          const repeatMode = TrackPlayer.getRepeatMode();
+          if (repeatMode === RepeatMode.Queue) {
+            nextIndex = 0;
+          } else {
+            return; // No next track
+          }
+        }
+
+        const nextTrack = currentQueue[nextIndex];
+        if (!nextTrack) return;
+
+        // Check if next track is a Drive track and not yet cached
+        if (nextTrack.mediaId.startsWith('drive-') && !nextTrack.url.startsWith('file://')) {
+          const fileId = nextTrack.mediaId.replace('drive-', '');
+          
+          // Check if file is already in Cache (to avoid requesting token or starting download if it already exists)
+          const localUri = FileSystem.cacheDirectory + `${fileId}.mp3`;
+          const fileInfo = await FileSystem.getInfoAsync(localUri);
+          
+          if (fileInfo.exists) {
+            console.log(`[Buffering] Next track is already cached locally at: ${localUri}. Updating queue...`);
+            const updatedTrack = { ...nextTrack, url: localUri };
+            
+            if (isMounted) {
+              // Update native queue
+              const latestQueue = TrackPlayer.getQueue();
+              if (latestQueue && nextIndex < latestQueue.length && latestQueue[nextIndex].mediaId === nextTrack.mediaId) {
+                await TrackPlayer.replaceMediaItem(nextIndex, updatedTrack);
+              }
+              // Update state
+              setPlayQueue(prev => {
+                const newQueue = [...prev];
+                if (nextIndex < newQueue.length && newQueue[nextIndex].mediaId === nextTrack.mediaId) {
+                  newQueue[nextIndex] = updatedTrack;
+                }
+                return newQueue;
+              });
+              setTracks(prev => prev.map(t => t.mediaId === nextTrack.mediaId ? updatedTrack : t));
+            }
+            return;
+          }
+
+          // Otherwise, we need to download it
+          const token = await getStoredToken();
+          if (!token) return;
+
+          console.log(`[Buffering] Starting background pre-download for: ${nextTrack.title}`);
+          const downloadedUri = await downloadDriveFile(fileId, nextTrack.title, token);
+          
+          if (downloadedUri && isMounted) {
+            console.log(`[Buffering] Background pre-download finished: ${nextTrack.title}`);
+            const updatedTrack = { ...nextTrack, url: downloadedUri };
+            
+            // Update native queue
+            const latestQueue = TrackPlayer.getQueue();
+            if (latestQueue && nextIndex < latestQueue.length && latestQueue[nextIndex].mediaId === nextTrack.mediaId) {
+              await TrackPlayer.replaceMediaItem(nextIndex, updatedTrack);
+            }
+            
+            // Update state
+            setPlayQueue(prev => {
+              const newQueue = [...prev];
+              if (nextIndex < newQueue.length && newQueue[nextIndex].mediaId === nextTrack.mediaId) {
+                newQueue[nextIndex] = updatedTrack;
+              }
+              return newQueue;
+            });
+            setTracks(prev => prev.map(t => t.mediaId === nextTrack.mediaId ? updatedTrack : t));
+          }
+        }
+      } catch (err) {
+        console.error('[Buffering] Error during prefetch:', err);
+      }
+    }
+
+    prefetchNextTrack();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeTrack, isPlayerInitialized]);
+
+  const handleSelectTrack = async (item, index, playlistTracks) => {
+    const trackListToLoad = playlistTracks || tracks;
+
     if (item.mediaId.startsWith('drive-') && !item.url.startsWith('file://')) {
       try {
         showToast(`Descargando canción: ${item.title}...`);
@@ -626,13 +895,30 @@ function MainApp() {
         const localUri = await downloadDriveFile(fileId, item.title, token);
         
         if (localUri) {
-          const updatedTracks = tracks.map(t => {
+          const updatedTracks = trackListToLoad.map(t => {
             if (t.mediaId === item.mediaId) {
               return { ...t, url: localUri };
             }
             return t;
           });
-          setTracks(updatedTracks);
+
+          if (!playlistTracks) {
+            setTracks(updatedTracks);
+          }
+
+          // Update playlists track URLs
+          const updatedPlaylists = playlists.map(p => {
+            const hasTrack = p.tracks.some(t => t.mediaId === item.mediaId);
+            if (hasTrack) {
+              return {
+                ...p,
+                tracks: p.tracks.map(t => t.mediaId === item.mediaId ? { ...t, url: localUri } : t)
+              };
+            }
+            return p;
+          });
+          setPlaylists(updatedPlaylists);
+          await AsyncStorage.setItem('vulpis_playlists', JSON.stringify(updatedPlaylists));
           
           console.log('[App] Loading track with local cached file:', localUri);
           await TrackPlayer.clear();
@@ -652,15 +938,10 @@ function MainApp() {
       }
     } else {
       try {
-        if (activeTab === 'queue') {
-          await TrackPlayer.skipToIndex(index);
-          await TrackPlayer.play();
-        } else {
-          await TrackPlayer.clear();
-          await TrackPlayer.setMediaItems(tracks);
-          await TrackPlayer.skipToIndex(index);
-          await TrackPlayer.play();
-        }
+        await TrackPlayer.clear();
+        await TrackPlayer.setMediaItems(trackListToLoad);
+        await TrackPlayer.skipToIndex(index);
+        await TrackPlayer.play();
       } catch (e) {
         console.error('[App] Error selecting track:', e);
       }
@@ -706,6 +987,11 @@ function MainApp() {
         googleClientId={googleClientId}
         googleRedirectUri={googleRedirectUri}
         onSelectTrack={handleSelectTrack}
+        playlists={playlists}
+        onCreatePlaylist={handleCreatePlaylist}
+        onDeletePlaylist={handleDeletePlaylist}
+        onAddTrackToPlaylist={handleAddTrackToPlaylist}
+        onRemoveTrackFromPlaylist={handleRemoveTrackFromPlaylist}
         contentContainerStyle={{
           paddingTop: Math.max(insets.top, 20),
           paddingBottom: Math.max(insets.bottom, 20) + (activeTrack ? 80 : 0),
@@ -724,6 +1010,10 @@ function MainApp() {
         position={progress.position}
         duration={progress.duration}
         onPress={() => setIsFullPlayerVisible(true)}
+        tracks={tracks}
+        playQueue={playQueue}
+        onSelectTrack={handleSelectTrack}
+        isShuffleActive={isShuffleActive}
       />
 
       {/* Full Screen Player Modal */}
@@ -743,6 +1033,7 @@ function MainApp() {
           playQueue={playQueue}
           onRemoveFromQueue={handleRemoveFromQueue}
           onClose={() => setIsFullPlayerVisible(false)}
+          onSelectTrack={handleSelectTrack}
         />
       </Modal>
 

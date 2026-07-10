@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, Image, TouchableOpacity, FlatList } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { StyleSheet, Text, View, Image, TouchableOpacity, FlatList, Animated } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TrackPlayer from '@rntp/player';
+import { LinearGradient } from 'expo-linear-gradient';
+import ImageColors from 'react-native-image-colors';
 import ProgressBar from './ProgressBar';
 import Controls from './Controls';
 
@@ -17,6 +19,7 @@ export default function PlayerCard({
   playQueue,
   onRemoveFromQueue,
   onClose,
+  onSelectTrack,
 }) {
   const insets = useSafeAreaInsets();
   const [isQueueVisible, setIsQueueVisible] = useState(false);
@@ -27,6 +30,57 @@ export default function PlayerCard({
   const currentTrackArtist = activeTrack?.artist ?? defaultTrack.artist;
   const currentTrackArtwork = activeTrack?.artworkUrl ?? defaultTrack.artworkUrl;
 
+  const [colorA, setColorA] = useState('#161722');
+  const [colorB, setColorB] = useState('#161722');
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    let isMounted = true;
+    
+    const fetchColors = async () => {
+      if (!currentTrackArtwork) return;
+      try {
+        const result = await ImageColors.getColors(currentTrackArtwork, {
+          fallback: '#161722',
+          cache: true,
+          key: currentTrackArtwork,
+        });
+
+        let newColor = '#161722';
+        if (result.type === 'android') {
+          newColor = result.dominant || result.vibrant || result.darkVibrant || '#161722';
+        } else if (result.type === 'ios') {
+          newColor = result.primary || result.background || '#161722';
+        } else if (result.type === 'web') {
+          newColor = result.dominant || '#161722';
+        }
+
+        if (isMounted) {
+          setColorB(newColor);
+          fadeAnim.setValue(0);
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }).start(() => {
+            if (isMounted) {
+              setColorA(newColor);
+              fadeAnim.setValue(0);
+            }
+          });
+        }
+      } catch (e) {
+        console.error('Error fetching image colors:', e);
+      }
+    };
+
+    fetchColors();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentTrackArtwork]);
+
   const selectTrackFromQueue = async (index) => {
     try {
       console.log(`[PlayerCard Queue] Skipping to index: ${index}`);
@@ -35,6 +89,31 @@ export default function PlayerCard({
     } catch (e) {
       console.error('[PlayerCard Queue] Error skipping to index:', e);
     }
+  };
+
+  const renderBackground = () => {
+    return (
+      <View style={StyleSheet.absoluteFill}>
+        {/* Layer A (Base / Prev Color) */}
+        <LinearGradient
+          colors={[colorA, '#090A0F']}
+          style={StyleSheet.absoluteFill}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+        />
+        {/* Layer B (Target Color, Fading In) */}
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity: fadeAnim }]}>
+          <LinearGradient
+            colors={[colorB, '#090A0F']}
+            style={StyleSheet.absoluteFill}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+          />
+        </Animated.View>
+        {/* Dark overlay to ensure text is always readable */}
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(9, 10, 15, 0.4)' }]} />
+      </View>
+    );
   };
 
   // If the internal Queue overlay is visible, render it
@@ -49,6 +128,7 @@ export default function PlayerCard({
           },
         ]}
       >
+        {renderBackground()}
         {/* Header Row */}
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => setIsQueueVisible(false)} style={styles.closeButton} activeOpacity={0.7}>
@@ -116,6 +196,7 @@ export default function PlayerCard({
         },
       ]}
     >
+      {renderBackground()}
       {/* Header Row */}
       <View style={styles.headerRow}>
         <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.7}>
@@ -153,6 +234,10 @@ export default function PlayerCard({
           isPlaying={isPlaying}
           repeatMode={repeatMode}
           isShuffleActive={isShuffleActive}
+          tracks={tracks}
+          playQueue={playQueue}
+          activeTrack={activeTrack}
+          onSelectTrack={onSelectTrack}
         />
 
         {/* Footer controls button */}
@@ -174,7 +259,6 @@ export default function PlayerCard({
 const styles = StyleSheet.create({
   playerFullScreen: {
     flex: 1,
-    backgroundColor: '#090A0F',
     paddingHorizontal: 24,
     justifyContent: 'space-between',
   },
@@ -184,16 +268,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     height: 56,
     width: '100%',
+    zIndex: 10,
   },
   closeButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#161722',
+    backgroundColor: 'rgba(22, 23, 34, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#2C2D3C',
+    borderColor: 'rgba(44, 45, 60, 0.6)',
   },
   headerTitle: {
     color: '#8B5CF6',
@@ -211,6 +296,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginVertical: 16,
     width: '100%',
+    zIndex: 10,
   },
   artworkShadowWrapper: {
     width: '100%',
@@ -232,6 +318,7 @@ const styles = StyleSheet.create({
   bottomSection: {
     width: '100%',
     marginBottom: 8,
+    zIndex: 10,
   },
   trackDetails: {
     alignItems: 'flex-start',
@@ -246,7 +333,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   trackArtist: {
-    color: '#8E8F9E',
+    color: '#E2E3E9',
     fontSize: 16,
     fontWeight: '500',
   },
@@ -262,9 +349,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: '#161722',
+    backgroundColor: 'rgba(22, 23, 34, 0.6)',
     borderWidth: 1,
-    borderColor: '#2C2D3C',
+    borderColor: 'rgba(44, 45, 60, 0.6)',
   },
   footerButtonText: {
     color: '#8E8F9E',
@@ -273,20 +360,21 @@ const styles = StyleSheet.create({
   },
   queueListContent: {
     paddingVertical: 12,
+    zIndex: 10,
   },
   queueItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
     borderRadius: 14,
-    backgroundColor: '#12131A',
+    backgroundColor: 'rgba(18, 19, 26, 0.6)',
     marginBottom: 10,
     borderWidth: 1,
     borderColor: 'transparent',
   },
   queueItemActive: {
-    backgroundColor: '#1C1D2A',
-    borderColor: '#3B3D54',
+    backgroundColor: 'rgba(28, 29, 42, 0.7)',
+    borderColor: 'rgba(59, 61, 84, 0.7)',
   },
   queueItemMainContent: {
     flexDirection: 'row',

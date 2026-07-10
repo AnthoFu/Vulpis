@@ -3,12 +3,21 @@ import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import TrackPlayer, { RepeatMode } from '@rntp/player';
 
-export default function Controls({ isPlaying, repeatMode, isShuffleActive }) {
+export default function Controls({
+  isPlaying,
+  repeatMode,
+  isShuffleActive,
+  tracks = [],
+  playQueue = [],
+  activeTrack,
+  onSelectTrack,
+}) {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const togglePlayback = async () => {
     if (isProcessing) return;
     setIsProcessing(true);
+    const timer = setTimeout(() => setIsProcessing(false), 1500);
     try {
       console.log('Toggling playback. Current isPlaying:', isPlaying);
       if (isPlaying) {
@@ -19,20 +28,65 @@ export default function Controls({ isPlaying, repeatMode, isShuffleActive }) {
     } catch (e) {
       console.error('Error toggling playback:', e);
     } finally {
+      clearTimeout(timer);
       setIsProcessing(false);
+    }
+  };
+
+  const playLibraryFallback = async (direction) => {
+    try {
+      if (tracks && tracks.length > 0 && onSelectTrack) {
+        let targetIndex = 0;
+        if (isShuffleActive) {
+          targetIndex = Math.floor(Math.random() * tracks.length);
+        } else if (activeTrack) {
+          const currentIdx = tracks.findIndex(t => t.mediaId === activeTrack.mediaId);
+          if (currentIdx !== -1) {
+            if (direction === 'next') {
+              targetIndex = (currentIdx + 1) % tracks.length;
+            } else {
+              targetIndex = (currentIdx - 1 + tracks.length) % tracks.length;
+            }
+          }
+        }
+        const targetTrack = tracks[targetIndex];
+        if (targetTrack) {
+          console.log(`[Controls] Skipping fallback to library track: ${targetTrack.title}`);
+          await onSelectTrack(targetTrack, targetIndex);
+        }
+      } else {
+        await TrackPlayer.seekTo(0);
+        await TrackPlayer.play();
+      }
+    } catch (fallbackErr) {
+      console.error('Error in playLibraryFallback:', fallbackErr);
+      try {
+        await TrackPlayer.seekTo(0);
+        await TrackPlayer.play();
+      } catch (err) {
+        console.error('Absolute fallback failed:', err);
+      }
     }
   };
 
   const playNext = async () => {
     if (isProcessing) return;
     setIsProcessing(true);
+    const timer = setTimeout(() => setIsProcessing(false), 1500);
     try {
-      console.log('Skipping to next track');
-      await TrackPlayer.skipToNext();
-      await TrackPlayer.play();
+      if (playQueue && playQueue.length > 1) {
+        console.log('Skipping to next track in queue');
+        await TrackPlayer.skipToNext();
+        await TrackPlayer.play();
+      } else {
+        console.log('Queue has 1 or fewer tracks, triggering library fallback');
+        await playLibraryFallback('next');
+      }
     } catch (e) {
       console.log('No next track or end of queue:', e);
+      await playLibraryFallback('next');
     } finally {
+      clearTimeout(timer);
       setIsProcessing(false);
     }
   };
@@ -40,13 +94,21 @@ export default function Controls({ isPlaying, repeatMode, isShuffleActive }) {
   const playPrevious = async () => {
     if (isProcessing) return;
     setIsProcessing(true);
+    const timer = setTimeout(() => setIsProcessing(false), 1500);
     try {
-      console.log('Skipping to previous track');
-      await TrackPlayer.skipToPrevious();
-      await TrackPlayer.play();
+      if (playQueue && playQueue.length > 1) {
+        console.log('Skipping to previous track in queue');
+        await TrackPlayer.skipToPrevious();
+        await TrackPlayer.play();
+      } else {
+        console.log('Queue has 1 or fewer tracks, triggering library fallback');
+        await playLibraryFallback('prev');
+      }
     } catch (e) {
       console.log('No previous track or start of queue:', e);
+      await playLibraryFallback('prev');
     } finally {
+      clearTimeout(timer);
       setIsProcessing(false);
     }
   };
@@ -54,6 +116,7 @@ export default function Controls({ isPlaying, repeatMode, isShuffleActive }) {
   const toggleShuffle = async () => {
     if (isProcessing) return;
     setIsProcessing(true);
+    const timer = setTimeout(() => setIsProcessing(false), 1500);
     try {
       const nextShuffle = !isShuffleActive;
       console.log('Setting shuffle enabled:', nextShuffle);
@@ -61,6 +124,7 @@ export default function Controls({ isPlaying, repeatMode, isShuffleActive }) {
     } catch (e) {
       console.error('Error toggling shuffle:', e);
     } finally {
+      clearTimeout(timer);
       setIsProcessing(false);
     }
   };
@@ -68,6 +132,7 @@ export default function Controls({ isPlaying, repeatMode, isShuffleActive }) {
   const cycleRepeatMode = async () => {
     if (isProcessing) return;
     setIsProcessing(true);
+    const timer = setTimeout(() => setIsProcessing(false), 1500);
     try {
       let nextMode;
       if (repeatMode === RepeatMode.Off || !repeatMode) {
@@ -82,6 +147,7 @@ export default function Controls({ isPlaying, repeatMode, isShuffleActive }) {
     } catch (e) {
       console.error('Error setting repeat mode:', e);
     } finally {
+      clearTimeout(timer);
       setIsProcessing(false);
     }
   };

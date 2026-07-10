@@ -78,6 +78,12 @@ export default function SidebarDrawer({ isOpen, onClose, currentSource, onSelect
       icon: 'google-drive',
       description: 'Música en tu Google Drive',
     },
+    {
+      id: 'playlists',
+      label: 'Mis Playlists',
+      icon: 'playlist-music-outline',
+      description: 'Tus listas de reproducción híbridas',
+    },
   ];
 
   return (

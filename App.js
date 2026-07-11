@@ -485,6 +485,40 @@ function MainApp() {
     }
   };
 
+  const handleUploadLocalTrackToDrive = async (track) => {
+    const token = await getStoredToken();
+    if (!token) {
+      Alert.alert(
+        'Google Drive no conectado',
+        'Por favor, conéctate a Google Drive en la pestaña de Nube Privada primero.'
+      );
+      return;
+    }
+
+    setIsDriveLoading(true);
+    setIsSourceChanging(true);
+    showToast(`Subiendo a Drive: ${track.title}...`);
+
+    try {
+      let filename = track.title;
+      if (!filename.toLowerCase().endsWith('.mp3')) {
+        filename += '.mp3';
+      }
+
+      await uploadTrackToDrive(track.url, filename, token);
+      showToast('¡Subido a Drive exitosamente!');
+      
+      // Refresh the tracks list if connected to drive
+      await loadDriveFiles(token);
+    } catch (e) {
+      console.error('[App] Error uploading local track to Drive:', e);
+      Alert.alert('Error', 'No se pudo subir la canción seleccionada a Google Drive.');
+    } finally {
+      setIsDriveLoading(false);
+      setIsSourceChanging(false);
+    }
+  };
+
   const handleDeleteDriveTrack = async (track) => {
     const token = await getStoredToken();
     if (!token) {
@@ -1074,6 +1108,7 @@ function MainApp() {
         onDisconnectDrive={handleDisconnectDrive}
         onRefreshDrive={handleRefreshDrive}
         onUploadTrackToDrive={handleUploadTrackToDrive}
+        onUploadLocalTrackToDrive={handleUploadLocalTrackToDrive}
         onDeleteDriveTrack={handleDeleteDriveTrack}
         isDriveLoading={isDriveLoading}
         googleClientId={googleClientId}

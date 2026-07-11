@@ -42,6 +42,7 @@ export default function QueueList({
   onAddTrackToPlaylist,
   onRemoveTrackFromPlaylist,
   onUploadTrackToDrive,
+  onUploadLocalTrackToDrive,
   onDeleteDriveTrack,
 }) {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -693,6 +694,21 @@ export default function QueueList({
               <MaterialCommunityIcons name="playlist-music-outline" size={22} color="#A78BFA" />
               <Text style={styles.modalOptionText}>Añadir a una playlist...</Text>
             </TouchableOpacity>
+
+            {!selectedTrackForOptions?.mediaId?.startsWith('drive-') && onUploadLocalTrackToDrive && (
+              <TouchableOpacity
+                onPress={() => {
+                  const trackToUpload = selectedTrackForOptions;
+                  setSelectedTrackForOptions(null);
+                  onUploadLocalTrackToDrive(trackToUpload);
+                }}
+                style={styles.modalOption}
+                activeOpacity={0.7}
+              >
+                <MaterialCommunityIcons name="cloud-upload-outline" size={22} color="#A78BFA" />
+                <Text style={styles.modalOptionText}>Subir a Google Drive</Text>
+              </TouchableOpacity>
+            )}
 
             {selectedTrackForOptions?.mediaId?.startsWith('drive-') && onDeleteDriveTrack && (
               <TouchableOpacity

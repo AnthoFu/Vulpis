@@ -189,15 +189,96 @@ export const signInWithGoogle = async (clientId, redirectUri) => {
 };
 
 /**
- * Fetches MP3 audio files from the user's Google Drive
+ * Gets the ID of the dedicated "Vulpis" folder in Google Drive, creating it if it doesn't exist.
+ */
+export const getOrCreateVulpisFolder = async (accessToken) => {
+  const FOLDER_CACHE_KEY = 'vulpis_google_folder_id';
+  try {
+    const cachedId = await AsyncStorage.getItem(FOLDER_CACHE_KEY);
+    if (cachedId) {
+      // Verify folder exists and is not trashed
+      const verifyUrl = `https://www.googleapis.com/drive/v3/files/${cachedId}?fields=id,trashed`;
+      const verifyRes = await fetch(verifyUrl, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      if (verifyRes.ok) {
+        const verifyData = await verifyRes.json();
+        if (!verifyData.trashed) {
+          console.log('[Drive] Using cached Vulpis folder ID:', cachedId);
+          return cachedId;
+        }
+      }
+      await AsyncStorage.removeItem(FOLDER_CACHE_KEY);
+    }
+
+    // Search for Vulpis folder
+    console.log('[Drive] Searching for Vulpis folder...');
+    const q = encodeURIComponent("mimeType = 'application/vnd.google-apps.folder' and name = 'Vulpis' and trashed = false");
+    const searchUrl = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)`;
+    const searchRes = await fetch(searchUrl, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!searchRes.ok) {
+      throw new Error(`Failed to search folder: ${searchRes.status}`);
+    }
+
+    const searchData = await searchRes.json();
+    if (searchData.files && searchData.files.length > 0) {
+      const folderId = searchData.files[0].id;
+      console.log('[Drive] Found existing Vulpis folder:', folderId);
+      await AsyncStorage.setItem(FOLDER_CACHE_KEY, folderId);
+      return folderId;
+    }
+
+    // Create Vulpis folder
+    console.log('[Drive] Vulpis folder not found. Creating it...');
+    const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: 'Vulpis',
+        mimeType: 'application/vnd.google-apps.folder',
+      }),
+    });
+
+    if (!createRes.ok) {
+      throw new Error(`Failed to create Vulpis folder: ${createRes.status}`);
+    }
+
+    const createData = await createRes.json();
+    const newFolderId = createData.id;
+    console.log('[Drive] Created new Vulpis folder:', newFolderId);
+    await AsyncStorage.setItem(FOLDER_CACHE_KEY, newFolderId);
+    return newFolderId;
+  } catch (err) {
+    console.error('[Drive] Error in getOrCreateVulpisFolder:', err);
+    throw err;
+  }
+};
+
+/**
+ * Fetches MP3 audio files from the user's Google Drive inside the dedicated Vulpis folder
  */
 export const fetchDriveMp3Files = async (accessToken) => {
   if (!accessToken) {
     throw new Error('Token de acceso no válido.');
   }
 
-  // Query: MP3 files only, not in trash, ordered by name
-  const q = encodeURIComponent("mimeType = 'audio/mpeg' and trashed = false");
+  // Ensure Vulpis folder exists and get its ID
+  const folderId = await getOrCreateVulpisFolder(accessToken);
+
+  // Query: MP3 files only inside the Vulpis folder, not in trash, ordered by name
+  const q = encodeURIComponent(`mimeType = 'audio/mpeg' and trashed = false and '${folderId}' in parents`);
   const fields = 'files(id,name,size,webContentLink)';
   const driveUrl = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=${encodeURIComponent(fields)}&orderBy=name`;
 
@@ -297,14 +378,17 @@ export const mapDriveFileToTrack = (file, accessToken, defaultCover, resolvedUrl
 };
 
 /**
- * Uploads an MP3 file to Google Drive using a two-step process to avoid large memory footprints.
+ * Uploads an MP3 file to Google Drive dedicated Vulpis folder using a two-step process.
  */
 export const uploadTrackToDrive = async (fileUri, fileName, accessToken) => {
   if (!accessToken) {
     throw new Error('Token de acceso no válido.');
   }
 
-  console.log('[Drive] Creating file metadata for upload:', fileName);
+  // Ensure Vulpis folder exists and get its ID
+  const folderId = await getOrCreateVulpisFolder(accessToken);
+
+  console.log('[Drive] Creating file metadata for upload inside Vulpis folder:', fileName);
   const createResponse = await fetch('https://www.googleapis.com/drive/v3/files', {
     method: 'POST',
     headers: {
@@ -314,6 +398,7 @@ export const uploadTrackToDrive = async (fileUri, fileName, accessToken) => {
     body: JSON.stringify({
       name: fileName,
       mimeType: 'audio/mpeg',
+      parents: [folderId],
     }),
   });
 

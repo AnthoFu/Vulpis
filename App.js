@@ -32,6 +32,8 @@ import {
   mapDriveFileToTrack,
   clearAllCredentials,
   getDriveRedirectUrl,
+  uploadTrackToDrive,
+  deleteTrackFromDrive,
 } from './src/utils/drive';
 
 function MainApp() {
@@ -446,6 +448,94 @@ function MainApp() {
         }
       ]
     );
+  };
+
+  const handleUploadTrackToDrive = async () => {
+    const token = await getStoredToken();
+    if (!token) {
+      Alert.alert('No Conectado', 'Por favor, conéctate a Google Drive primero.');
+      return;
+    }
+
+    try {
+      const res = await DocumentPicker.getDocumentAsync({
+        type: 'audio/mpeg', // MP3 files
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+
+      if (res.canceled) return;
+
+      const asset = res.assets[0];
+      setIsDriveLoading(true);
+      setIsSourceChanging(true);
+      showToast(`Subiendo: ${asset.name}...`);
+
+      await uploadTrackToDrive(asset.uri, asset.name, token);
+      
+      showToast('¡Subida completada!');
+      // Reload Drive tracks to show the new uploaded song
+      await loadDriveFiles(token);
+    } catch (e) {
+      console.error('[App] Error uploading to Drive:', e);
+      Alert.alert('Error', 'No se pudo subir la canción a Google Drive.');
+    } finally {
+      setIsDriveLoading(false);
+      setIsSourceChanging(false);
+    }
+  };
+
+  const handleDeleteDriveTrack = async (track) => {
+    const token = await getStoredToken();
+    if (!token) {
+      Alert.alert('No Conectado', 'Por favor, conéctate a Google Drive primero.');
+      return;
+    }
+
+    const fileId = track.mediaId.replace(/^drive-/, '');
+    setIsDriveLoading(true);
+    setIsSourceChanging(true);
+    showToast(`Eliminando: ${track.title}...`);
+
+    try {
+      // 1. Delete from Google Drive cloud
+      await deleteTrackFromDrive(fileId, token);
+
+      // 2. Delete from local cache if it was downloaded
+      const cacheUri = FileSystem.cacheDirectory + `${fileId}.mp3`;
+      try {
+        const cacheInfo = await FileSystem.getInfoAsync(cacheUri);
+        if (cacheInfo.exists) {
+          await FileSystem.deleteAsync(cacheUri);
+          console.log('[App] Cached file deleted:', cacheUri);
+        }
+      } catch (cacheErr) {
+        console.warn('[App] Error deleting cached file:', cacheErr);
+      }
+
+      // 3. Remove from active player if currently playing
+      const active = TrackPlayer.getActiveMediaItem();
+      if (active && active.mediaId === track.mediaId) {
+        await TrackPlayer.stop();
+        await TrackPlayer.clear();
+        setActiveTrack(null);
+        setIsPlaying(false);
+      }
+
+      // 4. Remove from play queue state
+      const updatedQueue = playQueue.filter(t => t.mediaId !== track.mediaId);
+      setPlayQueue(updatedQueue);
+
+      // 5. Reload Drive tracks list
+      await loadDriveFiles(token);
+      showToast('Canción eliminada de Drive');
+    } catch (e) {
+      console.error('[App] Error deleting from Drive:', e);
+      Alert.alert('Error', 'No se pudo eliminar la canción de Google Drive.');
+    } finally {
+      setIsDriveLoading(false);
+      setIsSourceChanging(false);
+    }
   };
 
   const handleRefreshDrive = async () => {
@@ -983,6 +1073,8 @@ function MainApp() {
         onConnectDrive={handleConnectDrive}
         onDisconnectDrive={handleDisconnectDrive}
         onRefreshDrive={handleRefreshDrive}
+        onUploadTrackToDrive={handleUploadTrackToDrive}
+        onDeleteDriveTrack={handleDeleteDriveTrack}
         isDriveLoading={isDriveLoading}
         googleClientId={googleClientId}
         googleRedirectUri={googleRedirectUri}

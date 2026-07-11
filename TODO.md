@@ -45,6 +45,13 @@ Este documento detalla el estado actual del desarrollo de Vulpis Player, registr
 
 ---
 
+### 9. Gestión Interactiva de Archivos en Google Drive (Nube Privada)
+- [x] **Subir Archivos a Drive:** Añadir botón de carga en el banner de estado de Google Drive, que abre el selector de documentos locales para subir archivos `.mp3` directamente a la nube.
+- [x] **Eliminar Archivos de Drive:** Integrar la opción de borrar canciones alojadas en Drive directamente desde el menú de opciones del track, eliminando también su copia en caché y sacándola de colas/playlists.
+- [x] **Actualización de Permisos:** Ampliar el alcance (scope) de autenticación OAuth 2.0 a `drive` para permitir operaciones de lectura/escritura y borrado de archivos del usuario.
+
+---
+
 ## 🟡 Tareas Pendientes (Roadmap)
 
 *¡Todas las características planeadas en el roadmap inicial de Vulpis Player han sido completamente implementadas!* 🦊🚀

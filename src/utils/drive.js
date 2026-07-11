@@ -101,7 +101,7 @@ export const signInWithGoogle = async (clientId, redirectUri) => {
     `client_id=${clientId}` +
     `&redirect_uri=${encodeURIComponent(redirectUri)}` +
     `&response_type=code` +
-    `&scope=${encodeURIComponent('https://www.googleapis.com/auth/drive.readonly')}` +
+    `&scope=${encodeURIComponent('https://www.googleapis.com/auth/drive')}` +
     `&prompt=consent` +
     `&code_challenge=${codeVerifier}` +
     `&code_challenge_method=plain`;
@@ -294,4 +294,98 @@ export const mapDriveFileToTrack = (file, accessToken, defaultCover, resolvedUrl
       Authorization: `Bearer ${accessToken}`,
     },
   };
+};
+
+/**
+ * Uploads an MP3 file to Google Drive using a two-step process to avoid large memory footprints.
+ */
+export const uploadTrackToDrive = async (fileUri, fileName, accessToken) => {
+  if (!accessToken) {
+    throw new Error('Token de acceso no válido.');
+  }
+
+  console.log('[Drive] Creating file metadata for upload:', fileName);
+  const createResponse = await fetch('https://www.googleapis.com/drive/v3/files', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      name: fileName,
+      mimeType: 'audio/mpeg',
+    }),
+  });
+
+  if (!createResponse.ok) {
+    const err = await createResponse.text();
+    console.error('[Drive] Create file metadata failed:', err);
+    throw new Error(`Error al crear metadatos en Google Drive: ${createResponse.status}`);
+  }
+
+  const fileData = await createResponse.json();
+  const fileId = fileData.id;
+  console.log('[Drive] File placeholder created with ID:', fileId);
+
+  const uploadUrl = `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`;
+  console.log('[Drive] Uploading media to URL:', uploadUrl);
+
+  const FileSystem = require('expo-file-system/legacy');
+  const uploadResult = await FileSystem.uploadAsync(uploadUrl, fileUri, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'audio/mpeg',
+    },
+    httpMethod: 'PATCH',
+    uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+  });
+
+  console.log('[Drive] Upload result status:', uploadResult.status);
+  if (uploadResult.status < 200 || uploadResult.status >= 300) {
+    console.error('[Drive] Media upload failed details:', uploadResult.body);
+    // Cleanup metadata placeholder if upload failed
+    try {
+      await deleteTrackFromDrive(fileId, accessToken);
+    } catch (cleanupErr) {
+      console.warn('[Drive] Cleanup of empty placeholder failed:', cleanupErr);
+    }
+    throw new Error(`Error al subir el archivo de audio: ${uploadResult.status}`);
+  }
+
+  const finalData = JSON.parse(uploadResult.body);
+  return {
+    id: fileId,
+    name: finalData.name || fileName,
+    mimeType: 'audio/mpeg',
+  };
+};
+
+/**
+ * Deletes a file from Google Drive using its fileId.
+ */
+export const deleteTrackFromDrive = async (fileId, accessToken) => {
+  if (!accessToken) {
+    throw new Error('Token de acceso no válido.');
+  }
+
+  console.log('[Drive] Deleting file from Google Drive:', fileId);
+  const deleteUrl = `https://www.googleapis.com/drive/v3/files/${fileId}`;
+  const response = await fetch(deleteUrl, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    console.error('[Drive] Delete file failed:', err);
+    if (response.status === 404) {
+      return true;
+    }
+    throw new Error(`Error al eliminar archivo de Google Drive: ${response.status}`);
+  }
+
+  console.log('[Drive] File deleted successfully from Google Drive:', fileId);
+  return true;
 };

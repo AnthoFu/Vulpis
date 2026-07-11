@@ -41,6 +41,8 @@ export default function QueueList({
   onDeletePlaylist,
   onAddTrackToPlaylist,
   onRemoveTrackFromPlaylist,
+  onUploadTrackToDrive,
+  onDeleteDriveTrack,
 }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -72,6 +74,16 @@ export default function QueueList({
             <Text style={styles.driveInfoText}>Listo para transmitir canciones</Text>
           </View>
           <View style={styles.driveActionsCol}>
+            {onUploadTrackToDrive && (
+              <TouchableOpacity
+                onPress={onUploadTrackToDrive}
+                disabled={isDriveLoading || isLoading}
+                style={[styles.driveActionBtn, styles.driveUploadBtn]}
+                activeOpacity={0.7}
+              >
+                <MaterialCommunityIcons name="cloud-upload" size={18} color="#FFFFFF" />
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               onPress={onRefreshDrive}
               disabled={isDriveLoading || isLoading}
@@ -682,6 +694,32 @@ export default function QueueList({
               <Text style={styles.modalOptionText}>Añadir a una playlist...</Text>
             </TouchableOpacity>
 
+            {selectedTrackForOptions?.mediaId?.startsWith('drive-') && onDeleteDriveTrack && (
+              <TouchableOpacity
+                onPress={() => {
+                  const trackToDelete = selectedTrackForOptions;
+                  setSelectedTrackForOptions(null);
+                  Alert.alert(
+                    'Eliminar Canción de Drive',
+                    `¿Estás seguro de que quieres eliminar "${trackToDelete.title}" de tu Google Drive? Esta acción no se puede deshacer y también eliminará la canción de tus playlists y cola de reproducción.`,
+                    [
+                      { text: 'Cancelar', style: 'cancel' },
+                      {
+                        text: 'Eliminar',
+                        style: 'destructive',
+                        onPress: () => onDeleteDriveTrack(trackToDelete),
+                      },
+                    ]
+                  );
+                }}
+                style={styles.modalOption}
+                activeOpacity={0.7}
+              >
+                <MaterialCommunityIcons name="delete-outline" size={22} color="#EF4444" />
+                <Text style={[styles.modalOptionText, { color: '#EF4444' }]}>Eliminar de Drive</Text>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity
               onPress={() => setSelectedTrackForOptions(null)}
               style={[styles.modalOption, styles.modalCancelOption]}
@@ -1023,9 +1061,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
   },
-  driveRefreshBtn: {
+  driveUploadBtn: {
     backgroundColor: '#8B5CF6',
     borderColor: '#A78BFA',
+  },
+  driveRefreshBtn: {
+    backgroundColor: '#232433',
+    borderColor: '#3B3D54',
   },
   driveDisconnectBtn: {
     backgroundColor: '#232433',

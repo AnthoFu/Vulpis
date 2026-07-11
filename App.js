@@ -365,7 +365,10 @@ function MainApp() {
 
   const loadDriveFiles = async (token, forceUpdatePlayer = false) => {
     setIsDriveLoading(true);
-    setIsSourceChanging(true);
+    const isPrivateActive = currentSourceRef.current === 'private';
+    if (isPrivateActive) {
+      setIsSourceChanging(true);
+    }
     try {
       const files = await fetchDriveMp3Files(token);
       const driveTracks = await Promise.all(
@@ -375,10 +378,12 @@ function MainApp() {
         })
       );
       
-      setTracks(driveTracks);
+      if (isPrivateActive) {
+        setTracks(driveTracks);
+      }
       
       // Update the TrackPlayer queue ONLY if forceUpdatePlayer is true AND there is no active track playing
-      if (forceUpdatePlayer) {
+      if (forceUpdatePlayer && isPrivateActive) {
         const active = TrackPlayer.getActiveMediaItem();
         if (!active) {
           await TrackPlayer.clear();
@@ -392,14 +397,18 @@ function MainApp() {
       console.error('[App] Error loading Drive files:', err);
       if (err.message === 'AUTH_EXPIRED') {
         setIsDriveConnected(false);
-        setTracks([]);
+        if (isPrivateActive) {
+          setTracks([]);
+        }
         Alert.alert('Sesión Expirada', 'Tu sesión de Google Drive ha expirado. Por favor, conéctate de nuevo.');
       } else {
         Alert.alert('Error', 'No se pudieron obtener las canciones de Google Drive.');
       }
     } finally {
       setIsDriveLoading(false);
-      setIsSourceChanging(false);
+      if (isPrivateActive) {
+        setIsSourceChanging(false);
+      }
     }
   };
 
@@ -468,7 +477,6 @@ function MainApp() {
 
       const asset = res.assets[0];
       setIsDriveLoading(true);
-      setIsSourceChanging(true);
       showToast(`Subiendo: ${asset.name}...`);
 
       await uploadTrackToDrive(asset.uri, asset.name, token);
@@ -481,7 +489,6 @@ function MainApp() {
       Alert.alert('Error', 'No se pudo subir la canción a Google Drive.');
     } finally {
       setIsDriveLoading(false);
-      setIsSourceChanging(false);
     }
   };
 
@@ -496,7 +503,6 @@ function MainApp() {
     }
 
     setIsDriveLoading(true);
-    setIsSourceChanging(true);
     showToast(`Subiendo a Drive: ${track.title}...`);
 
     try {
@@ -515,7 +521,6 @@ function MainApp() {
       Alert.alert('Error', 'No se pudo subir la canción seleccionada a Google Drive.');
     } finally {
       setIsDriveLoading(false);
-      setIsSourceChanging(false);
     }
   };
 
@@ -528,7 +533,6 @@ function MainApp() {
 
     const fileId = track.mediaId.replace(/^drive-/, '');
     setIsDriveLoading(true);
-    setIsSourceChanging(true);
     showToast(`Eliminando: ${track.title}...`);
 
     try {
@@ -568,7 +572,6 @@ function MainApp() {
       Alert.alert('Error', 'No se pudo eliminar la canción de Google Drive.');
     } finally {
       setIsDriveLoading(false);
-      setIsSourceChanging(false);
     }
   };
 

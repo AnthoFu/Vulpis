@@ -19,14 +19,14 @@ export default function Controls({
     setIsProcessing(true);
     const timer = setTimeout(() => setIsProcessing(false), 1500);
     try {
-      console.log('Toggling playback. Current isPlaying:', isPlaying);
+      console.log('Alternando reproducción. isPlaying actual:', isPlaying);
       if (isPlaying) {
         await TrackPlayer.pause();
       } else {
         await TrackPlayer.play();
       }
     } catch (e) {
-      console.error('Error toggling playback:', e);
+      console.error('Error al alternar la reproducción:', e);
     } finally {
       clearTimeout(timer);
       setIsProcessing(false);
@@ -51,7 +51,7 @@ export default function Controls({
         }
         const targetTrack = tracks[targetIndex];
         if (targetTrack) {
-          console.log(`[Controls] Skipping fallback to library track: ${targetTrack.title}`);
+          console.log(`[Controls] Saltando respaldo a pista de biblioteca: ${targetTrack.title}`);
           await onSelectTrack(targetTrack, targetIndex);
         }
       } else {
@@ -59,12 +59,12 @@ export default function Controls({
         await TrackPlayer.play();
       }
     } catch (fallbackErr) {
-      console.error('Error in playLibraryFallback:', fallbackErr);
+      console.error('Error en playLibraryFallback:', fallbackErr);
       try {
         await TrackPlayer.seekTo(0);
         await TrackPlayer.play();
       } catch (err) {
-        console.error('Absolute fallback failed:', err);
+        console.error('Respaldo absoluto falló:', err);
       }
     }
   };
@@ -75,15 +75,15 @@ export default function Controls({
     const timer = setTimeout(() => setIsProcessing(false), 1500);
     try {
       if (playQueue && playQueue.length > 1) {
-        console.log('Skipping to next track in queue');
+        console.log('Saltando a la siguiente pista de la cola');
         await TrackPlayer.skipToNext();
         await TrackPlayer.play();
       } else {
-        console.log('Queue has 1 or fewer tracks, triggering library fallback');
+        console.log('La cola tiene 1 o menos pistas, activando respaldo de biblioteca');
         await playLibraryFallback('next');
       }
     } catch (e) {
-      console.log('No next track or end of queue:', e);
+      console.log('No hay siguiente pista o fin de la cola:', e);
       await playLibraryFallback('next');
     } finally {
       clearTimeout(timer);
@@ -97,15 +97,15 @@ export default function Controls({
     const timer = setTimeout(() => setIsProcessing(false), 1500);
     try {
       if (playQueue && playQueue.length > 1) {
-        console.log('Skipping to previous track in queue');
+        console.log('Saltando a la pista anterior de la cola');
         await TrackPlayer.skipToPrevious();
         await TrackPlayer.play();
       } else {
-        console.log('Queue has 1 or fewer tracks, triggering library fallback');
+        console.log('La cola tiene 1 o menos pistas, activando respaldo de biblioteca');
         await playLibraryFallback('prev');
       }
     } catch (e) {
-      console.log('No previous track or start of queue:', e);
+      console.log('No hay pista anterior o inicio de la cola:', e);
       await playLibraryFallback('prev');
     } finally {
       clearTimeout(timer);
@@ -119,10 +119,10 @@ export default function Controls({
     const timer = setTimeout(() => setIsProcessing(false), 1500);
     try {
       const nextShuffle = !isShuffleActive;
-      console.log('Setting shuffle enabled:', nextShuffle);
+      console.log('Estableciendo reproducción aleatoria activada:', nextShuffle);
       await TrackPlayer.setShuffleEnabled(nextShuffle);
     } catch (e) {
-      console.error('Error toggling shuffle:', e);
+      console.error('Error al alternar la reproducción aleatoria:', e);
     } finally {
       clearTimeout(timer);
       setIsProcessing(false);
@@ -142,10 +142,10 @@ export default function Controls({
       } else {
         nextMode = RepeatMode.Off;
       }
-      console.log('Setting repeat mode:', nextMode);
+      console.log('Estableciendo modo de repetición:', nextMode);
       await TrackPlayer.setRepeatMode(nextMode);
     } catch (e) {
-      console.error('Error setting repeat mode:', e);
+      console.error('Error al establecer modo de repetición:', e);
     } finally {
       clearTimeout(timer);
       setIsProcessing(false);
@@ -156,7 +156,7 @@ export default function Controls({
 
   return (
     <View style={[styles.controlsRow, isProcessing && styles.controlsDisabled]}>
-      {/* SHUFFLE BUTTON */}
+      {/* BOTÓN DE REPRODUCCIÓN ALEATORIA */}
       <TouchableOpacity
         onPress={toggleShuffle}
         style={[styles.secondaryButton, isShuffleActive && styles.activeSecondaryButton]}
@@ -169,12 +169,12 @@ export default function Controls({
         />
       </TouchableOpacity>
 
-      {/* PREVIOUS BUTTON */}
+      {/* BOTÓN ANTERIOR */}
       <TouchableOpacity onPress={playPrevious} style={styles.controlButton} disabled={isProcessing}>
         <MaterialCommunityIcons name="skip-previous" size={26} color="#FFFFFF" />
       </TouchableOpacity>
 
-      {/* PLAY / PAUSE BUTTON */}
+      {/* BOTÓN REPRODUCIR / PAUSAR */}
       <TouchableOpacity onPress={togglePlayback} style={styles.playButton} disabled={isProcessing}>
         <MaterialCommunityIcons
           name={isPlaying ? 'pause' : 'play'}
@@ -184,12 +184,12 @@ export default function Controls({
         />
       </TouchableOpacity>
 
-      {/* NEXT BUTTON */}
+      {/* BOTÓN SIGUIENTE */}
       <TouchableOpacity onPress={playNext} style={styles.controlButton} disabled={isProcessing}>
         <MaterialCommunityIcons name="skip-next" size={26} color="#FFFFFF" />
       </TouchableOpacity>
 
-      {/* REPEAT BUTTON */}
+      {/* BOTÓN DE REPETICIÓN */}
       <TouchableOpacity
         onPress={cycleRepeatMode}
         style={[styles.secondaryButton, isRepeatActive && styles.activeSecondaryButton]}

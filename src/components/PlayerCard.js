@@ -70,7 +70,7 @@ export default function PlayerCard({
           });
         }
       } catch (e) {
-        console.error('Error fetching image colors:', e);
+        console.error('Error al obtener colores de la imagen:', e);
       }
     };
 
@@ -83,25 +83,25 @@ export default function PlayerCard({
 
   const selectTrackFromQueue = async (index) => {
     try {
-      console.log(`[PlayerCard Queue] Skipping to index: ${index}`);
+      console.log(`[PlayerCard Queue] Saltando al índice: ${index}`);
       await TrackPlayer.skipToIndex(index);
       await TrackPlayer.play();
     } catch (e) {
-      console.error('[PlayerCard Queue] Error skipping to index:', e);
+      console.error('[PlayerCard Queue] Error al saltar al índice:', e);
     }
   };
 
   const renderBackground = () => {
     return (
       <View style={StyleSheet.absoluteFill}>
-        {/* Layer A (Base / Prev Color) */}
+        {/* Capa A (Color Base / Anterior) */}
         <LinearGradient
           colors={[colorA, '#090A0F']}
           style={StyleSheet.absoluteFill}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
         />
-        {/* Layer B (Target Color, Fading In) */}
+        {/* Capa B (Color de Destino, Desvaneciéndose) */}
         <Animated.View style={[StyleSheet.absoluteFill, { opacity: fadeAnim }]}>
           <LinearGradient
             colors={[colorB, '#090A0F']}
@@ -110,13 +110,13 @@ export default function PlayerCard({
             end={{ x: 0, y: 1 }}
           />
         </Animated.View>
-        {/* Dark overlay to ensure text is always readable */}
+        {/* Superposición oscura para asegurar que el texto sea siempre legible */}
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(9, 10, 15, 0.4)' }]} />
       </View>
     );
   };
 
-  // If the internal Queue overlay is visible, render it
+  // Si la superposición interna de la cola es visible, renderizarla
   if (isQueueVisible) {
     return (
       <View
@@ -129,7 +129,7 @@ export default function PlayerCard({
         ]}
       >
         {renderBackground()}
-        {/* Header Row */}
+        {/* Fila de encabezado */}
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => setIsQueueVisible(false)} style={styles.closeButton} activeOpacity={0.7}>
             <MaterialCommunityIcons name="chevron-down" size={28} color="#FFFFFF" />
@@ -138,7 +138,7 @@ export default function PlayerCard({
           <View style={styles.headerPlaceholder} />
         </View>
         
-        {/* Queue Scrollable List */}
+        {/* Lista deslizable de la cola */}
         <FlatList
           data={playQueue || []}
           keyExtractor={(item, index) => `${item.mediaId}-${index}`}
@@ -185,7 +185,7 @@ export default function PlayerCard({
     );
   }
 
-  // Normal Fullscreen Player view
+  // Vista normal del reproductor en pantalla completa
   return (
     <View
       style={[
@@ -197,7 +197,7 @@ export default function PlayerCard({
       ]}
     >
       {renderBackground()}
-      {/* Header Row */}
+      {/* Fila de encabezado */}
       <View style={styles.headerRow}>
         <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.7}>
           <MaterialCommunityIcons name="chevron-down" size={28} color="#FFFFFF" />
@@ -206,7 +206,7 @@ export default function PlayerCard({
         <View style={styles.headerPlaceholder} />
       </View>
       
-      {/* Artwork Section with Shadow wrapper */}
+      {/* Sección de portada con contenedor de sombra */}
       <View style={styles.artworkContainer}>
         <View style={styles.artworkShadowWrapper}>
           <Image
@@ -217,7 +217,7 @@ export default function PlayerCard({
         </View>
       </View>
       
-      {/* Track Details, Progress & Controls */}
+      {/* Detalles de la pista, progreso y controles */}
       <View style={styles.bottomSection}>
         <View style={styles.trackDetails}>
           <Text style={styles.trackTitle} numberOfLines={1}>
@@ -240,7 +240,7 @@ export default function PlayerCard({
           onSelectTrack={onSelectTrack}
         />
 
-        {/* Footer controls button */}
+        {/* Botón de controles de pie de página */}
         <View style={styles.footerRow}>
           <TouchableOpacity
             onPress={() => setIsQueueVisible(true)}

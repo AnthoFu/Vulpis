@@ -48,23 +48,23 @@ function MainApp() {
   const [isFullPlayerVisible, setIsFullPlayerVisible] = useState(false);
   const [playQueue, setPlayQueue] = useState([]);
 
-  // Navigation Drawer & Source states
+  // Estados del menú lateral de navegación y de la fuente
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [currentSource, setCurrentSource] = useState('local'); // 'local' | 'private'
   const [tracks, setTracks] = useState(localTracks);
   const [isSourceChanging, setIsSourceChanging] = useState(false);
 
-  // Google Drive Integration States
+  // Estados de integración con Google Drive
   const [isDriveConnected, setIsDriveConnected] = useState(false);
   const [googleClientId, setGoogleClientId] = useState(GOOGLE_OAUTH_CONFIG.clientId);
   const [googleRedirectUri, setGoogleRedirectUri] = useState(GOOGLE_OAUTH_CONFIG.redirectUri);
   const [isDriveLoading, setIsDriveLoading] = useState(false);
 
-  // Local library tracks & customization state
+  // Pistas de la biblioteca local y estado de personalización
   const [localLibraryTracks, setLocalLibraryTracks] = useState(localTracks);
   const [hasCustomLocalTracks, setHasCustomLocalTracks] = useState(false);
 
-  // Custom toast notification & queue management
+  // Notificación toast personalizada y gestión de colas
   const [playlists, setPlaylists] = useState([]);
   const [toast, setToast] = useState(null);
 
@@ -75,7 +75,7 @@ function MainApp() {
     }, 2500);
   };
 
-  // Playlists Helper Functions
+  // Funciones auxiliares para listas de reproducción
   useEffect(() => {
     async function loadPlaylists() {
       try {
@@ -84,7 +84,7 @@ function MainApp() {
           setPlaylists(JSON.parse(stored));
         }
       } catch (err) {
-        console.error('[App] Error loading playlists:', err);
+        console.error('[App] Error al cargar listas de reproducción:', err);
       }
     }
     loadPlaylists();
@@ -158,24 +158,24 @@ function MainApp() {
         mediaId: uniqueId,
       };
 
-      console.log(`[App] Adding track ${item.title} to queue after index ${activeIndex}`);
+      console.log(`[App] Agregando pista ${item.title} a la cola después del índice ${activeIndex}`);
       await TrackPlayer.insertMediaItem(activeIndex + 1, queuedItem);
 
-      // Update playQueue state
+      // Actualizar el estado de la cola de reproducción (playQueue)
       const updatedQueue = [...playQueue];
       updatedQueue.splice(activeIndex + 1, 0, queuedItem);
       setPlayQueue(updatedQueue);
 
       showToast(`Añadido a la cola: ${item.title}`);
     } catch (e) {
-      console.error('[App] Error adding track to queue:', e);
+      console.error('[App] Error al agregar pista a la cola:', e);
       Alert.alert('Error', 'No se pudo agregar la canción a la cola.');
     }
   };
 
   const handleRemoveFromQueue = async (item, index) => {
     try {
-      console.log(`[App] Removing track from queue at index ${index}: ${item.title}`);
+      console.log(`[App] Eliminando pista de la cola en el índice ${index}: ${item.title}`);
       await TrackPlayer.removeMediaItem(index);
       
       const updatedQueue = [...playQueue];
@@ -184,7 +184,7 @@ function MainApp() {
 
       showToast(`Eliminado de la cola: ${item.title}`);
     } catch (e) {
-      console.error('[App] Error removing track from queue:', e);
+      console.error('[App] Error al eliminar pista de la cola:', e);
       Alert.alert('Error', 'No se pudo eliminar la canción de la cola.');
     }
   };
@@ -195,14 +195,14 @@ function MainApp() {
 
     async function init() {
       try {
-        console.log('[App] Initializing TrackPlayer...');
+        console.log('[App] Inicializando TrackPlayer...');
         try {
           await TrackPlayer.setupPlayer({});
         } catch (e) {
           console.log('[App] Player ya estaba configurado, ignorando error:', e.message);
         }
         
-        console.log('[App] Setting Player commands/capabilities...');
+        console.log('[App] Configurando comandos/capacidades del reproductor...');
         TrackPlayer.setCommands({
           capabilities: [
             PlayerCommand.PlayPause,
@@ -213,9 +213,9 @@ function MainApp() {
           ],
         });
         
-        console.log('[App] Setting media items into player queue...');
+        console.log('[App] Configurando pistas en la cola del reproductor...');
         
-        // Load custom local tracks from storage if they exist
+        // Cargar pistas locales personalizadas del almacenamiento si existen
         let initialTracks = localTracks;
         try {
           const stored = await AsyncStorage.getItem('vulpis_local_tracks');
@@ -231,10 +231,10 @@ function MainApp() {
             }
           }
         } catch (storageErr) {
-          console.error('[App] Error reading initial local tracks:', storageErr);
+          console.error('[App] Error al leer las pistas locales iniciales:', storageErr);
         }
 
-        // Now load saved player state if it exists
+        // Cargar el estado guardado del reproductor si existe
         let savedState = null;
         try {
           const storedState = await AsyncStorage.getItem('vulpis_player_state');
@@ -242,10 +242,10 @@ function MainApp() {
             savedState = JSON.parse(storedState);
           }
         } catch (stateErr) {
-          console.error('[App] Error reading saved player state:', stateErr);
+          console.error('[App] Error al leer el estado guardado del reproductor:', stateErr);
         }
 
-        // Check if we have a stored token for Drive
+        // Verificar si tenemos un token guardado para Drive
         let hasDriveToken = false;
         try {
           const token = await getStoredToken();
@@ -253,17 +253,17 @@ function MainApp() {
             hasDriveToken = true;
           }
         } catch (tokenErr) {
-          console.error('[App] Error checking Drive token:', tokenErr);
+          console.error('[App] Error al verificar el token de Drive:', tokenErr);
         }
 
         await TrackPlayer.clear();
 
         if (savedState && savedState.playQueue && savedState.playQueue.length > 0) {
-          console.log('[App] Restoring saved player state...');
+          console.log('[App] Restaurando el estado guardado del reproductor...');
           
           let sourceToRestore = savedState.currentSource || 'local';
           if (sourceToRestore === 'private' && !hasDriveToken) {
-            console.log('[App] Saved source is private but no token found, falling back to local');
+            console.log('[App] La fuente guardada es privada pero no se encontró ningún token, volviendo a local');
             sourceToRestore = 'local';
           }
 
@@ -281,7 +281,7 @@ function MainApp() {
 
           await TrackPlayer.setMediaItems(savedState.playQueue);
           
-          // Find the index of active track
+          // Buscar el índice de la pista activa
           let activeIndex = 0;
           if (savedState.activeTrackId) {
             const idx = savedState.playQueue.findIndex(t => t.mediaId === savedState.activeTrackId);
@@ -292,7 +292,7 @@ function MainApp() {
           await TrackPlayer.skipToIndex(activeIndex);
 
           if (savedState.progressPosition && savedState.progressPosition > 0) {
-            console.log(`[App] Seeking to saved position: ${savedState.progressPosition}`);
+            console.log(`[App] Buscando posición guardada: ${savedState.progressPosition}`);
             await TrackPlayer.seekTo(savedState.progressPosition);
             if (isMounted) {
               const activeTrackItem = savedState.playQueue[activeIndex];
@@ -303,7 +303,7 @@ function MainApp() {
             }
           }
         } else {
-          // Default setup
+          // Configuración predeterminada
           await TrackPlayer.setMediaItems(initialTracks);
           await TrackPlayer.skipToIndex(0);
           if (isMounted) {
@@ -311,23 +311,23 @@ function MainApp() {
           }
         }
 
-        console.log('[App] TrackPlayer setup completed successfully!');
+        console.log('[App] ¡Configuración de TrackPlayer completada exitosamente!');
         
         sub1 = TrackPlayer.addEventListener(Event.MediaItemTransition, (event) => {
-          console.log('[DEBUG] MediaItemTransition:', event);
+          console.log('[DEBUG] TransiciónElementoMultimedia:', event);
         });
         sub2 = TrackPlayer.addEventListener(Event.IsPlayingChanged, (event) => {
-          console.log('[DEBUG] IsPlayingChanged:', event);
+          console.log('[DEBUG] CambióReproduciendo:', event);
         });
         sub3 = TrackPlayer.addEventListener(Event.PlaybackStateChanged, (event) => {
-          console.log('[DEBUG] PlaybackStateChanged:', event);
+          console.log('[DEBUG] EstadoReproducciónCambió:', event);
         });
 
         if (isMounted) {
           setIsPlayerInitialized(true);
         }
       } catch (err) {
-        console.error('[App] Critical Player setup error:', err);
+        console.error('[App] Error crítico de configuración del reproductor:', err);
         if (isMounted) {
           setIsPlayerInitialized(true);
         }
@@ -344,7 +344,7 @@ function MainApp() {
     };
   }, []);
 
-  // Load Google Drive configuration on app start
+  // Cargar la configuración de Google Drive al iniciar la app
   useEffect(() => {
     async function loadGoogleConfigData() {
       try {
@@ -357,7 +357,7 @@ function MainApp() {
           setIsDriveConnected(true);
         }
       } catch (err) {
-        console.error('[App] Error loading initial Google Drive config:', err);
+        console.error('[App] Error al cargar la configuración inicial de Google Drive:', err);
       }
     }
     loadGoogleConfigData();
@@ -382,7 +382,7 @@ function MainApp() {
         setTracks(driveTracks);
       }
       
-      // Update the TrackPlayer queue ONLY if forceUpdatePlayer is true AND there is no active track playing
+      // Actualizar la cola de TrackPlayer SOLO si forceUpdatePlayer es true Y no hay ninguna pista activa reproduciéndose
       if (forceUpdatePlayer && isPrivateActive) {
         const active = TrackPlayer.getActiveMediaItem();
         if (!active) {
@@ -394,7 +394,7 @@ function MainApp() {
         }
       }
     } catch (err) {
-      console.error('[App] Error loading Drive files:', err);
+      console.error('[App] Error al cargar archivos de Drive:', err);
       if (err.message === 'AUTH_EXPIRED') {
         setIsDriveConnected(false);
         if (isPrivateActive) {
@@ -424,7 +424,7 @@ function MainApp() {
         await loadDriveFiles(token);
       }
     } catch (err) {
-      console.error('[App] Connect Google Drive error:', err);
+      console.error('[App] Error al conectar Google Drive:', err);
       Alert.alert('Error de Conexión', err.message || 'No se pudo conectar a Google Drive.');
     } finally {
       setIsDriveLoading(false);
@@ -449,7 +449,7 @@ function MainApp() {
               await TrackPlayer.clear();
               showToast('Google Drive desconectado');
             } catch (err) {
-              console.error('[App] Disconnect error:', err);
+              console.error('[App] Error al desconectar:', err);
             } finally {
               setIsDriveLoading(false);
             }
@@ -482,10 +482,10 @@ function MainApp() {
       await uploadTrackToDrive(asset.uri, asset.name, token);
       
       showToast('¡Subida completada!');
-      // Reload Drive tracks to show the new uploaded song
+      // Recargar las pistas de Drive para mostrar la nueva canción subida
       await loadDriveFiles(token);
     } catch (e) {
-      console.error('[App] Error uploading to Drive:', e);
+      console.error('[App] Error al subir a Drive:', e);
       Alert.alert('Error', 'No se pudo subir la canción a Google Drive.');
     } finally {
       setIsDriveLoading(false);
@@ -514,10 +514,10 @@ function MainApp() {
       await uploadTrackToDrive(track.url, filename, token);
       showToast('¡Subido a Drive exitosamente!');
       
-      // Refresh the tracks list if connected to drive
+      // Actualizar la lista de pistas si está conectado a Drive
       await loadDriveFiles(token);
     } catch (e) {
-      console.error('[App] Error uploading local track to Drive:', e);
+      console.error('[App] Error al subir pista local a Drive:', e);
       Alert.alert('Error', 'No se pudo subir la canción seleccionada a Google Drive.');
     } finally {
       setIsDriveLoading(false);
@@ -536,22 +536,22 @@ function MainApp() {
     showToast(`Eliminando: ${track.title}...`);
 
     try {
-      // 1. Delete from Google Drive cloud
+      // 1. Eliminar de la nube de Google Drive
       await deleteTrackFromDrive(fileId, token);
 
-      // 2. Delete from local cache if it was downloaded
+      // 2. Eliminar de la caché local si fue descargado
       const cacheUri = FileSystem.cacheDirectory + `${fileId}.mp3`;
       try {
         const cacheInfo = await FileSystem.getInfoAsync(cacheUri);
         if (cacheInfo.exists) {
           await FileSystem.deleteAsync(cacheUri);
-          console.log('[App] Cached file deleted:', cacheUri);
+          console.log('[App] Archivo en caché eliminado:', cacheUri);
         }
       } catch (cacheErr) {
-        console.warn('[App] Error deleting cached file:', cacheErr);
+        console.warn('[App] Error al eliminar archivo en caché:', cacheErr);
       }
 
-      // 3. Remove from active player if currently playing
+      // 3. Quitar del reproductor activo si se está reproduciendo actualmente
       const active = TrackPlayer.getActiveMediaItem();
       if (active && active.mediaId === track.mediaId) {
         await TrackPlayer.stop();
@@ -560,15 +560,15 @@ function MainApp() {
         setIsPlaying(false);
       }
 
-      // 4. Remove from play queue state
+      // 4. Quitar del estado de la cola de reproducción
       const updatedQueue = playQueue.filter(t => t.mediaId !== track.mediaId);
       setPlayQueue(updatedQueue);
 
-      // 5. Reload Drive tracks list
+      // 5. Recargar la lista de pistas de Drive
       await loadDriveFiles(token);
       showToast('Canción eliminada de Drive');
     } catch (e) {
-      console.error('[App] Error deleting from Drive:', e);
+      console.error('[App] Error al eliminar de Drive:', e);
       Alert.alert('Error', 'No se pudo eliminar la canción de Google Drive.');
     } finally {
       setIsDriveLoading(false);
@@ -616,7 +616,7 @@ function MainApp() {
         const currentQueue = TrackPlayer.getQueue();
         
         tick++;
-        if (tick % 8 === 0) { // log only once every 2 seconds
+        if (tick % 8 === 0) { // registrar en log solo una vez cada 2 segundos
           console.log('[DEBUG-POLL]', {
             activeTrack: currentActive,
             state: TrackPlayer.getPlaybackState(),
@@ -638,12 +638,12 @@ function MainApp() {
           duration: currentProgress?.duration ?? 0,
         });
 
-        // State persistence check
+        // Verificación de persistencia del estado
         const pos = currentProgress?.position ?? 0;
         const trackId = currentActive?.mediaId ?? null;
         const queueLen = currentQueue ? currentQueue.length : 0;
         
-        // Save if track changed, or if progress moved by >= 5 seconds, or if queue length changed
+        // Guardar si cambió la pista, o si el progreso avanzó >= 5 segundos, o si la longitud de la cola cambió
         const timeDiff = Math.abs(pos - lastSavedSec);
         if (trackId !== lastSavedTrackId || timeDiff >= 5 || queueLen !== lastSavedQueueLen) {
           lastSavedSec = pos;
@@ -659,7 +659,7 @@ function MainApp() {
           };
           
           AsyncStorage.setItem('vulpis_player_state', JSON.stringify(stateToSave))
-            .catch(err => console.error('[App] Error saving player state:', err));
+            .catch(err => console.error('[App] Error al guardar el estado del reproductor:', err));
         }
 
       } catch (e) {
@@ -673,19 +673,19 @@ function MainApp() {
     return () => clearInterval(interval);
   }, [isPlayerInitialized]);
 
-  // Automatically restore library tracks if the play queue becomes completely empty
+  // Restaurar automáticamente las pistas de la biblioteca si la cola de reproducción queda completamente vacía
   useEffect(() => {
     if (!isPlayerInitialized || isSourceChanging) return;
     
     if (playQueue.length === 0 && tracks && tracks.length > 0) {
-      console.log('[App] Queue is empty. Automatically restoring library tracks...');
+      console.log('[App] La cola está vacía. Restaurando automáticamente las pistas de la biblioteca...');
       const restoreLibrary = async () => {
         try {
           await TrackPlayer.clear();
           await TrackPlayer.setMediaItems(tracks);
           await TrackPlayer.skipToIndex(0);
         } catch (err) {
-          console.error('[App] Error restoring library tracks:', err);
+          console.error('[App] Error al restaurar las pistas de la biblioteca:', err);
         }
       };
       restoreLibrary();
@@ -715,7 +715,7 @@ function MainApp() {
     }
   };
 
-  // Helper to save local tracks to storage & sync with state and player
+  // Auxiliar para guardar pistas locales en el almacenamiento y sincronizar con el estado y el reproductor
   const saveLocalTracks = async (newTracksList) => {
     setLocalLibraryTracks(newTracksList);
     setHasCustomLocalTracks(true);
@@ -740,12 +740,12 @@ function MainApp() {
           await TrackPlayer.skipToIndex(0);
         }
       } catch (err) {
-        console.error('[saveLocalTracks] Error synchronizing TrackPlayer:', err);
+        console.error('[saveLocalTracks] Error al sincronizar TrackPlayer:', err);
       }
     }
   };
 
-  // Scan local audio files on the device using expo-media-library
+  // Escanear archivos de audio locales en el dispositivo usando expo-media-library
   const handleScanLocal = async () => {
     try {
       const { status } = await MediaLibrary.requestPermissionsAsync();
@@ -761,7 +761,7 @@ function MainApp() {
       
       let media = await MediaLibrary.getAssetsAsync({
         mediaType: [MediaLibrary.MediaType.audio],
-        first: 100, // retrieve up to 100 tracks
+        first: 100, // recuperar hasta 100 pistas
       });
 
       const assetsList = media.assets.filter(
@@ -793,18 +793,18 @@ function MainApp() {
         `Se encontraron y cargaron ${newTracks.length} archivos .mp3 en tu biblioteca local.`
       );
     } catch (e) {
-      console.error('Error scanning local audio:', e);
+      console.error('Error al escanear audio local:', e);
       Alert.alert('Error', 'Hubo un problema al escanear los archivos locales.');
     } finally {
       setIsSourceChanging(false);
     }
   };
 
-  // Import specific MP3 files from device storage using expo-document-picker
+  // Importar archivos MP3 específicos del almacenamiento del dispositivo usando expo-document-picker
   const handleImportMp3 = async () => {
     try {
       const res = await DocumentPicker.getDocumentAsync({
-        type: 'audio/mpeg', // MP3 mime type
+        type: 'audio/mpeg', // Tipo mime MP3
         copyToCacheDirectory: true,
         multiple: true,
       });
@@ -826,7 +826,7 @@ function MainApp() {
         });
       }
 
-      // Append to existing local library
+      // Agregar a la biblioteca local existente
       const existingCustom = hasCustomLocalTracks ? localLibraryTracks : [];
       const updatedTracks = [...existingCustom, ...importedTracks];
       
@@ -836,14 +836,14 @@ function MainApp() {
         `Se han importado ${importedTracks.length} canción(es) a la biblioteca local.`
       );
     } catch (e) {
-      console.error('Error importing MP3 file:', e);
+      console.error('Error al importar archivo MP3:', e);
       Alert.alert('Error', 'No se pudo importar el archivo MP3.');
     } finally {
       setIsSourceChanging(false);
     }
   };
 
-  // Clear custom local library tracks and fall back to hardcoded default demo ones
+  // Limpiar las pistas de la biblioteca local personalizada y volver a las de demostración predeterminadas
   const handleResetLocal = async () => {
     Alert.alert(
       'Restablecer Biblioteca',
@@ -867,7 +867,7 @@ function MainApp() {
                 await TrackPlayer.skipToIndex(0);
               }
             } catch (e) {
-              console.error('Error resetting local tracks:', e);
+              console.error('Error al restablecer pistas locales:', e);
             } finally {
               setIsSourceChanging(false);
             }
@@ -884,11 +884,11 @@ function MainApp() {
     try {
       const fileInfo = await FileSystem.getInfoAsync(localUri);
       if (fileInfo.exists) {
-        console.log('[Drive] File already cached locally:', localUri);
+        console.log('[Drive] Archivo ya guardado en caché local:', localUri);
         return localUri;
       }
       
-      console.log('[Drive] Downloading file to cache:', localUri);
+      console.log('[Drive] Descargando archivo a caché:', localUri);
       const downloadResumable = FileSystem.createDownloadResumable(
         url,
         localUri,
@@ -900,15 +900,15 @@ function MainApp() {
       );
       
       const { uri } = await downloadResumable.downloadAsync();
-      console.log('[Drive] File downloaded successfully:', uri);
+      console.log('[Drive] Archivo descargado exitosamente:', uri);
       return uri;
     } catch (error) {
-      console.error('[Drive] Error downloading file:', error);
+      console.error('[Drive] Error al descargar archivo:', error);
       return null;
     }
   };
 
-  // Background Buffering for Google Drive files
+  // Almacenamiento en caché en segundo plano para archivos de Google Drive
   useEffect(() => {
     if (!isPlayerInitialized) return;
     if (!activeTrack) return;
@@ -923,40 +923,40 @@ function MainApp() {
         const currentQueue = TrackPlayer.getQueue();
         if (!currentQueue || currentQueue.length <= 1) return;
 
-        // Calculate next index
+        // Calcular el siguiente índice
         let nextIndex = activeIndex + 1;
         if (nextIndex >= currentQueue.length) {
-          // If repeat queue is on, wrap around to 0
+          // Si la repetición de cola está activada, volver a 0
           const repeatMode = TrackPlayer.getRepeatMode();
           if (repeatMode === RepeatMode.Queue) {
             nextIndex = 0;
           } else {
-            return; // No next track
+            return; // No hay siguiente pista
           }
         }
 
         const nextTrack = currentQueue[nextIndex];
         if (!nextTrack) return;
 
-        // Check if next track is a Drive track and not yet cached
+        // Verificar si la siguiente pista es de Drive y aún no está en caché
         if (nextTrack.mediaId.startsWith('drive-') && !nextTrack.url.startsWith('file://')) {
           const fileId = nextTrack.mediaId.replace('drive-', '');
           
-          // Check if file is already in Cache (to avoid requesting token or starting download if it already exists)
+          // Verificar si el archivo ya está en caché (para evitar solicitar token o iniciar la descarga si ya existe)
           const localUri = FileSystem.cacheDirectory + `${fileId}.mp3`;
           const fileInfo = await FileSystem.getInfoAsync(localUri);
           
           if (fileInfo.exists) {
-            console.log(`[Buffering] Next track is already cached locally at: ${localUri}. Updating queue...`);
+            console.log(`[Buffering] La siguiente pista ya está guardada en caché local en: ${localUri}. Actualizando cola...`);
             const updatedTrack = { ...nextTrack, url: localUri };
             
             if (isMounted) {
-              // Update native queue
+              // Actualizar la cola nativa
               const latestQueue = TrackPlayer.getQueue();
               if (latestQueue && nextIndex < latestQueue.length && latestQueue[nextIndex].mediaId === nextTrack.mediaId) {
                 await TrackPlayer.replaceMediaItem(nextIndex, updatedTrack);
               }
-              // Update state
+              // Actualizar el estado
               setPlayQueue(prev => {
                 const newQueue = [...prev];
                 if (nextIndex < newQueue.length && newQueue[nextIndex].mediaId === nextTrack.mediaId) {
@@ -969,24 +969,24 @@ function MainApp() {
             return;
           }
 
-          // Otherwise, we need to download it
+          // De lo contrario, necesitamos descargarlo
           const token = await getStoredToken();
           if (!token) return;
 
-          console.log(`[Buffering] Starting background pre-download for: ${nextTrack.title}`);
+          console.log(`[Buffering] Iniciando predescarga en segundo plano para: ${nextTrack.title}`);
           const downloadedUri = await downloadDriveFile(fileId, nextTrack.title, token);
           
           if (downloadedUri && isMounted) {
-            console.log(`[Buffering] Background pre-download finished: ${nextTrack.title}`);
+            console.log(`[Buffering] Predescarga en segundo plano finalizada: ${nextTrack.title}`);
             const updatedTrack = { ...nextTrack, url: downloadedUri };
             
-            // Update native queue
+            // Actualizar la cola nativa
             const latestQueue = TrackPlayer.getQueue();
             if (latestQueue && nextIndex < latestQueue.length && latestQueue[nextIndex].mediaId === nextTrack.mediaId) {
               await TrackPlayer.replaceMediaItem(nextIndex, updatedTrack);
             }
             
-            // Update state
+            // Actualizar el estado
             setPlayQueue(prev => {
               const newQueue = [...prev];
               if (nextIndex < newQueue.length && newQueue[nextIndex].mediaId === nextTrack.mediaId) {
@@ -998,7 +998,7 @@ function MainApp() {
           }
         }
       } catch (err) {
-        console.error('[Buffering] Error during prefetch:', err);
+        console.error('[Buffering] Error durante la predescarga:', err);
       }
     }
 
@@ -1033,7 +1033,7 @@ function MainApp() {
             setTracks(updatedTracks);
           }
 
-          // Update playlists track URLs
+          // Actualizar las URLs de las pistas de las listas de reproducción
           const updatedPlaylists = playlists.map(p => {
             const hasTrack = p.tracks.some(t => t.mediaId === item.mediaId);
             if (hasTrack) {
@@ -1047,7 +1047,7 @@ function MainApp() {
           setPlaylists(updatedPlaylists);
           await AsyncStorage.setItem('vulpis_playlists', JSON.stringify(updatedPlaylists));
           
-          console.log('[App] Loading track with local cached file:', localUri);
+          console.log('[App] Cargando pista con archivo local guardado en caché:', localUri);
           await TrackPlayer.clear();
           await TrackPlayer.setMediaItems(updatedTracks);
           
@@ -1058,7 +1058,7 @@ function MainApp() {
           Alert.alert('Error', 'No se pudo descargar el archivo de Google Drive.');
         }
       } catch (err) {
-        console.error('[App] Error in handleSelectTrack download:', err);
+        console.error('[App] Error en la descarga de handleSelectTrack:', err);
         Alert.alert('Error', 'No se pudo reproducir la canción.');
       } finally {
         setIsSourceChanging(false);
@@ -1070,7 +1070,7 @@ function MainApp() {
         await TrackPlayer.skipToIndex(index);
         await TrackPlayer.play();
       } catch (e) {
-        console.error('[App] Error selecting track:', e);
+        console.error('[App] Error al seleccionar pista:', e);
       }
     }
   };
@@ -1133,7 +1133,7 @@ function MainApp() {
         }
       />
 
-      {/* Floating MiniPlayer */}
+      {/* Mini reproductor flotante */}
       <MiniPlayer
         activeTrack={activeTrack}
         isPlaying={isPlaying}
@@ -1146,7 +1146,7 @@ function MainApp() {
         isShuffleActive={isShuffleActive}
       />
 
-      {/* Full Screen Player Modal */}
+      {/* Modal del reproductor a pantalla completa */}
       <Modal
         visible={isFullPlayerVisible}
         animationType="slide"
@@ -1167,7 +1167,7 @@ function MainApp() {
         />
       </Modal>
 
-      {/* Navigation Drawer Menu */}
+      {/* Menú lateral de navegación */}
       <SidebarDrawer
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}

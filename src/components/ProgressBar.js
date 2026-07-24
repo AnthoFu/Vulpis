@@ -25,7 +25,7 @@ export default function ProgressBar({ position, duration }) {
     try {
       await TrackPlayer.seekTo(val);
     } catch (e) {
-      console.error('Error seeking in TrackPlayer:', e);
+      console.error('Error al buscar posición en TrackPlayer:', e);
     } finally {
       setIsSeeking(false);
     }
@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
   timeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: -4, // Adjust slightly since slider has built-in padding
+    marginTop: -4, // Ajustar ligeramente ya que el deslizador tiene un relleno incorporado
     paddingHorizontal: 4,
   },
   timeText: {

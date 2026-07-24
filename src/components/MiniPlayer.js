@@ -31,7 +31,7 @@ export default function MiniPlayer({
         await TrackPlayer.play();
       }
     } catch (e) {
-      console.error('[MiniPlayer] Error toggling playback:', e);
+      console.error('[MiniPlayer] Error al alternar la reproducción:', e);
     } finally {
       clearTimeout(timer);
       setIsProcessing(false);
@@ -56,7 +56,7 @@ export default function MiniPlayer({
         }
         const targetTrack = tracks[targetIndex];
         if (targetTrack) {
-          console.log(`[MiniPlayer] Skipping fallback to library track: ${targetTrack.title}`);
+          console.log(`[MiniPlayer] Saltando respaldo a pista de biblioteca: ${targetTrack.title}`);
           await onSelectTrack(targetTrack, targetIndex);
         }
       } else {
@@ -64,12 +64,12 @@ export default function MiniPlayer({
         await TrackPlayer.play();
       }
     } catch (fallbackErr) {
-      console.error('[MiniPlayer] Error in playLibraryFallback:', fallbackErr);
+      console.error('[MiniPlayer] Error en playLibraryFallback:', fallbackErr);
       try {
         await TrackPlayer.seekTo(0);
         await TrackPlayer.play();
       } catch (err) {
-        console.error('[MiniPlayer] Absolute fallback failed:', err);
+        console.error('[MiniPlayer] Respaldo absoluto falló:', err);
       }
     }
   };
@@ -80,15 +80,15 @@ export default function MiniPlayer({
     const timer = setTimeout(() => setIsProcessing(false), 1500);
     try {
       if (playQueue && playQueue.length > 1) {
-        console.log('[MiniPlayer] Skipping to previous track in queue');
+        console.log('[MiniPlayer] Saltando a la pista anterior de la cola');
         await TrackPlayer.skipToPrevious();
         await TrackPlayer.play();
       } else {
-        console.log('[MiniPlayer] Queue has 1 or fewer tracks, triggering library fallback');
+        console.log('[MiniPlayer] La cola tiene 1 o menos pistas, activando respaldo de biblioteca');
         await playLibraryFallback('prev');
       }
     } catch (e) {
-      console.log('[MiniPlayer] No previous track:', e);
+      console.log('[MiniPlayer] No hay pista anterior:', e);
       await playLibraryFallback('prev');
     } finally {
       clearTimeout(timer);
@@ -102,15 +102,15 @@ export default function MiniPlayer({
     const timer = setTimeout(() => setIsProcessing(false), 1500);
     try {
       if (playQueue && playQueue.length > 1) {
-        console.log('[MiniPlayer] Skipping to next track in queue');
+        console.log('[MiniPlayer] Saltando a la siguiente pista de la cola');
         await TrackPlayer.skipToNext();
         await TrackPlayer.play();
       } else {
-        console.log('[MiniPlayer] Queue has 1 or fewer tracks, triggering library fallback');
+        console.log('[MiniPlayer] La cola tiene 1 o menos pistas, activando respaldo de biblioteca');
         await playLibraryFallback('next');
       }
     } catch (e) {
-      console.log('[MiniPlayer] No next track:', e);
+      console.log('[MiniPlayer] No hay siguiente pista:', e);
       await playLibraryFallback('next');
     } finally {
       clearTimeout(timer);
@@ -131,16 +131,16 @@ export default function MiniPlayer({
         { bottom: insets.bottom + 8 }
       ]}
     >
-      {/* Sleek top progress indicator */}
+      {/* Indicador de progreso superior elegante */}
       <View style={styles.progressBackground}>
         <View style={[styles.progressActive, { width: `${progressPercent}%` }]} />
       </View>
 
       <View style={styles.contentRow}>
-        {/* Track Artwork */}
+        {/* Portada de la pista */}
         <Image source={{ uri: currentArtwork }} style={styles.artwork} />
 
-        {/* Track Details */}
+        {/* Detalles de la pista */}
         <View style={styles.details}>
           <Text style={styles.title} numberOfLines={1}>
             {activeTrack.title || 'Sin Título'}
@@ -150,7 +150,7 @@ export default function MiniPlayer({
           </Text>
         </View>
 
-        {/* Control Buttons */}
+        {/* Botones de control */}
         <View style={styles.controls}>
           <TouchableOpacity
             onPress={playPrevious}
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 8,
-    overflow: 'hidden', // To clip the top progress bar corners correctly
+    overflow: 'hidden', // Para recortar correctamente las esquinas de la barra de progreso superior
   },
   progressBackground: {
     height: 2,

@@ -28,5 +28,5 @@ export const localTracks = [
 
 export const privateTracks = [];
 
-// Fallback for existing codebase compatibility
+// Respaldo para compatibilidad con la base de código existente
 export const trackQueue = localTracks;

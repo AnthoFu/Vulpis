@@ -59,22 +59,22 @@ function arrayBufferToBase64(bytes) {
 export const extractMetadata = async (fileUri) => {
   return new Promise(async (resolve) => {
     try {
-      console.log('[MetadataExtractor] Reading file as base64:', fileUri);
+      console.log('[MetadataExtractor] Leyendo archivo como base64:', fileUri);
       
-      // Read local file as base64 string using expo-file-system
+      // Leer archivo local como cadena base64 usando expo-file-system
       const base64String = await FileSystem.readAsStringAsync(fileUri, {
         encoding: FileSystem.EncodingType.Base64,
       });
 
-      console.log('[MetadataExtractor] Decoding base64 to byte array...');
+      console.log('[MetadataExtractor] Decodificando base64 a arreglo de bytes...');
       const byteArray = base64ToUint8Array(base64String);
       const standardArray = Array.from(byteArray);
 
-      console.log('[MetadataExtractor] Extracting tags with jsmediatags...');
+      console.log('[MetadataExtractor] Extrayendo etiquetas con jsmediatags...');
       jsmediatags.read(standardArray, {
         onSuccess: (tag) => {
           const tags = tag.tags;
-          console.log('[MetadataExtractor] onSuccess. Title:', tags.title, 'Artist:', tags.artist, 'HasPicture:', !!tags.picture);
+          console.log('[MetadataExtractor] onSuccess. Título:', tags.title, 'Artista:', tags.artist, 'TieneImagen:', !!tags.picture);
           const title = tags.title || null;
           const artist = tags.artist || null;
           let artworkUrl = null;
@@ -83,18 +83,18 @@ export const extractMetadata = async (fileUri) => {
             const { data, format } = tags.picture;
             const base64 = arrayBufferToBase64(data);
             artworkUrl = `data:${format};base64,${base64}`;
-            console.log('[MetadataExtractor] Successfully extracted artwork.');
+            console.log('[MetadataExtractor] Portada extraída exitosamente.');
           }
 
           resolve({ title, artist, artworkUrl });
         },
         onError: (error) => {
-          console.log('[MetadataExtractor] jsmediatags error:', error);
+          console.log('[MetadataExtractor] Error de jsmediatags:', error);
           resolve({ title: null, artist: null, artworkUrl: null });
         }
       });
     } catch (e) {
-      console.error('[MetadataExtractor] File reading error:', e);
+      console.error('[MetadataExtractor] Error al leer el archivo:', e);
       resolve({ title: null, artist: null, artworkUrl: null });
     }
   });

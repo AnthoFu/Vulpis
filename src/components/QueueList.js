@@ -47,9 +47,9 @@ export default function QueueList({
 }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('library'); // 'library' | 'queue'
+  const [activeTab, setActiveTab] = useState('library'); // 'biblioteca' | 'cola'
 
-  // Playlists States
+  // Estados de las listas de reproducción
   const [selectedPlaylistId, setSelectedPlaylistId] = useState(null);
   const [showCreateInput, setShowCreateInput] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
@@ -57,7 +57,7 @@ export default function QueueList({
   const [isPlaylistPickerVisible, setIsPlaylistPickerVisible] = useState(false);
   const [inlineNewPlaylistName, setInlineNewPlaylistName] = useState('');
 
-  // Reset selected playlist if source changes
+  // Restablecer la lista de reproducción seleccionada si cambia la fuente
   useEffect(() => {
     setSelectedPlaylistId(null);
     setSearchQuery('');
@@ -173,7 +173,7 @@ export default function QueueList({
         await TrackPlayer.play();
       }
     } catch (e) {
-      console.error('Error selecting track:', e);
+      console.error('Error al seleccionar la pista:', e);
     } finally {
       setIsProcessing(false);
     }
@@ -192,7 +192,7 @@ export default function QueueList({
       await TrackPlayer.skipToIndex(0);
       await TrackPlayer.play();
     } catch (e) {
-      console.error('Error playing playlist:', e);
+      console.error('Error al reproducir la lista de reproducción:', e);
     } finally {
       setIsProcessing(false);
     }
@@ -220,7 +220,7 @@ export default function QueueList({
     }
   };
 
-  // Filter library tracks based on search query
+  // Filtrar pistas de la biblioteca según la consulta de búsqueda
   const displayTracks = (tracks || []).filter((track) => {
     if (!searchQuery) return true;
     const title = (track.title || '').toLowerCase();
@@ -231,7 +231,7 @@ export default function QueueList({
 
   const defaultArtwork = Image.resolveAssetSource(require('../../assets/default-cover.jpg')).uri;
 
-  // --- RENDER PLAYLISTS BROWSING MODE ---
+  // --- MODO DE RENDERIZADO DE BÚSQUEDA DE PLAYLISTS ---
   if (currentSource === 'playlists') {
     const selectedPlaylist = playlists.find(p => p.id === selectedPlaylistId);
     const horizontalPadding = {
@@ -239,7 +239,7 @@ export default function QueueList({
       paddingRight: contentContainerStyle?.paddingRight ?? 20,
     };
 
-    // 1. Details of a single selected playlist
+    // 1. Detalles de una sola lista de reproducción seleccionada
     if (selectedPlaylist) {
       const filteredPlaylistTracks = selectedPlaylist.tracks.filter(track => {
         if (!searchQuery) return true;
@@ -348,7 +348,7 @@ export default function QueueList({
       );
     }
 
-    // 2. Playlists List view
+    // 2. Vista de lista de reproducción (Playlists)
     const filteredPlaylists = playlists.filter(p => {
       if (!searchQuery) return true;
       return p.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -471,7 +471,7 @@ export default function QueueList({
     );
   }
 
-  // --- RENDER REGULAR MUSIC LIBRARY / QUEUE ---
+  // --- RENDERIZADO DE BIBLIOTECA DE MÚSICA REGULAR / COLA ---
   const listData = activeTab === 'library'
     ? (isLoading ? [] : displayTracks)
     : playQueue;
@@ -1173,7 +1173,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  // Playlists specific styles
+  // Estilos específicos de las listas de reproducción (Playlists)
   playlistDetailContainer: {
     flex: 1,
   },
@@ -1339,7 +1339,7 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
 
-  // Modal styles for Track Options & Playlist Picker
+  // Estilos de modal para Opciones de pista y Selector de lista de reproducción
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',

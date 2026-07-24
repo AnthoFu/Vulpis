@@ -214,7 +214,7 @@ export const getOrCreateVulpisFolder = async (accessToken) => {
       await AsyncStorage.removeItem(FOLDER_CACHE_KEY);
     }
 
-    # Buscar la carpeta Vulpis
+    // Buscar la carpeta Vulpis
     console.log('[Drive] Buscando la carpeta Vulpis...');
     const q = encodeURIComponent("mimeType = 'application/vnd.google-apps.folder' and name = 'Vulpis' and trashed = false");
     const searchUrl = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)`;
@@ -237,7 +237,7 @@ export const getOrCreateVulpisFolder = async (accessToken) => {
       return folderId;
     }
 
-    # Crear la carpeta Vulpis
+    // Crear la carpeta Vulpis
     console.log('[Drive] Carpeta Vulpis no encontrada. Creándola...');
     const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
       method: 'POST',

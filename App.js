@@ -12,8 +12,6 @@ import {
 } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import TrackPlayer, { PlayerCommand, Event, RepeatMode } from '@rntp/player';
-import * as MediaLibrary from 'expo-media-library/legacy';
-import * as DocumentPicker from 'expo-document-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import Header from './src/components/Header';
@@ -21,21 +19,15 @@ import PlayerCard from './src/components/PlayerCard';
 import MiniPlayer from './src/components/MiniPlayer';
 import QueueList from './src/components/QueueList';
 import SidebarDrawer from './src/components/SidebarDrawer';
-import { GOOGLE_OAUTH_CONFIG } from './src/constants/config';
-import { localTracks, privateTracks } from './src/constants/tracks';
+import { localTracks } from './src/constants/tracks';
 import { extractMetadata } from './src/utils/metadata';
-import {
-  getGoogleConfig,
-  saveGoogleConfig,
-  getStoredToken,
-  signInWithGoogle,
-  fetchDriveMp3Files,
-  mapDriveFileToTrack,
-  clearAllCredentials,
-  getDriveRedirectUrl,
-  uploadTrackToDrive,
-  deleteTrackFromDrive,
-} from './src/utils/drive';
+import { getStoredToken } from './src/utils/drive';
+
+// Custom Hooks for modular logic
+import useToast from './src/hooks/useToast';
+import usePlaylists from './src/hooks/usePlaylists';
+import useLocalLibrary from './src/hooks/useLocalLibrary';
+import useGoogleDrive from './src/hooks/useGoogleDrive';
 
 function MainApp() {
   const insets = useSafeAreaInsets();
@@ -55,96 +47,63 @@ function MainApp() {
   const [tracks, setTracks] = useState(localTracks);
   const [isSourceChanging, setIsSourceChanging] = useState(false);
 
-  // Estados de integración con Google Drive
-  const [isDriveConnected, setIsDriveConnected] = useState(false);
-  const [googleClientId, setGoogleClientId] = useState(GOOGLE_OAUTH_CONFIG.clientId);
-  const [googleRedirectUri, setGoogleRedirectUri] = useState(GOOGLE_OAUTH_CONFIG.redirectUri);
-  const [isDriveLoading, setIsDriveLoading] = useState(false);
+  // Hooks personalizados para logica estandarizada y modular
+  const { toast, showToast } = useToast();
 
-  // Pistas de la biblioteca local y estado de personalización
-  const [localLibraryTracks, setLocalLibraryTracks] = useState(localTracks);
-  const [hasCustomLocalTracks, setHasCustomLocalTracks] = useState(false);
+  const {
+    playlists,
+    handleCreatePlaylist,
+    handleDeletePlaylist,
+    handleAddTrackToPlaylist,
+    handleRemoveTrackFromPlaylist,
+  } = usePlaylists(showToast);
 
-  // Notificación toast personalizada y gestión de colas
-  const [playlists, setPlaylists] = useState([]);
-  const [toast, setToast] = useState(null);
+  const {
+    localLibraryTracks,
+    setLocalLibraryTracks,
+    hasCustomLocalTracks,
+    setHasCustomLocalTracks,
+    saveLocalTracks,
+    handleScanLocal,
+    handleImportMp3,
+    handleResetLocal,
+  } = useLocalLibrary({
+    currentSource,
+    setTracks,
+    defaultCover,
+    setIsSourceChanging,
+  });
 
-  const showToast = (message) => {
-    setToast(message);
-    setTimeout(() => {
-      setToast(null);
-    }, 2500);
-  };
-
-  // Funciones auxiliares para listas de reproducción
-  useEffect(() => {
-    async function loadPlaylists() {
-      try {
-        const stored = await AsyncStorage.getItem('vulpis_playlists');
-        if (stored) {
-          setPlaylists(JSON.parse(stored));
-        }
-      } catch (err) {
-        console.error('[App] Error al cargar listas de reproducción:', err);
-      }
-    }
-    loadPlaylists();
-  }, []);
-
-  const handleCreatePlaylist = async (name) => {
-    if (!name || name.trim() === '') return null;
-    const newPlaylist = {
-      id: `playlist-${Date.now()}`,
-      name: name.trim(),
-      tracks: [],
-    };
-    const updated = [...playlists, newPlaylist];
-    setPlaylists(updated);
-    await AsyncStorage.setItem('vulpis_playlists', JSON.stringify(updated));
-    showToast(`Playlist "${name}" creada`);
-    return newPlaylist;
-  };
-
-  const handleDeletePlaylist = async (id) => {
-    const updated = playlists.filter((p) => p.id !== id);
-    setPlaylists(updated);
-    await AsyncStorage.setItem('vulpis_playlists', JSON.stringify(updated));
-    showToast('Playlist eliminada');
-  };
-
-  const handleAddTrackToPlaylist = async (playlistId, track) => {
-    const updated = playlists.map((p) => {
-      if (p.id === playlistId) {
-        if (p.tracks.some((t) => t.mediaId === track.mediaId)) {
-          showToast('La canción ya está en esta playlist');
-          return p;
-        }
-        showToast(`Añadida a: ${p.name}`);
-        return {
-          ...p,
-          tracks: [...p.tracks, track],
-        };
-      }
-      return p;
-    });
-    setPlaylists(updated);
-    await AsyncStorage.setItem('vulpis_playlists', JSON.stringify(updated));
-  };
-
-  const handleRemoveTrackFromPlaylist = async (playlistId, trackId) => {
-    const updated = playlists.map((p) => {
-      if (p.id === playlistId) {
-        return {
-          ...p,
-          tracks: p.tracks.filter((t) => t.mediaId !== trackId),
-        };
-      }
-      return p;
-    });
-    setPlaylists(updated);
-    await AsyncStorage.setItem('vulpis_playlists', JSON.stringify(updated));
-    showToast('Canción eliminada de la playlist');
-  };
+  const {
+    isDriveConnected,
+    setIsDriveConnected,
+    googleClientId,
+    googleRedirectUri,
+    isDriveLoading,
+    setIsDriveLoading,
+    downloadDriveFile,
+    loadDriveFiles,
+    handleConnectDrive,
+    handleDisconnectDrive,
+    handleUploadTrackToDrive,
+    handleUploadLocalTrackToDrive,
+    handleDeleteDriveTrack,
+    handleDownloadDriveTrack,
+    handleRefreshDrive,
+  } = useGoogleDrive({
+    currentSource,
+    setTracks,
+    setIsSourceChanging,
+    playQueue,
+    setPlayQueue,
+    setActiveTrack,
+    setIsPlaying,
+    showToast,
+    defaultCover,
+    localLibraryTracks,
+    hasCustomLocalTracks,
+    saveLocalTracks,
+  });
 
   const handleAddToQueue = async (item) => {
     try {
@@ -345,386 +304,9 @@ function MainApp() {
     };
   }, []);
 
-  // Cargar la configuración de Google Drive al iniciar la app
-  useEffect(() => {
-    async function loadGoogleConfigData() {
-      try {
-        const config = await getGoogleConfig();
-        setGoogleClientId(config.clientId);
-        setGoogleRedirectUri(config.redirectUri);
 
-        const token = await getStoredToken();
-        if (token) {
-          setIsDriveConnected(true);
-        }
-      } catch (err) {
-        console.error('[App] Error al cargar la configuración inicial de Google Drive:', err);
-      }
-    }
-    loadGoogleConfigData();
-  }, []);
 
-  const loadDriveFiles = async (token, forceUpdatePlayer = false) => {
-    setIsDriveLoading(true);
-    const isPrivateActive = currentSourceRef.current === 'private';
-    if (isPrivateActive) {
-      setIsSourceChanging(true);
-    }
-    try {
-      const files = await fetchDriveMp3Files(token);
-      const driveTracks = await Promise.all(
-        files.map(async (file) => {
-          const resolvedUrl = await getDriveRedirectUrl(file.id, token);
-          return mapDriveFileToTrack(file, token, defaultCover, resolvedUrl);
-        })
-      );
-      
-      if (isPrivateActive) {
-        setTracks(driveTracks);
-      }
-      
-      // Actualizar la cola de TrackPlayer SOLO si forceUpdatePlayer es true Y no hay ninguna pista activa reproduciéndose
-      if (forceUpdatePlayer && isPrivateActive) {
-        const active = TrackPlayer.getActiveMediaItem();
-        if (!active) {
-          await TrackPlayer.clear();
-          if (driveTracks.length > 0) {
-            await TrackPlayer.setMediaItems(driveTracks);
-            await TrackPlayer.skipToIndex(0);
-          }
-        }
-      }
-    } catch (err) {
-      console.error('[App] Error al cargar archivos de Drive:', err);
-      if (err.message === 'AUTH_EXPIRED') {
-        setIsDriveConnected(false);
-        if (isPrivateActive) {
-          setTracks([]);
-        }
-        Alert.alert('Sesión Expirada', 'Tu sesión de Google Drive ha expirado. Por favor, conéctate de nuevo.');
-      } else {
-        Alert.alert('Error', 'No se pudieron obtener las canciones de Google Drive.');
-      }
-    } finally {
-      setIsDriveLoading(false);
-      if (isPrivateActive) {
-        setIsSourceChanging(false);
-      }
-    }
-  };
 
-  const handleConnectDrive = async (clientId, redirectUri) => {
-    setIsDriveLoading(true);
-    try {
-      const token = await signInWithGoogle(clientId, redirectUri);
-      if (token) {
-        setIsDriveConnected(true);
-        setGoogleClientId(clientId);
-        setGoogleRedirectUri(redirectUri);
-        showToast('Google Drive conectado exitosamente');
-        await loadDriveFiles(token);
-      }
-    } catch (err) {
-      console.error('[App] Error al conectar Google Drive:', err);
-      Alert.alert('Error de Conexión', err.message || 'No se pudo conectar a Google Drive.');
-    } finally {
-      setIsDriveLoading(false);
-    }
-  };
-
-  const handleDisconnectDrive = async () => {
-    Alert.alert(
-      'Desconectar Nube Privada',
-      '¿Estás seguro de que quieres desconectar tu cuenta de Google Drive?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Desconectar',
-          style: 'destructive',
-          onPress: async () => {
-            setIsDriveLoading(true);
-            try {
-              await clearAllCredentials();
-              setIsDriveConnected(false);
-              setTracks([]);
-              await TrackPlayer.clear();
-              showToast('Google Drive desconectado');
-            } catch (err) {
-              console.error('[App] Error al desconectar:', err);
-            } finally {
-              setIsDriveLoading(false);
-            }
-          }
-        }
-      ]
-    );
-  };
-
-  const handleUploadTrackToDrive = async () => {
-    const token = await getStoredToken();
-    if (!token) {
-      Alert.alert('No Conectado', 'Por favor, conéctate a Google Drive primero.');
-      return;
-    }
-
-    try {
-      const res = await DocumentPicker.getDocumentAsync({
-        type: 'audio/mpeg', // MP3 files
-        copyToCacheDirectory: true,
-        multiple: false,
-      });
-
-      if (res.canceled) return;
-
-      const asset = res.assets[0];
-      setIsDriveLoading(true);
-      showToast(`Subiendo: ${asset.name}...`);
-
-      await uploadTrackToDrive(asset.uri, asset.name, token);
-      
-      showToast('¡Subida completada!');
-      // Recargar las pistas de Drive para mostrar la nueva canción subida
-      await loadDriveFiles(token);
-    } catch (e) {
-      console.error('[App] Error al subir a Drive:', e);
-      Alert.alert('Error', 'No se pudo subir la canción a Google Drive.');
-    } finally {
-      setIsDriveLoading(false);
-    }
-  };
-
-  const handleUploadLocalTrackToDrive = async (track) => {
-    const token = await getStoredToken();
-    if (!token) {
-      Alert.alert(
-        'Google Drive no conectado',
-        'Por favor, conéctate a Google Drive en la pestaña de Nube Privada primero.'
-      );
-      return;
-    }
-
-    setIsDriveLoading(true);
-    showToast(`Subiendo a Drive: ${track.title}...`);
-
-    try {
-      let filename = track.title;
-      if (!filename.toLowerCase().endsWith('.mp3')) {
-        filename += '.mp3';
-      }
-
-      await uploadTrackToDrive(track.url, filename, token);
-      showToast('¡Subido a Drive exitosamente!');
-      
-      // Actualizar la lista de pistas si está conectado a Drive
-      await loadDriveFiles(token);
-    } catch (e) {
-      console.error('[App] Error al subir pista local a Drive:', e);
-      Alert.alert('Error', 'No se pudo subir la canción seleccionada a Google Drive.');
-    } finally {
-      setIsDriveLoading(false);
-    }
-  };
-
-  const handleDeleteDriveTrack = async (track) => {
-    const token = await getStoredToken();
-    if (!token) {
-      Alert.alert('No Conectado', 'Por favor, conéctate a Google Drive primero.');
-      return;
-    }
-
-    const fileId = track.mediaId.replace(/^drive-/, '');
-    setIsDriveLoading(true);
-    showToast(`Eliminando: ${track.title}...`);
-
-    try {
-      // 1. Eliminar de la nube de Google Drive
-      await deleteTrackFromDrive(fileId, token);
-
-      // 2. Eliminar de la caché local si fue descargado
-      const cacheUri = FileSystem.cacheDirectory + `${fileId}.mp3`;
-      try {
-        const cacheInfo = await FileSystem.getInfoAsync(cacheUri);
-        if (cacheInfo.exists) {
-          await FileSystem.deleteAsync(cacheUri);
-          console.log('[App] Archivo en caché eliminado:', cacheUri);
-        }
-      } catch (cacheErr) {
-        console.warn('[App] Error al eliminar archivo en caché:', cacheErr);
-      }
-
-      // 3. Quitar del reproductor activo si se está reproduciendo actualmente
-      const active = TrackPlayer.getActiveMediaItem();
-      if (active && active.mediaId === track.mediaId) {
-        await TrackPlayer.stop();
-        await TrackPlayer.clear();
-        setActiveTrack(null);
-        setIsPlaying(false);
-      }
-
-      // 4. Quitar del estado de la cola de reproducción
-      const updatedQueue = playQueue.filter(t => t.mediaId !== track.mediaId);
-      setPlayQueue(updatedQueue);
-
-      // 5. Recargar la lista de pistas de Drive
-      await loadDriveFiles(token);
-      showToast('Canción eliminada de Drive');
-    } catch (e) {
-      console.error('[App] Error al eliminar de Drive:', e);
-      Alert.alert('Error', 'No se pudo eliminar la canción de Google Drive.');
-    } finally {
-      setIsDriveLoading(false);
-    }
-  };
-
-  const handleDownloadDriveTrack = async (track) => {
-    const token = await getStoredToken();
-    if (!token) {
-      Alert.alert('No Conectado', 'Por favor, conéctate a Google Drive primero.');
-      return;
-    }
-
-    const startDownload = async (savedDirectoryUri = null) => {
-      setIsDriveLoading(true);
-      showToast(`Preparando descarga: ${track.title}...`);
-
-      try {
-        let persistentLocalUri = null;
-        const sanitizedTitle = track.title.replace(/[/\\?%*:|"<>]/g, '_');
-        const tempFilename = `${sanitizedTitle}.mp3`;
-
-        // 1. Descargar a caché temporal primero
-        const fileId = track.mediaId.replace(/^drive-/, '');
-        const cachedUri = await downloadDriveFile(fileId, track.title, token);
-        if (!cachedUri) {
-          throw new Error('No se pudo descargar el archivo de Google Drive.');
-        }
-
-        // 2. Guardar una copia persistente en el directorio privado de la app (para asegurar la reproducción en Vulpis)
-        persistentLocalUri = FileSystem.documentDirectory + tempFilename;
-        await FileSystem.copyAsync({
-          from: cachedUri,
-          to: persistentLocalUri,
-        });
-
-        // 3. Android: Guardar copia pública usando Storage Access Framework
-        if (Platform.OS === 'android') {
-          let directoryUri = savedDirectoryUri;
-
-          // Si no tenemos una carpeta guardada, pedirla al usuario
-          if (!directoryUri) {
-            const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
-            if (!permissions.granted) {
-              Alert.alert('Permiso cancelado', 'No se pudo guardar la canción en el almacenamiento público.');
-              setIsDriveLoading(false);
-              return;
-            }
-            directoryUri = permissions.directoryUri;
-            // Guardar la carpeta elegida en el almacenamiento persistente para futuras descargas
-            await AsyncStorage.setItem('vulpis_download_directory_uri', directoryUri);
-          }
-
-          showToast('Exportando al dispositivo...');
-          
-          // Leer archivo descargado en Base64
-          const base64Data = await FileSystem.readAsStringAsync(cachedUri, {
-            encoding: FileSystem.EncodingType.Base64,
-          });
-
-          // Crear archivo en la carpeta autorizada
-          const publicFileUri = await FileSystem.StorageAccessFramework.createFileAsync(
-            directoryUri,
-            sanitizedTitle,
-            'audio/mpeg'
-          );
-
-          // Escribir los datos en el archivo público
-          await FileSystem.writeAsStringAsync(publicFileUri, base64Data, {
-            encoding: FileSystem.EncodingType.Base64,
-          });
-        }
-
-        // 4. Registrar en la biblioteca local de Vulpis
-        const meta = await extractMetadata(persistentLocalUri);
-        const newLocalTrack = {
-          mediaId: `local-drive-${Date.now()}`,
-          url: persistentLocalUri,
-          title: meta.title || track.title || tempFilename.replace(/\.mp3$/i, ''),
-          artist: meta.artist || track.artist || 'Descargado de Drive',
-          artworkUrl: meta.artworkUrl || track.artworkUrl || defaultCover,
-        };
-
-        const existingCustom = hasCustomLocalTracks ? localLibraryTracks : [];
-        const updatedTracks = [...existingCustom, newLocalTrack];
-        
-        await saveLocalTracks(updatedTracks);
-        showToast('¡Guardado exitosamente!');
-        
-        Alert.alert(
-          'Descarga Completada',
-          Platform.OS === 'android' 
-            ? `La canción "${track.title}" se guardó en tu dispositivo y se agregó a tu biblioteca local de Vulpis.`
-            : `La canción "${track.title}" se ha descargado y guardado en tu biblioteca local.`
-        );
-
-      } catch (error) {
-        console.error('[App] Error en handleDownloadDriveTrack:', error);
-        // Si falla usando la URI guardada (por ejemplo, si el usuario revocó permisos o la carpeta ya no existe), limpiar la caché
-        if (savedDirectoryUri) {
-          try {
-            await AsyncStorage.removeItem('vulpis_download_directory_uri');
-          } catch (e) {
-            console.warn('[App] Error al limpiar directorio URI:', e);
-          }
-        }
-        Alert.alert(
-          'Error de Descarga',
-          'Ocurrió un problema al descargar o guardar la canción. Si cambiaste los permisos de tu carpeta, inténtalo de nuevo para volver a seleccionarla.'
-        );
-      } finally {
-        setIsDriveLoading(false);
-      }
-    };
-
-    if (Platform.OS === 'android') {
-      try {
-        // Verificar si ya tenemos una carpeta pública guardada
-        const savedUri = await AsyncStorage.getItem('vulpis_download_directory_uri');
-        if (savedUri) {
-          // Ya la tenemos, descargar silenciosamente
-          await startDownload(savedUri);
-        } else {
-          // No la tenemos, guiar al usuario con instrucciones claras antes de abrir el selector del sistema
-          Alert.alert(
-            'Activar Descargas Públicas',
-            'Para que otras aplicaciones de tu teléfono puedan acceder a tu música descargada, necesitamos que elijas una carpeta una sola vez.\n\n' +
-            '1. En la siguiente pantalla, selecciona o crea una carpeta en tu teléfono (te sugerimos "Música" o "Descargas").\n' +
-            '2. Presiona el botón grande azul abajo que dice "Usar esta carpeta" (o "Permitir acceso").\n\n' +
-            '¡Y listo! Las próximas descargas se realizarán automáticamente sin preguntarte nada.',
-            [
-              { text: 'Cancelar', style: 'cancel' },
-              { text: 'Elegir Carpeta', onPress: () => startDownload(null) }
-            ]
-          );
-        }
-      } catch (err) {
-        console.error('[App] Error al leer directorio guardado:', err);
-        await startDownload(null);
-      }
-    } else {
-      await startDownload();
-    }
-  };
-
-  const handleRefreshDrive = async () => {
-    const token = await getStoredToken();
-    if (token) {
-      await loadDriveFiles(token);
-      showToast('Biblioteca de Drive actualizada');
-    } else {
-      setIsDriveConnected(false);
-      Alert.alert('No Conectado', 'Por favor, conéctate a Google Drive primero.');
-    }
-  };
 
   const currentSourceRef = useRef(currentSource);
   const tracksRef = useRef(tracks);
@@ -756,17 +338,19 @@ function MainApp() {
         const currentQueue = TrackPlayer.getQueue();
         
         tick++;
-        if (tick % 8 === 0) { // registrar en log solo una vez cada 2 segundos
-          console.log('[DEBUG-POLL]', {
-            activeTrack: currentActive,
-            state: TrackPlayer.getPlaybackState(),
-            isPlaying: currentPlaying,
-            position: currentProgress?.position,
-            repeatMode: currentRepeat,
-            isShuffleActive: currentShuffle,
-            playQueueLength: currentQueue?.length,
-          });
-        }
+
+        // Eliminamos este console.log ya que no es necesarioa actualmente
+        // if (tick % 8 === 0) { // registrar en log solo una vez cada 2 segundos
+        //   console.log('[DEBUG-POLL]', {
+        //     activeTrack: currentActive,
+        //     state: TrackPlayer.getPlaybackState(),
+        //     isPlaying: currentPlaying,
+        //     position: currentProgress?.position,
+        //     repeatMode: currentRepeat,
+        //     isShuffleActive: currentShuffle,
+        //     playQueueLength: currentQueue?.length,
+        //   });
+        // }
 
         setActiveTrack(currentActive);
         setIsPlaying(currentPlaying);
@@ -855,198 +439,7 @@ function MainApp() {
     }
   };
 
-  // Auxiliar para guardar pistas locales en el almacenamiento y sincronizar con el estado y el reproductor
-  const saveLocalTracks = async (newTracksList) => {
-    setLocalLibraryTracks(newTracksList);
-    setHasCustomLocalTracks(true);
-    await AsyncStorage.setItem('vulpis_local_tracks', JSON.stringify(newTracksList));
-    
-    if (currentSource === 'local') {
-      setTracks(newTracksList);
-      
-      try {
-        const active = TrackPlayer.getActiveMediaItem();
-        await TrackPlayer.clear();
-        await TrackPlayer.setMediaItems(newTracksList);
-        
-        if (active) {
-          const idx = newTracksList.findIndex(t => t.mediaId === active.mediaId);
-          if (idx !== -1) {
-            await TrackPlayer.skipToIndex(idx);
-          } else {
-            await TrackPlayer.skipToIndex(0);
-          }
-        } else {
-          await TrackPlayer.skipToIndex(0);
-        }
-      } catch (err) {
-        console.error('[saveLocalTracks] Error al sincronizar TrackPlayer:', err);
-      }
-    }
-  };
 
-  // Escanear archivos de audio locales en el dispositivo usando expo-media-library
-  const handleScanLocal = async () => {
-    try {
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert(
-          'Permiso denegado',
-          'Necesitamos acceso a tu biblioteca de medios para buscar archivos de audio.'
-        );
-        return;
-      }
-
-      setIsSourceChanging(true);
-      
-      let media = await MediaLibrary.getAssetsAsync({
-        mediaType: [MediaLibrary.MediaType.audio],
-        first: 100, // recuperar hasta 100 pistas
-      });
-
-      const assetsList = media.assets.filter(
-        asset => asset.filename && asset.filename.toLowerCase().endsWith('.mp3')
-      );
-
-      if (assetsList.length === 0) {
-        Alert.alert('Escaneo Completado', 'No se encontraron archivos .mp3 en el dispositivo.');
-        setIsSourceChanging(false);
-        return;
-      }
-
-      const newTracks = [];
-      for (let i = 0; i < assetsList.length; i++) {
-        const asset = assetsList[i];
-        const meta = await extractMetadata(asset.uri);
-        newTracks.push({
-          mediaId: asset.id || `local-scanned-${i}-${Date.now()}`,
-          url: asset.uri,
-          title: meta.title || asset.filename.replace(/\.mp3$/i, ''),
-          artist: meta.artist || 'Audio Escaneado',
-          artworkUrl: meta.artworkUrl || defaultCover,
-        });
-      }
-
-      await saveLocalTracks(newTracks);
-      Alert.alert(
-        'Escaneo Completado',
-        `Se encontraron y cargaron ${newTracks.length} archivos .mp3 en tu biblioteca local.`
-      );
-    } catch (e) {
-      console.error('Error al escanear audio local:', e);
-      Alert.alert('Error', 'Hubo un problema al escanear los archivos locales.');
-    } finally {
-      setIsSourceChanging(false);
-    }
-  };
-
-  // Importar archivos MP3 específicos del almacenamiento del dispositivo usando expo-document-picker
-  const handleImportMp3 = async () => {
-    try {
-      const res = await DocumentPicker.getDocumentAsync({
-        type: 'audio/mpeg', // Tipo mime MP3
-        copyToCacheDirectory: true,
-        multiple: true,
-      });
-
-      if (res.canceled) return;
-
-      setIsSourceChanging(true);
-      
-      const importedTracks = [];
-      for (let i = 0; i < res.assets.length; i++) {
-        const asset = res.assets[i];
-        const meta = await extractMetadata(asset.uri);
-        importedTracks.push({
-          mediaId: `imported-${Date.now()}-${i}`,
-          url: asset.uri,
-          title: meta.title || asset.name.replace(/\.mp3$/i, ''),
-          artist: meta.artist || 'Archivo Importado',
-          artworkUrl: meta.artworkUrl || defaultCover,
-        });
-      }
-
-      // Agregar a la biblioteca local existente
-      const existingCustom = hasCustomLocalTracks ? localLibraryTracks : [];
-      const updatedTracks = [...existingCustom, ...importedTracks];
-      
-      await saveLocalTracks(updatedTracks);
-      Alert.alert(
-        'Importación Exitosa',
-        `Se han importado ${importedTracks.length} canción(es) a la biblioteca local.`
-      );
-    } catch (e) {
-      console.error('Error al importar archivo MP3:', e);
-      Alert.alert('Error', 'No se pudo importar el archivo MP3.');
-    } finally {
-      setIsSourceChanging(false);
-    }
-  };
-
-  // Limpiar las pistas de la biblioteca local personalizada y volver a las de demostración predeterminadas
-  const handleResetLocal = async () => {
-    Alert.alert(
-      'Restablecer Biblioteca',
-      '¿Estás seguro de que quieres restablecer la biblioteca local? Esto eliminará tus canciones importadas/escaneadas y volverá a las canciones de prueba.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Restablecer',
-          style: 'destructive',
-          onPress: async () => {
-            setIsSourceChanging(true);
-            try {
-              await AsyncStorage.removeItem('vulpis_local_tracks');
-              setLocalLibraryTracks(localTracks);
-              setHasCustomLocalTracks(false);
-              
-              if (currentSource === 'local') {
-                setTracks(localTracks);
-                await TrackPlayer.clear();
-                await TrackPlayer.setMediaItems(localTracks);
-                await TrackPlayer.skipToIndex(0);
-              }
-            } catch (e) {
-              console.error('Error al restablecer pistas locales:', e);
-            } finally {
-              setIsSourceChanging(false);
-            }
-          }
-        }
-      ]
-    );
-  };
-
-  const downloadDriveFile = async (fileId, title, accessToken) => {
-    const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
-    const localUri = FileSystem.cacheDirectory + `${fileId}.mp3`;
-    
-    try {
-      const fileInfo = await FileSystem.getInfoAsync(localUri);
-      if (fileInfo.exists) {
-        console.log('[Drive] Archivo ya guardado en caché local:', localUri);
-        return localUri;
-      }
-      
-      console.log('[Drive] Descargando archivo a caché:', localUri);
-      const downloadResumable = FileSystem.createDownloadResumable(
-        url,
-        localUri,
-        {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-          },
-        }
-      );
-      
-      const { uri } = await downloadResumable.downloadAsync();
-      console.log('[Drive] Archivo descargado exitosamente:', uri);
-      return uri;
-    } catch (error) {
-      console.error('[Drive] Error al descargar archivo:', error);
-      return null;
-    }
-  };
 
   // Almacenamiento en caché en segundo plano para archivos de Google Drive
   useEffect(() => {

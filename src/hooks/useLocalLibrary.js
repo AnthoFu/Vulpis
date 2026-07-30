@@ -3,6 +3,7 @@ import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as MediaLibrary from 'expo-media-library/legacy';
 import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import TrackPlayer from '@rntp/player';
 import { extractMetadata } from '../utils/metadata';
 import { localTracks } from '../constants/tracks';
@@ -12,6 +13,11 @@ export default function useLocalLibrary({
   setTracks,
   defaultCover,
   setIsSourceChanging,
+  playQueue,
+  setPlayQueue,
+  setActiveTrack,
+  setIsPlaying,
+  showToast,
 }) {
   const [localLibraryTracks, setLocalLibraryTracks] = useState(localTracks);
   const [hasCustomLocalTracks, setHasCustomLocalTracks] = useState(false);
@@ -178,6 +184,88 @@ export default function useLocalLibrary({
     );
   };
 
+  const handleDeleteLocalTrack = async (track) => {
+    setIsSourceChanging(true);
+    try {
+      // 1. Si es una pista escaneada del sistema (su id no empieza con prefijos de importación/descarga/prueba)
+      const isSystemAsset = 
+        track.mediaId && 
+        !track.mediaId.startsWith('imported-') && 
+        !track.mediaId.startsWith('local-drive-') && 
+        !track.mediaId.startsWith('local-track-');
+
+      if (isSystemAsset) {
+        // Pedir permiso y eliminar del almacenamiento del sistema público
+        try {
+          const deleted = await MediaLibrary.deleteAssetsAsync([track.mediaId]);
+          if (!deleted) {
+            // El usuario canceló o falló la eliminación en el sistema
+            setIsSourceChanging(false);
+            return;
+          }
+          console.log('[useLocalLibrary] Pista del sistema eliminada físicamente:', track.mediaId);
+        } catch (mediaErr) {
+          console.warn('[useLocalLibrary] Error al borrar de MediaLibrary:', mediaErr);
+          Alert.alert(
+            'Error de permisos',
+            'No se pudo eliminar el archivo público. Asegúrate de otorgar los permisos necesarios.'
+          );
+          setIsSourceChanging(false);
+          return;
+        }
+      } else if (track.url && track.url.startsWith('file://')) {
+        // 2. Si es un archivo físico local en el almacenamiento persistente privado de la app, borrarlo
+        try {
+          const fileInfo = await FileSystem.getInfoAsync(track.url);
+          if (fileInfo.exists) {
+            await FileSystem.deleteAsync(track.url);
+            console.log('[useLocalLibrary] Archivo privado borrado del almacenamiento:', track.url);
+          }
+        } catch (fileErr) {
+          console.warn('[useLocalLibrary] Error al intentar borrar archivo físico privado:', fileErr);
+        }
+      }
+
+      // 3. Detener el reproductor si la pista eliminada es la pista activa
+      try {
+        const active = TrackPlayer.getActiveMediaItem();
+        if (active && active.mediaId === track.mediaId) {
+          await TrackPlayer.stop();
+          await TrackPlayer.clear();
+          if (setActiveTrack) setActiveTrack(null);
+          if (setIsPlaying) setIsPlaying(false);
+        }
+      } catch (playerErr) {
+        console.warn('[useLocalLibrary] Error al detener reproductor:', playerErr);
+      }
+
+      // 4. Quitar del estado de la cola de reproducción
+      if (playQueue && setPlayQueue) {
+        const updatedQueue = playQueue.filter(t => t.mediaId !== track.mediaId);
+        setPlayQueue(updatedQueue);
+      }
+
+      // 5. Quitar de la biblioteca local (AsyncStorage y estado)
+      const existingCustom = hasCustomLocalTracks ? localLibraryTracks : [];
+      const updatedTracks = existingCustom.filter(t => t.mediaId !== track.mediaId);
+      
+      await saveLocalTracks(updatedTracks);
+      
+      if (showToast) {
+        showToast(
+          isSystemAsset 
+            ? 'Archivo eliminado del teléfono' 
+            : 'Canción eliminada de la biblioteca'
+        );
+      }
+    } catch (e) {
+      console.error('[useLocalLibrary] Error al borrar canción local:', e);
+      Alert.alert('Error', 'No se pudo eliminar la canción.');
+    } finally {
+      setIsSourceChanging(false);
+    }
+  };
+
   return {
     localLibraryTracks,
     setLocalLibraryTracks,
@@ -187,5 +275,6 @@ export default function useLocalLibrary({
     handleScanLocal,
     handleImportMp3,
     handleResetLocal,
+    handleDeleteLocalTrack,
   };
 }

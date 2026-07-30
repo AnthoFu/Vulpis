@@ -68,11 +68,17 @@ function MainApp() {
     handleScanLocal,
     handleImportMp3,
     handleResetLocal,
+    handleDeleteLocalTrack,
   } = useLocalLibrary({
     currentSource,
     setTracks,
     defaultCover,
     setIsSourceChanging,
+    playQueue,
+    setPlayQueue,
+    setActiveTrack,
+    setIsPlaying,
+    showToast,
   });
 
   const {
@@ -637,6 +643,7 @@ function MainApp() {
         onScanLocal={handleScanLocal}
         onImportMp3={handleImportMp3}
         onResetLocal={handleResetLocal}
+        onDeleteLocalTrack={handleDeleteLocalTrack}
         hasCustomLocalTracks={hasCustomLocalTracks}
         onAddToQueue={handleAddToQueue}
         onRemoveFromQueue={handleRemoveFromQueue}

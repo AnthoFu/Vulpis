@@ -45,6 +45,7 @@ export default function QueueList({
   onUploadLocalTrackToDrive,
   onDeleteDriveTrack,
   onDownloadDriveTrack,
+  onDeleteLocalTrack,
 }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -699,6 +700,32 @@ export default function QueueList({
               >
                 <MaterialCommunityIcons name="delete-outline" size={22} color="#EF4444" />
                 <Text style={[styles.modalOptionText, { color: '#EF4444' }]}>Eliminar de Drive</Text>
+              </TouchableOpacity>
+            )}
+
+            {!selectedTrackForOptions?.mediaId?.startsWith('drive-') && onDeleteLocalTrack && (
+              <TouchableOpacity
+                onPress={() => {
+                  const trackToDelete = selectedTrackForOptions;
+                  setSelectedTrackForOptions(null);
+                  Alert.alert(
+                    'Eliminar Canción del Dispositivo',
+                    `¿Estás seguro de que quieres eliminar "${trackToDelete.title}" de tu biblioteca local? Esto la borrará del almacenamiento de la app y la quitará de tus playlists y cola de reproducción.`,
+                    [
+                      { text: 'Cancelar', style: 'cancel' },
+                      {
+                        text: 'Eliminar',
+                        style: 'destructive',
+                        onPress: () => onDeleteLocalTrack(trackToDelete),
+                      },
+                    ]
+                  );
+                }}
+                style={styles.modalOption}
+                activeOpacity={0.7}
+              >
+                <MaterialCommunityIcons name="delete-outline" size={22} color="#EF4444" />
+                <Text style={[styles.modalOptionText, { color: '#EF4444' }]}>Borrar del dispositivo</Text>
               </TouchableOpacity>
             )}
 

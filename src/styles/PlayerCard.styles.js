@@ -1,0 +1,173 @@
+import { StyleSheet } from 'react-native';
+
+const styles = StyleSheet.create({
+  playerFullScreen: {
+    flex: 1,
+    paddingHorizontal: 24,
+    justifyContent: 'space-between',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 56,
+    width: '100%',
+    zIndex: 10,
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(22, 23, 34, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(44, 45, 60, 0.6)',
+  },
+  headerTitle: {
+    color: '#8B5CF6',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 2,
+    textAlign: 'center',
+  },
+  headerPlaceholder: {
+    width: 40,
+  },
+  artworkContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: 16,
+    width: '100%',
+    zIndex: 10,
+  },
+  artworkShadowWrapper: {
+    width: '100%',
+    maxWidth: 320,
+    aspectRatio: 1,
+    borderRadius: 24,
+    backgroundColor: '#161722',
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.35,
+    shadowRadius: 18,
+    elevation: 10,
+  },
+  artwork: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 24,
+  },
+  bottomSection: {
+    width: '100%',
+    marginBottom: 8,
+    zIndex: 10,
+  },
+  trackDetails: {
+    alignItems: 'flex-start',
+    width: '100%',
+    marginBottom: 20,
+    paddingHorizontal: 4,
+  },
+  trackTitle: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: '800',
+    marginBottom: 6,
+  },
+  trackArtist: {
+    color: '#E2E3E9',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  footerRow: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+  },
+  footerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: 'rgba(22, 23, 34, 0.6)',
+    borderWidth: 1,
+    borderColor: 'rgba(44, 45, 60, 0.6)',
+  },
+  footerButtonText: {
+    color: '#8E8F9E',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  queueListContent: {
+    paddingVertical: 12,
+    zIndex: 10,
+  },
+  queueItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 14,
+    backgroundColor: 'rgba(18, 19, 26, 0.6)',
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  queueItemActive: {
+    backgroundColor: 'rgba(28, 29, 42, 0.7)',
+    borderColor: 'rgba(59, 61, 84, 0.7)',
+  },
+  queueItemMainContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  queueArtwork: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    marginRight: 14,
+  },
+  queueDetails: {
+    flex: 1,
+  },
+  queueTitle: {
+    color: '#E2E3E9',
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  queueTextActive: {
+    color: '#8B5CF6',
+  },
+  queueArtist: {
+    color: '#8E8F9E',
+    fontSize: 13,
+  },
+  playingIndicator: {
+    backgroundColor: 'rgba(139, 92, 246, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.3)',
+  },
+  playingIndicatorText: {
+    color: '#8B5CF6',
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  removeButton: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+});
+
+export default styles;

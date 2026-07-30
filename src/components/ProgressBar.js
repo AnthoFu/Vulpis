@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
+import styles from '../styles/ProgressBar.styles';
 import Slider from '@react-native-community/slider';
 import TrackPlayer from '@rntp/player';
 
@@ -54,25 +55,5 @@ export default function ProgressBar({ position, duration }) {
   );
 }
 
-const styles = StyleSheet.create({
-  progressContainer: {
-    width: '100%',
-    marginBottom: 24,
-  },
-  slider: {
-    width: '100%',
-    height: 40,
-  },
-  timeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: -4, // Ajustar ligeramente ya que el deslizador tiene un relleno incorporado
-    paddingHorizontal: 4,
-  },
-  timeText: {
-    color: '#8E8F9E',
-    fontSize: 12,
-    fontFamily: 'monospace',
-  },
-});
+
 

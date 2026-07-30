@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import appConfig from '../../app.config';
 
 export default function SidebarDrawer({ isOpen, onClose, currentSource, onSelectSource }) {
   const insets = useSafeAreaInsets();
@@ -170,7 +171,7 @@ export default function SidebarDrawer({ isOpen, onClose, currentSource, onSelect
             <MaterialCommunityIcons name="cog-outline" size={20} color="#8E8F9E" />
             <Text style={styles.settingsLabel}>Ajustes</Text>
           </TouchableOpacity>
-          <Text style={styles.versionText}>v0.2.0</Text>
+          <Text style={styles.versionText}>v{appConfig?.expo?.version }</Text>
         </View>
       </Animated.View>
     </View>

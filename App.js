@@ -8,6 +8,7 @@ import {
   Alert,
   Modal,
   Image,
+  Platform,
 } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import TrackPlayer, { PlayerCommand, Event, RepeatMode } from '@rntp/player';
@@ -575,6 +576,145 @@ function MainApp() {
     }
   };
 
+  const handleDownloadDriveTrack = async (track) => {
+    const token = await getStoredToken();
+    if (!token) {
+      Alert.alert('No Conectado', 'Por favor, conéctate a Google Drive primero.');
+      return;
+    }
+
+    const startDownload = async (savedDirectoryUri = null) => {
+      setIsDriveLoading(true);
+      showToast(`Preparando descarga: ${track.title}...`);
+
+      try {
+        let persistentLocalUri = null;
+        const sanitizedTitle = track.title.replace(/[/\\?%*:|"<>]/g, '_');
+        const tempFilename = `${sanitizedTitle}.mp3`;
+
+        // 1. Descargar a caché temporal primero
+        const fileId = track.mediaId.replace(/^drive-/, '');
+        const cachedUri = await downloadDriveFile(fileId, track.title, token);
+        if (!cachedUri) {
+          throw new Error('No se pudo descargar el archivo de Google Drive.');
+        }
+
+        // 2. Guardar una copia persistente en el directorio privado de la app (para asegurar la reproducción en Vulpis)
+        persistentLocalUri = FileSystem.documentDirectory + tempFilename;
+        await FileSystem.copyAsync({
+          from: cachedUri,
+          to: persistentLocalUri,
+        });
+
+        // 3. Android: Guardar copia pública usando Storage Access Framework
+        if (Platform.OS === 'android') {
+          let directoryUri = savedDirectoryUri;
+
+          // Si no tenemos una carpeta guardada, pedirla al usuario
+          if (!directoryUri) {
+            const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+            if (!permissions.granted) {
+              Alert.alert('Permiso cancelado', 'No se pudo guardar la canción en el almacenamiento público.');
+              setIsDriveLoading(false);
+              return;
+            }
+            directoryUri = permissions.directoryUri;
+            // Guardar la carpeta elegida en el almacenamiento persistente para futuras descargas
+            await AsyncStorage.setItem('vulpis_download_directory_uri', directoryUri);
+          }
+
+          showToast('Exportando al dispositivo...');
+          
+          // Leer archivo descargado en Base64
+          const base64Data = await FileSystem.readAsStringAsync(cachedUri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+
+          // Crear archivo en la carpeta autorizada
+          const publicFileUri = await FileSystem.StorageAccessFramework.createFileAsync(
+            directoryUri,
+            sanitizedTitle,
+            'audio/mpeg'
+          );
+
+          // Escribir los datos en el archivo público
+          await FileSystem.writeAsStringAsync(publicFileUri, base64Data, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+        }
+
+        // 4. Registrar en la biblioteca local de Vulpis
+        const meta = await extractMetadata(persistentLocalUri);
+        const newLocalTrack = {
+          mediaId: `local-drive-${Date.now()}`,
+          url: persistentLocalUri,
+          title: meta.title || track.title || tempFilename.replace(/\.mp3$/i, ''),
+          artist: meta.artist || track.artist || 'Descargado de Drive',
+          artworkUrl: meta.artworkUrl || track.artworkUrl || defaultCover,
+        };
+
+        const existingCustom = hasCustomLocalTracks ? localLibraryTracks : [];
+        const updatedTracks = [...existingCustom, newLocalTrack];
+        
+        await saveLocalTracks(updatedTracks);
+        showToast('¡Guardado exitosamente!');
+        
+        Alert.alert(
+          'Descarga Completada',
+          Platform.OS === 'android' 
+            ? `La canción "${track.title}" se guardó en tu dispositivo y se agregó a tu biblioteca local de Vulpis.`
+            : `La canción "${track.title}" se ha descargado y guardado en tu biblioteca local.`
+        );
+
+      } catch (error) {
+        console.error('[App] Error en handleDownloadDriveTrack:', error);
+        // Si falla usando la URI guardada (por ejemplo, si el usuario revocó permisos o la carpeta ya no existe), limpiar la caché
+        if (savedDirectoryUri) {
+          try {
+            await AsyncStorage.removeItem('vulpis_download_directory_uri');
+          } catch (e) {
+            console.warn('[App] Error al limpiar directorio URI:', e);
+          }
+        }
+        Alert.alert(
+          'Error de Descarga',
+          'Ocurrió un problema al descargar o guardar la canción. Si cambiaste los permisos de tu carpeta, inténtalo de nuevo para volver a seleccionarla.'
+        );
+      } finally {
+        setIsDriveLoading(false);
+      }
+    };
+
+    if (Platform.OS === 'android') {
+      try {
+        // Verificar si ya tenemos una carpeta pública guardada
+        const savedUri = await AsyncStorage.getItem('vulpis_download_directory_uri');
+        if (savedUri) {
+          // Ya la tenemos, descargar silenciosamente
+          await startDownload(savedUri);
+        } else {
+          // No la tenemos, guiar al usuario con instrucciones claras antes de abrir el selector del sistema
+          Alert.alert(
+            'Activar Descargas Públicas',
+            'Para que otras aplicaciones de tu teléfono puedan acceder a tu música descargada, necesitamos que elijas una carpeta una sola vez.\n\n' +
+            '1. En la siguiente pantalla, selecciona o crea una carpeta en tu teléfono (te sugerimos "Música" o "Descargas").\n' +
+            '2. Presiona el botón grande azul abajo que dice "Usar esta carpeta" (o "Permitir acceso").\n\n' +
+            '¡Y listo! Las próximas descargas se realizarán automáticamente sin preguntarte nada.',
+            [
+              { text: 'Cancelar', style: 'cancel' },
+              { text: 'Elegir Carpeta', onPress: () => startDownload(null) }
+            ]
+          );
+        }
+      } catch (err) {
+        console.error('[App] Error al leer directorio guardado:', err);
+        await startDownload(null);
+      }
+    } else {
+      await startDownload();
+    }
+  };
+
   const handleRefreshDrive = async () => {
     const token = await getStoredToken();
     if (token) {
@@ -1113,6 +1253,7 @@ function MainApp() {
         onUploadTrackToDrive={handleUploadTrackToDrive}
         onUploadLocalTrackToDrive={handleUploadLocalTrackToDrive}
         onDeleteDriveTrack={handleDeleteDriveTrack}
+        onDownloadDriveTrack={handleDownloadDriveTrack}
         isDriveLoading={isDriveLoading}
         googleClientId={googleClientId}
         googleRedirectUri={googleRedirectUri}

@@ -44,6 +44,7 @@ export default function QueueList({
   onUploadTrackToDrive,
   onUploadLocalTrackToDrive,
   onDeleteDriveTrack,
+  onDownloadDriveTrack,
 }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -707,6 +708,21 @@ export default function QueueList({
               >
                 <MaterialCommunityIcons name="cloud-upload-outline" size={22} color="#A78BFA" />
                 <Text style={styles.modalOptionText}>Subir a Google Drive</Text>
+              </TouchableOpacity>
+            )}
+
+            {selectedTrackForOptions?.mediaId?.startsWith('drive-') && onDownloadDriveTrack && (
+              <TouchableOpacity
+                onPress={() => {
+                  const trackToDownload = selectedTrackForOptions;
+                  setSelectedTrackForOptions(null);
+                  onDownloadDriveTrack(trackToDownload);
+                }}
+                style={styles.modalOption}
+                activeOpacity={0.7}
+              >
+                <MaterialCommunityIcons name="cloud-download-outline" size={22} color="#A78BFA" />
+                <Text style={styles.modalOptionText}>Descargar al almacenamiento local</Text>
               </TouchableOpacity>
             )}
 

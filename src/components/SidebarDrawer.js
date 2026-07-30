@@ -1,10 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 import {
   Text,
   View,
   TouchableOpacity,
   Animated,
-  Dimensions,
   Image,
   TouchableWithoutFeedback,
   Modal,
@@ -13,57 +12,11 @@ import styles from '../styles/SidebarDrawer.styles';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import appConfig from '../../app.config';
+import useSidebarDrawer from '../hooks/useSidebarDrawer';
 
 export default function SidebarDrawer({ isOpen, onClose, currentSource, onSelectSource }) {
   const insets = useSafeAreaInsets();
-  const [visible, setVisible] = useState(isOpen);
-  const slideAnim = useRef(new Animated.Value(-290)).current;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const isFirstRender = useRef(true);
-
-  useEffect(() => {
-    // Avoid running the animation on the initial render if the drawer is closed
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      if (!isOpen) {
-        return;
-      }
-    }
-
-    if (isOpen) {
-      setVisible(true);
-      Animated.parallel([
-        Animated.spring(slideAnim, {
-          toValue: 0,
-          useNativeDriver: true,
-          tension: 65,
-          friction: 11,
-        }),
-        Animated.timing(fadeAnim, {
-          toValue: 0.65,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(slideAnim, {
-          toValue: -290,
-          duration: 220,
-          useNativeDriver: true,
-        }),
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 220,
-          useNativeDriver: true,
-        }),
-      ]).start(({ finished }) => {
-        if (finished) {
-          setVisible(false);
-        }
-      });
-    }
-  }, [isOpen]);
+  const { visible, slideAnim, fadeAnim } = useSidebarDrawer({ isOpen });
 
   if (!visible) return null;
 
@@ -96,88 +49,86 @@ export default function SidebarDrawer({ isOpen, onClose, currentSource, onSelect
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-      {/* Backdrop */}
-      <TouchableWithoutFeedback onPress={onClose}>
-        <Animated.View style={[styles.backdrop, { opacity: fadeAnim }]} />
-      </TouchableWithoutFeedback>
+        {/* Backdrop */}
+        <TouchableWithoutFeedback onPress={onClose}>
+          <Animated.View style={[styles.backdrop, { opacity: fadeAnim }]} />
+        </TouchableWithoutFeedback>
 
-      {/* Drawer Body */}
-      <Animated.View
-        style={[
-          styles.drawer,
-          {
-            transform: [{ translateX: slideAnim }],
-            paddingTop: insets.top + 20,
-            paddingBottom: Math.max(insets.bottom + 20, 20),
-          },
-        ]}
-      >
-        <View>
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={styles.logoContainer}>
-              <Image
-                source={require('../../assets/AnthoFu-Icon-Purple.png')}
-                style={styles.logoImage}
-                resizeMode="contain"
-              />
+        {/* Drawer Body */}
+        <Animated.View
+          style={[
+            styles.drawer,
+            {
+              transform: [{ translateX: slideAnim }],
+              paddingTop: insets.top + 20,
+              paddingBottom: Math.max(insets.bottom + 20, 20),
+            },
+          ]}
+        >
+          <View>
+            {/* Header */}
+            <View style={styles.header}>
+              <View style={styles.logoContainer}>
+                <Image
+                  source={require('../../assets/AnthoFu-Icon-Purple.png')}
+                  style={styles.logoImage}
+                  resizeMode="contain"
+                />
+              </View>
+              <View style={styles.headerTextContainer}>
+                <Text style={styles.title}>VULPIS</Text>
+                <Text style={styles.subtitle}>Nube de Audio Híbrida</Text>
+              </View>
             </View>
-            <View style={styles.headerTextContainer}>
-              <Text style={styles.title}>VULPIS</Text>
-              <Text style={styles.subtitle}>Nube de Audio Híbrida</Text>
-            </View>
-          </View>
 
-          {/* Separation Line */}
-          <View style={styles.divider} />
+            {/* Separation Line */}
+            <View style={styles.divider} />
 
-          {/* Navigation Options */}
-          <View style={styles.menuList}>
-            <Text style={styles.sectionHeader}>FUENTES DE AUDIO</Text>
-            {menuItems.map((item) => {
-              const isActive = currentSource === item.id;
-              return (
-                <TouchableOpacity
-                  key={item.id}
-                  onPress={() => {
-                    onSelectSource(item.id);
-                    onClose();
-                  }}
-                  style={[styles.menuItem, isActive && styles.menuItemActive]}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.menuItemContent}>
-                    <MaterialCommunityIcons
-                      name={item.icon}
-                      size={22}
-                      color={isActive ? '#A78BFA' : '#8E8F9E'}
-                    />
-                    <View style={styles.menuItemTextCol}>
-                      <Text style={[styles.menuItemLabel, isActive && styles.menuItemLabelActive]}>
-                        {item.label}
-                      </Text>
-                      <Text style={styles.menuItemDesc}>{item.description}</Text>
+            {/* Navigation Options */}
+            <View style={styles.menuList}>
+              <Text style={styles.sectionHeader}>FUENTES DE AUDIO</Text>
+              {menuItems.map((item) => {
+                const isActive = currentSource === item.id;
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    onPress={() => {
+                      onSelectSource(item.id);
+                      onClose();
+                    }}
+                    style={[styles.menuItem, isActive && styles.menuItemActive]}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.menuItemContent}>
+                      <MaterialCommunityIcons
+                        name={item.icon}
+                        size={22}
+                        color={isActive ? '#A78BFA' : '#8E8F9E'}
+                      />
+                      <View style={styles.menuItemTextCol}>
+                        <Text style={[styles.menuItemLabel, isActive && styles.menuItemLabelActive]}>
+                          {item.label}
+                        </Text>
+                        <Text style={styles.menuItemDesc}>{item.description}</Text>
+                      </View>
                     </View>
-                  </View>
-                  {isActive && <View style={styles.activeIndicator} />}
-                </TouchableOpacity>
-              );
-            })}
+                    {isActive && <View style={styles.activeIndicator} />}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
-        </View>
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <TouchableOpacity style={styles.settingsButton} activeOpacity={0.8}>
-            <MaterialCommunityIcons name="cog-outline" size={20} color="#8E8F9E" />
-            <Text style={styles.settingsLabel}>Ajustes</Text>
-          </TouchableOpacity>
-          <Text style={styles.versionText}>v{appConfig?.expo?.version }</Text>
-        </View>
-      </Animated.View>
-    </View>
+          {/* Footer */}
+          <View style={styles.footer}>
+            <TouchableOpacity style={styles.settingsButton} activeOpacity={0.8}>
+              <MaterialCommunityIcons name="cog-outline" size={20} color="#8E8F9E" />
+              <Text style={styles.settingsLabel}>Ajustes</Text>
+            </TouchableOpacity>
+            <Text style={styles.versionText}>v{appConfig?.expo?.version }</Text>
+          </View>
+        </Animated.View>
+      </View>
     </Modal>
   );
 }
-
-

@@ -7,6 +7,6 @@
 - [] Mejora visual en la lista de reproduccion y en la cola de reproduccion
 - [] Refactorizacion de los componentes largos
 - [X] Refactorizacion de estilos
-- [] Refactorizacion de vistas y logica (Podriamos hacerlo tipo angular? Evitar mezclar logica con vistas)
+- [x] Refactorizacion de vistas y logica (Podriamos hacerlo tipo angular? Evitar mezclar logica con vistas)
 - [] Mejora estetica, cambio de titulos. "Reproductor nativo" Es necesario?
 - [] Nueva vista: Letras. Agregar un sistema de lectura de letras de canciones, estilo spotify (si es que en los metadatos de la cancion hay letra)

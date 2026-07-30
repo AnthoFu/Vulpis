@@ -39,6 +39,7 @@ function MainApp() {
   const [repeatMode, setRepeatMode] = useState(RepeatMode.Off);
   const [isShuffleActive, setIsShuffleActive] = useState(false);
   const [isFullPlayerVisible, setIsFullPlayerVisible] = useState(false);
+  const [startWithQueueVisible, setStartWithQueueVisible] = useState(false);
   const [playQueue, setPlayQueue] = useState([]);
 
   // Estados del menú lateral de navegación y de la fuente
@@ -673,7 +674,14 @@ function MainApp() {
         isPlaying={isPlaying}
         position={progress.position}
         duration={progress.duration}
-        onPress={() => setIsFullPlayerVisible(true)}
+        onPress={() => {
+          setStartWithQueueVisible(false);
+          setIsFullPlayerVisible(true);
+        }}
+        onQueuePress={() => {
+          setStartWithQueueVisible(true);
+          setIsFullPlayerVisible(true);
+        }}
         tracks={tracks}
         playQueue={playQueue}
         onSelectTrack={handleSelectTrack}
@@ -698,6 +706,7 @@ function MainApp() {
           onRemoveFromQueue={handleRemoveFromQueue}
           onClose={() => setIsFullPlayerVisible(false)}
           onSelectTrack={handleSelectTrack}
+          initialQueueVisible={startWithQueueVisible}
         />
       </Modal>
 

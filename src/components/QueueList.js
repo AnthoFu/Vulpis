@@ -48,7 +48,7 @@ export default function QueueList({
 }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('library'); // 'biblioteca' | 'cola'
+
 
   // Estados de las listas de reproducción
   const [selectedPlaylistId, setSelectedPlaylistId] = useState(null);
@@ -473,9 +473,7 @@ export default function QueueList({
   }
 
   // --- RENDERIZADO DE BIBLIOTECA DE MÚSICA REGULAR / COLA ---
-  const listData = activeTab === 'library'
-    ? (isLoading ? [] : displayTracks)
-    : playQueue;
+  const listData = isLoading ? [] : displayTracks;
 
   return (
     <>
@@ -486,36 +484,11 @@ export default function QueueList({
           <>
             {ListHeaderComponent}
 
-            {/* Tabs Selector */}
-            <View style={styles.tabsContainer}>
-              <TouchableOpacity
-                onPress={() => {
-                  setActiveTab('library');
-                  setSearchQuery('');
-                }}
-                style={[styles.tabButton, activeTab === 'library' && styles.tabButtonActive]}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.tabLabel, activeTab === 'library' && styles.tabLabelActive]}>
-                  Biblioteca
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setActiveTab('queue')}
-                style={[styles.tabButton, activeTab === 'queue' && styles.tabButtonActive]}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.tabLabel, activeTab === 'queue' && styles.tabLabelActive]}>
-                  Cola de reproducción
-                </Text>
-              </TouchableOpacity>
-            </View>
-
             {/* Google Drive Status Panel (only under private source library tab) */}
-            {currentSource === 'private' && activeTab === 'library' && renderGoogleDrivePanel()}
+            {currentSource === 'private' && renderGoogleDrivePanel()}
 
             {/* Actions for local library */}
-            {currentSource === 'local' && activeTab === 'library' && !isLoading && (
+            {currentSource === 'local' && !isLoading && (
               <View style={styles.localActionsRow}>
                 <TouchableOpacity onPress={onScanLocal} style={styles.actionButton} activeOpacity={0.7}>
                   <MaterialCommunityIcons name="magnify" size={16} color="#A78BFA" />
@@ -534,7 +507,7 @@ export default function QueueList({
             )}
 
             {/* Search Input (only visible in library view) */}
-            {activeTab === 'library' && (currentSource === 'local' || (currentSource === 'private' && isDriveConnected)) && (
+            {(currentSource === 'local' || (currentSource === 'private' && isDriveConnected)) && (
               <View style={styles.searchSection}>
                 <View style={styles.searchContainer}>
                   <MaterialCommunityIcons name="magnify" size={20} color="#5F6070" style={styles.searchIcon} />
@@ -549,13 +522,8 @@ export default function QueueList({
               </View>
             )}
 
-            {/* Section Header */}
-            {activeTab === 'queue' && (playQueue || []).length > 0 && (
-              <Text style={styles.queueHeader}>PISTAS EN COLA</Text>
-            )}
-
             {/* Loading Indicator */}
-            {isLoading && activeTab === 'library' && (
+            {isLoading && (
               <View style={styles.loadingWrapper}>
                 <ActivityIndicator size="large" color="#8B5CF6" />
                 <Text style={styles.loadingText}>Buscando pistas de audio...</Text>
@@ -563,7 +531,7 @@ export default function QueueList({
             )}
 
             {/* Empty state handlers */}
-            {activeTab === 'library' && !isLoading && displayTracks.length === 0 && (
+            {!isLoading && displayTracks.length === 0 && (
               <View style={styles.emptyWrapper}>
                 <MaterialCommunityIcons name="music-off" size={48} color="#3F4052" />
                 <Text style={styles.emptyText}>No se encontraron canciones</Text>
@@ -573,14 +541,6 @@ export default function QueueList({
                 {currentSource === 'private' && isDriveConnected && !searchQuery && (
                   <Text style={styles.emptySubText}>No se encontraron archivos .mp3 en tu Google Drive.</Text>
                 )}
-              </View>
-            )}
-
-            {activeTab === 'queue' && (playQueue || []).length === 0 && (
-              <View style={styles.emptyWrapper}>
-                <MaterialCommunityIcons name="playlist-remove" size={48} color="#3F4052" />
-                <Text style={styles.emptyText}>La cola está vacía</Text>
-                <Text style={styles.emptySubText}>Añade canciones a la cola desde la Biblioteca.</Text>
               </View>
             )}
           </>
@@ -626,23 +586,13 @@ export default function QueueList({
                     <Text style={styles.playingIndicatorText}>SONANDO</Text>
                   </View>
                 )}
-                {activeTab === 'library' ? (
-                  <TouchableOpacity
-                    onPress={() => setSelectedTrackForOptions(item)}
-                    style={styles.addToQueueButton}
-                    activeOpacity={0.6}
-                  >
-                    <MaterialCommunityIcons name="dots-vertical" size={24} color="#8E8F9E" />
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity
-                    onPress={() => onRemoveFromQueue && onRemoveFromQueue(item, index)}
-                    style={styles.addToQueueButton}
-                    activeOpacity={0.6}
-                  >
-                    <MaterialCommunityIcons name="close" size={22} color="#EF4444" />
-                  </TouchableOpacity>
-                )}
+                 <TouchableOpacity
+                   onPress={() => setSelectedTrackForOptions(item)}
+                   style={styles.addToQueueButton}
+                   activeOpacity={0.6}
+                 >
+                   <MaterialCommunityIcons name="dots-vertical" size={24} color="#8E8F9E" />
+                 </TouchableOpacity>
               </View>
             </View>
           );
@@ -892,7 +842,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   searchSection: {
-    marginTop: 4,
+    marginTop: 12,
+    marginBottom: 16,
     width: '100%',
   },
   searchContainer: {
@@ -917,8 +868,8 @@ const styles = StyleSheet.create({
   localActionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginTop: 12,
+    gap: 12,
+    marginTop: 8,
     width: '100%',
   },
   actionButton: {

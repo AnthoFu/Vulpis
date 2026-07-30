@@ -20,9 +20,14 @@ export default function PlayerCard({
   onRemoveFromQueue,
   onClose,
   onSelectTrack,
+  initialQueueVisible = false,
 }) {
   const insets = useSafeAreaInsets();
-  const [isQueueVisible, setIsQueueVisible] = useState(false);
+  const [isQueueVisible, setIsQueueVisible] = useState(initialQueueVisible);
+
+  useEffect(() => {
+    setIsQueueVisible(initialQueueVisible);
+  }, [initialQueueVisible]);
   const defaultCover = Image.resolveAssetSource(require('../../assets/default-cover.jpg')).uri;
   const defaultTrack = tracks && tracks.length > 0 ? tracks[0] : { title: 'No Track', artist: 'No Artist', artworkUrl: defaultCover };
   

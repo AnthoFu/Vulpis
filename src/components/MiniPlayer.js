@@ -10,6 +10,7 @@ export default function MiniPlayer({
   position,
   duration,
   onPress,
+  onQueuePress,
   tracks = [],
   playQueue = [],
   onSelectTrack,
@@ -181,6 +182,14 @@ export default function MiniPlayer({
             activeOpacity={0.7}
           >
             <MaterialCommunityIcons name="skip-next" size={26} color="#FFFFFF" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={onQueuePress}
+            style={styles.controlButton}
+            activeOpacity={0.7}
+          >
+            <MaterialCommunityIcons name="playlist-play" size={24} color="#8E8F9E" />
           </TouchableOpacity>
         </View>
       </View>

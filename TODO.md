@@ -4,3 +4,5 @@
 - [x] Mejora del icon -> Averiguar como mostrarlo correctamente en las pantallas principales de los teléfonos
 - [X] Capacidad de descarga de la nube drive a local
 - [] Capacidad de eliminar canciones locales 
+- [] Mejora visual en la lista de reproduccion y en la cola de reproduccion
+- [] Refactorizacion de los componentes largos

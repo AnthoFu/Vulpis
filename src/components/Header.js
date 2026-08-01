@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, View, TouchableOpacity } from 'react-native';
+import { Text, View, TouchableOpacity, ActivityIndicator } from 'react-native';
 import styles from '../styles/Header.styles';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -8,7 +8,9 @@ export default function Header({
   currentSource,
   tracksCount = 0,
   playlistsCount = 0,
-  isDriveConnected = false 
+  isDriveConnected = false,
+  onRefresh,
+  isLoading = false
 }) {
   const getHeaderInfo = () => {
     switch (currentSource) {
@@ -48,9 +50,28 @@ export default function Header({
         <Text style={styles.headerTitle}>{title}</Text>
       </View>
       
-      <View style={styles.iconButtonPlaceholder}>
-        <MaterialCommunityIcons name="cloud-sync-outline" size={22} color="#8B5CF6" />
-      </View>
+      {onRefresh ? (
+        <TouchableOpacity 
+          onPress={onRefresh} 
+          disabled={isLoading}
+          style={styles.iconButton} 
+          activeOpacity={0.7}
+        >
+          {isLoading ? (
+            <ActivityIndicator size="small" color="#8B5CF6" />
+          ) : (
+            <MaterialCommunityIcons 
+              name={currentSource === 'local' ? 'folder-sync-outline' : 'cloud-sync-outline'} 
+              size={22} 
+              color="#A78BFA" 
+            />
+          )}
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.iconButtonPlaceholder}>
+          <MaterialCommunityIcons name="music-note" size={20} color="#4E4F62" />
+        </View>
+      )}
     </View>
   );
 }

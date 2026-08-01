@@ -127,6 +127,12 @@ function MainApp() {
             tracksCount={tracks ? tracks.length : 0}
             playlistsCount={playlists ? playlists.length : 0}
             isDriveConnected={isDriveConnected}
+            onRefresh={
+              currentSource === 'local' 
+                ? handleScanLocal 
+                : (currentSource === 'private' && isDriveConnected ? handleRefreshDrive : null)
+            }
+            isLoading={isSourceChanging || isDriveLoading}
           />
         }
       />

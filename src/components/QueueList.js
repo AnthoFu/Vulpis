@@ -7,13 +7,13 @@ import {
   FlatList,
   ActivityIndicator,
   TextInput,
-  Modal,
-  Alert,
 } from 'react-native';
 import styles from '../styles/QueueList.styles';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import useQueueList from '../hooks/useQueueList';
+import TrackOptionsModal from './TrackOptionsModal';
+import PlaylistPickerModal from './PlaylistPickerModal';
 
 export default function QueueList({
   activeTrack,
@@ -584,235 +584,33 @@ export default function QueueList({
         }}
       />
 
-      {/* TRACK OPTIONS MODAL */}
-      <Modal
+      {/* MODAL DE OPCIONES DE CANCIÓN MODULARIZADO */}
+      <TrackOptionsModal
         visible={selectedTrackForOptions !== null}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setSelectedTrackForOptions(null)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setSelectedTrackForOptions(null)}
-        >
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle} numberOfLines={1}>
-              {selectedTrackForOptions?.title}
-            </Text>
-            <Text style={styles.modalSubtitle} numberOfLines={1}>
-              {selectedTrackForOptions?.artist}
-            </Text>
-            
-            <View style={styles.modalDivider} />
+        track={selectedTrackForOptions}
+        onClose={() => setSelectedTrackForOptions(null)}
+        onAddToQueue={onAddToQueue}
+        onAddPlaylistPress={() => setIsPlaylistPickerVisible(true)}
+        onUploadLocalTrackToDrive={onUploadLocalTrackToDrive}
+        onDownloadDriveTrack={onDownloadDriveTrack}
+        onDeleteDriveTrack={onDeleteDriveTrack}
+        onDeleteLocalTrack={onDeleteLocalTrack}
+      />
 
-            <TouchableOpacity
-              onPress={() => {
-                if (onAddToQueue && selectedTrackForOptions) {
-                  onAddToQueue(selectedTrackForOptions);
-                }
-                setSelectedTrackForOptions(null);
-              }}
-              style={styles.modalOption}
-              activeOpacity={0.7}
-            >
-              <MaterialCommunityIcons name="playlist-plus" size={22} color="#A78BFA" />
-              <Text style={styles.modalOptionText}>Añadir a la cola</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => {
-                setIsPlaylistPickerVisible(true);
-              }}
-              style={styles.modalOption}
-              activeOpacity={0.7}
-            >
-              <MaterialCommunityIcons name="playlist-music-outline" size={22} color="#A78BFA" />
-              <Text style={styles.modalOptionText}>Añadir a una playlist...</Text>
-            </TouchableOpacity>
-
-            {!selectedTrackForOptions?.mediaId?.startsWith('drive-') && onUploadLocalTrackToDrive && (
-              <TouchableOpacity
-                onPress={() => {
-                  const trackToUpload = selectedTrackForOptions;
-                  setSelectedTrackForOptions(null);
-                  onUploadLocalTrackToDrive(trackToUpload);
-                }}
-                style={styles.modalOption}
-                activeOpacity={0.7}
-              >
-                <MaterialCommunityIcons name="cloud-upload-outline" size={22} color="#A78BFA" />
-                <Text style={styles.modalOptionText}>Subir a Google Drive</Text>
-              </TouchableOpacity>
-            )}
-
-            {selectedTrackForOptions?.mediaId?.startsWith('drive-') && onDownloadDriveTrack && (
-              <TouchableOpacity
-                onPress={() => {
-                  const trackToDownload = selectedTrackForOptions;
-                  setSelectedTrackForOptions(null);
-                  onDownloadDriveTrack(trackToDownload);
-                }}
-                style={styles.modalOption}
-                activeOpacity={0.7}
-              >
-                <MaterialCommunityIcons name="cloud-download-outline" size={22} color="#A78BFA" />
-                <Text style={styles.modalOptionText}>Descargar al almacenamiento local</Text>
-              </TouchableOpacity>
-            )}
-
-            {selectedTrackForOptions?.mediaId?.startsWith('drive-') && onDeleteDriveTrack && (
-              <TouchableOpacity
-                onPress={() => {
-                  const trackToDelete = selectedTrackForOptions;
-                  setSelectedTrackForOptions(null);
-                  Alert.alert(
-                    'Eliminar Canción de Drive',
-                    `¿Estás seguro de que quieres eliminar "${trackToDelete.title}" de tu Google Drive? Esta acción no se puede deshacer y también eliminará la canción de tus playlists y cola de reproducción.`,
-                    [
-                      { text: 'Cancelar', style: 'cancel' },
-                      {
-                        text: 'Eliminar',
-                        style: 'destructive',
-                        onPress: () => onDeleteDriveTrack(trackToDelete),
-                      },
-                    ]
-                  );
-                }}
-                style={styles.modalOption}
-                activeOpacity={0.7}
-              >
-                <MaterialCommunityIcons name="delete-outline" size={22} color="#EF4444" />
-                <Text style={[styles.modalOptionText, { color: '#EF4444' }]}>Eliminar de Drive</Text>
-              </TouchableOpacity>
-            )}
-
-            {!selectedTrackForOptions?.mediaId?.startsWith('drive-') && onDeleteLocalTrack && (
-              <TouchableOpacity
-                onPress={() => {
-                  const trackToDelete = selectedTrackForOptions;
-                  setSelectedTrackForOptions(null);
-                  Alert.alert(
-                    'Eliminar Canción del Dispositivo',
-                    `¿Estás seguro de que quieres eliminar "${trackToDelete.title}" de tu biblioteca local? Esto la borrará del almacenamiento de la app y la quitará de tus playlists y cola de reproducción.`,
-                    [
-                      { text: 'Cancelar', style: 'cancel' },
-                      {
-                        text: 'Eliminar',
-                        style: 'destructive',
-                        onPress: () => onDeleteLocalTrack(trackToDelete),
-                      },
-                    ]
-                  );
-                }}
-                style={styles.modalOption}
-                activeOpacity={0.7}
-              >
-                <MaterialCommunityIcons name="delete-outline" size={22} color="#EF4444" />
-                <Text style={[styles.modalOptionText, { color: '#EF4444' }]}>Borrar del dispositivo</Text>
-              </TouchableOpacity>
-            )}
-
-            <TouchableOpacity
-              onPress={() => setSelectedTrackForOptions(null)}
-              style={[styles.modalOption, styles.modalCancelOption]}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.modalCancelText}>Cancelar</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
-
-      {/* PLAYLIST PICKER MODAL */}
-      <Modal
+      {/* MODAL DE SELECCIÓN DE PLAYLIST MODULARIZADO */}
+      <PlaylistPickerModal
         visible={isPlaylistPickerVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setIsPlaylistPickerVisible(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => {
-            setIsPlaylistPickerVisible(false);
-            setSelectedTrackForOptions(null);
-          }}
-        >
-          <View style={[styles.modalContent, { maxHeight: '75%' }]}>
-            <Text style={styles.modalTitle}>Añadir a playlist</Text>
-            <Text style={styles.modalSubtitle} numberOfLines={1}>
-              Selecciona una lista de reproducción
-            </Text>
-
-            <View style={styles.modalDivider} />
-
-            {/* List of playlists */}
-            <FlatList
-              data={playlists}
-              keyExtractor={(item) => item.id}
-              showsVerticalScrollIndicator={false}
-              style={{ width: '100%', maxHeight: 240 }}
-              ListEmptyComponent={
-                <Text style={styles.emptyPlaylistsModalText}>No tienes playlists creadas.</Text>
-              }
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  onPress={async () => {
-                    if (onAddTrackToPlaylist && selectedTrackForOptions) {
-                      await onAddTrackToPlaylist(item.id, selectedTrackForOptions);
-                    }
-                    setIsPlaylistPickerVisible(false);
-                    setSelectedTrackForOptions(null);
-                  }}
-                  style={styles.playlistPickerOption}
-                  activeOpacity={0.7}
-                >
-                  <MaterialCommunityIcons name="playlist-music" size={20} color="#8B5CF6" />
-                  <Text style={styles.playlistPickerName} numberOfLines={1}>
-                    {item.name}
-                  </Text>
-                  <Text style={styles.playlistPickerCount}>
-                    ({item.tracks.length})
-                  </Text>
-                </TouchableOpacity>
-              )}
-            />
-
-            <View style={styles.modalDivider} />
-
-            {/* Inline creation input inside picker */}
-            <View style={styles.inlineCreateWrapper}>
-              <TextInput
-                placeholder="Nueva playlist..."
-                placeholderTextColor="#5F6070"
-                value={inlineNewPlaylistName}
-                onChangeText={setInlineNewPlaylistName}
-                style={styles.inlineCreateInput}
-              />
-              <TouchableOpacity
-                onPress={handleCreateAndAdd}
-                disabled={!inlineNewPlaylistName || inlineNewPlaylistName.trim() === ''}
-                style={[styles.inlineCreateBtn, (!inlineNewPlaylistName || inlineNewPlaylistName.trim() === '') && styles.inlineCreateBtnDisabled]}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.inlineCreateBtnText}>Crear</Text>
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity
-              onPress={() => {
-                setIsPlaylistPickerVisible(false);
-                setSelectedTrackForOptions(null);
-              }}
-              style={[styles.modalOption, styles.modalCancelOption, { marginTop: 10 }]}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.modalCancelText}>Atrás</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+        playlists={playlists}
+        track={selectedTrackForOptions}
+        onClose={() => {
+          setIsPlaylistPickerVisible(false);
+          setSelectedTrackForOptions(null);
+        }}
+        onAddTrackToPlaylist={onAddTrackToPlaylist}
+        inlineNewPlaylistName={inlineNewPlaylistName}
+        setInlineNewPlaylistName={setInlineNewPlaylistName}
+        handleCreateAndAdd={handleCreateAndAdd}
+      />
     </>
   );
 }

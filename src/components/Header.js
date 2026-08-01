@@ -3,7 +3,40 @@ import { Text, View, TouchableOpacity } from 'react-native';
 import styles from '../styles/Header.styles';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-export default function Header({ onMenuPress }) {
+export default function Header({ 
+  onMenuPress, 
+  currentSource,
+  tracksCount = 0,
+  playlistsCount = 0,
+  isDriveConnected = false 
+}) {
+  const getHeaderInfo = () => {
+    switch (currentSource) {
+      case 'local':
+        return {
+          title: 'Biblioteca',
+          subtitle: `${tracksCount} CANCIONES`
+        };
+      case 'private':
+        return {
+          title: 'Google Drive',
+          subtitle: isDriveConnected ? `${tracksCount} PISTAS EN LA NUBE` : 'DESCONECTADO'
+        };
+      case 'playlists':
+        return {
+          title: 'Playlists',
+          subtitle: `${playlistsCount} LISTAS CREADAS`
+        };
+      default:
+        return {
+          title: 'Vulpis',
+          subtitle: 'NUBE DE AUDIO HÍBRIDA'
+        };
+    }
+  };
+
+  const { title, subtitle } = getHeaderInfo();
+
   return (
     <View style={styles.headerContainer}>
       <TouchableOpacity onPress={onMenuPress} style={styles.iconButton} activeOpacity={0.7}>
@@ -11,8 +44,8 @@ export default function Header({ onMenuPress }) {
       </TouchableOpacity>
       
       <View style={styles.titleContainer}>
-        <Text style={styles.headerSubtitle}>REPRODUCTOR NATIVO</Text>
-        <Text style={styles.headerTitle}>VULPIS</Text>
+        <Text style={styles.headerSubtitle}>{subtitle}</Text>
+        <Text style={styles.headerTitle}>{title}</Text>
       </View>
       
       <View style={styles.iconButtonPlaceholder}>

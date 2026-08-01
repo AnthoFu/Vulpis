@@ -121,7 +121,13 @@ function MainApp() {
           paddingRight: Math.max(insets.right, 20),
         }}
         ListHeaderComponent={
-          <Header onMenuPress={() => setIsDrawerOpen(true)} />
+          <Header 
+            onMenuPress={() => setIsDrawerOpen(true)} 
+            currentSource={currentSource} 
+            tracksCount={tracks ? tracks.length : 0}
+            playlistsCount={playlists ? playlists.length : 0}
+            isDriveConnected={isDriveConnected}
+          />
         }
       />
 

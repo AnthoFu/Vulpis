@@ -81,6 +81,18 @@ export default function usePlayerCard({
     }
   };
 
+  const togglePlayback = async (isPlayingState) => {
+    try {
+      if (isPlayingState) {
+        await TrackPlayer.pause();
+      } else {
+        await TrackPlayer.play();
+      }
+    } catch (e) {
+      console.error('[usePlayerCard] Error al alternar reproducción:', e);
+    }
+  };
+
   return {
     isQueueVisible,
     setIsQueueVisible,
@@ -93,5 +105,6 @@ export default function usePlayerCard({
     currentTrackArtist,
     currentTrackArtwork,
     selectTrackFromQueue,
+    togglePlayback,
   };
 }

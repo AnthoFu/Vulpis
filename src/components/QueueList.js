@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import styles from '../styles/QueueList.styles';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import useQueueList from '../hooks/useQueueList';
 
 export default function QueueList({
@@ -77,6 +78,28 @@ export default function QueueList({
     onCreatePlaylist,
     onAddTrackToPlaylist,
   });
+
+  const renderPlaylistArtwork = (playlist) => {
+    const firstTrackWithArtwork = playlist.tracks?.find(t => t.artworkUrl);
+    if (firstTrackWithArtwork) {
+      return (
+        <Image
+          source={{ uri: firstTrackWithArtwork.artworkUrl }}
+          style={styles.playlistArtworkImage}
+        />
+      );
+    }
+    return (
+      <LinearGradient
+        colors={['#8B5CF6', '#EC4899']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.playlistIconWrapperGradient}
+      >
+        <MaterialCommunityIcons name="music-box-multiple" size={24} color="#FFFFFF" />
+      </LinearGradient>
+    );
+  };
 
   const renderGoogleDrivePanel = () => {
     if (isDriveConnected) {
@@ -198,27 +221,43 @@ export default function QueueList({
             <>
               {ListHeaderComponent}
 
-              {/* Back button & Title */}
-              <View style={[styles.playlistDetailHeader, { paddingHorizontal: 0 }]}>
-                <TouchableOpacity
-                  onPress={() => setSelectedPlaylistId(null)}
-                  style={styles.playlistBackBtn}
-                  activeOpacity={0.7}
-                >
-                  <MaterialCommunityIcons name="arrow-left" size={24} color="#FFFFFF" />
-                </TouchableOpacity>
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={styles.playlistDetailName} numberOfLines={1}>{selectedPlaylist.name}</Text>
-                  <Text style={styles.playlistDetailCount}>{selectedPlaylist.tracks.length} canciones</Text>
+              {/* Boton de volver */}
+              <TouchableOpacity
+                onPress={() => setSelectedPlaylistId(null)}
+                style={styles.playlistBackBtnContainer}
+                activeOpacity={0.7}
+              >
+                <MaterialCommunityIcons name="arrow-left" size={20} color="#8E8F9E" />
+                <Text style={styles.playlistBackBtnText}>Volver a mis listas</Text>
+              </TouchableOpacity>
+
+              {/* Hero Banner */}
+              <View style={styles.playlistHeroCard}>
+                <View style={styles.playlistHeroArtworkContainer}>
+                  {renderPlaylistArtwork(selectedPlaylist)}
                 </View>
-                <TouchableOpacity
-                  onPress={() => handlePlayPlaylist(selectedPlaylist)}
-                  disabled={selectedPlaylist.tracks.length === 0}
-                  style={[styles.playlistPlayBtn, selectedPlaylist.tracks.length === 0 && styles.playlistPlayBtnDisabled]}
-                  activeOpacity={0.8}
-                >
-                  <MaterialCommunityIcons name="play" size={24} color="#FFFFFF" />
-                </TouchableOpacity>
+                
+                <View style={styles.playlistHeroDetails}>
+                  <Text style={styles.playlistHeroName} numberOfLines={2}>
+                    {selectedPlaylist.name}
+                  </Text>
+                  <Text style={styles.playlistHeroCount}>
+                    {selectedPlaylist.tracks.length} {selectedPlaylist.tracks.length === 1 ? 'canción' : 'canciones'}
+                  </Text>
+                  
+                  <TouchableOpacity
+                    onPress={() => handlePlayPlaylist(selectedPlaylist)}
+                    disabled={selectedPlaylist.tracks.length === 0}
+                    style={[
+                      styles.playlistHeroPlayBtn,
+                      selectedPlaylist.tracks.length === 0 && styles.playlistHeroPlayBtnDisabled
+                    ]}
+                    activeOpacity={0.8}
+                  >
+                    <MaterialCommunityIcons name="play" size={18} color="#FFFFFF" style={{ marginRight: 4 }} />
+                    <Text style={styles.playlistHeroPlayBtnText}>Reproducir Lista</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               {/* Search bar */}
@@ -240,7 +279,9 @@ export default function QueueList({
           }
           ListEmptyComponent={
             <View style={styles.emptyWrapper}>
-              <MaterialCommunityIcons name="music-note-plus" size={48} color="#3F4052" />
+              <View style={styles.emptyIconContainer}>
+                <MaterialCommunityIcons name="music-note-plus" size={32} color="#A78BFA" />
+              </View>
               <Text style={styles.emptyText}>Playlist vacía</Text>
               <Text style={styles.emptySubText}>Añade canciones desde tu Biblioteca Local o Google Drive pulsando en los tres puntos de cada pista.</Text>
             </View>
@@ -257,9 +298,14 @@ export default function QueueList({
                 >
                   <Image source={{ uri: item.artworkUrl || defaultArtwork }} style={styles.queueArtwork} />
                   <View style={styles.queueDetails}>
-                    <Text style={[styles.queueTitle, isCurrent && styles.queueTextActive]} numberOfLines={1}>
-                      {item.title}
-                    </Text>
+                    <View style={styles.queueTitleRow}>
+                      {isCurrent && (
+                        <MaterialCommunityIcons name="volume-high" size={16} color="#A78BFA" style={{ marginRight: 6 }} />
+                      )}
+                      <Text style={[styles.queueTitle, isCurrent && styles.queueTextActive]} numberOfLines={1}>
+                        {item.title}
+                      </Text>
+                    </View>
                     <Text style={styles.queueArtist} numberOfLines={1}>
                       {item.artist}
                     </Text>
@@ -268,16 +314,14 @@ export default function QueueList({
 
                 <View style={styles.rightActionsRow}>
                   {isCurrent && (
-                    <View style={styles.playingIndicator}>
-                      <Text style={styles.playingIndicatorText}>SONANDO</Text>
-                    </View>
+                    <MaterialCommunityIcons name="volume-high" size={20} color="#A78BFA" style={{ marginRight: 8 }} />
                   )}
                   <TouchableOpacity
                     onPress={() => onRemoveTrackFromPlaylist && onRemoveTrackFromPlaylist(selectedPlaylistId, item.mediaId)}
-                    style={styles.addToQueueButton}
+                    style={styles.deleteTrackFromPlaylistBtn}
                     activeOpacity={0.6}
                   >
-                    <MaterialCommunityIcons name="trash-can-outline" size={22} color="#EF4444" />
+                    <MaterialCommunityIcons name="trash-can-outline" size={20} color="#8E8F9E" />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -357,7 +401,9 @@ export default function QueueList({
         }
         ListEmptyComponent={
           <View style={styles.emptyWrapper}>
-            <MaterialCommunityIcons name="playlist-music-outline" size={48} color="#3F4052" />
+            <View style={styles.emptyIconContainer}>
+              <MaterialCommunityIcons name="playlist-music-outline" size={32} color="#A78BFA" />
+            </View>
             <Text style={styles.emptyText}>No hay playlists</Text>
             <Text style={styles.emptySubText}>Crea tu primera lista de reproducción arriba para empezar a organizar tu música.</Text>
           </View>
@@ -369,12 +415,14 @@ export default function QueueList({
               style={styles.playlistRowMain}
               activeOpacity={0.7}
             >
-              <View style={styles.playlistIconWrapper}>
-                <MaterialCommunityIcons name="playlist-music" size={26} color="#8B5CF6" />
+              <View style={styles.playlistArtworkContainer}>
+                {renderPlaylistArtwork(item)}
               </View>
               <View style={styles.playlistRowDetails}>
                 <Text style={styles.playlistRowName} numberOfLines={1}>{item.name}</Text>
-                <Text style={styles.playlistRowSub}>{item.tracks.length} canciones</Text>
+                <Text style={styles.playlistRowSub}>
+                  {item.tracks.length} {item.tracks.length === 1 ? 'canción' : 'canciones'}
+                </Text>
               </View>
             </TouchableOpacity>
             
@@ -382,10 +430,10 @@ export default function QueueList({
               <TouchableOpacity
                 onPress={() => handlePlayPlaylist(item)}
                 disabled={item.tracks.length === 0}
-                style={[styles.playlistActionIconBtn, item.tracks.length === 0 && styles.playlistActionIconBtnDisabled]}
+                style={[styles.playlistPlayRowBtn, item.tracks.length === 0 && styles.playlistPlayRowBtnDisabled]}
                 activeOpacity={0.7}
               >
-                <MaterialCommunityIcons name="play" size={22} color={item.tracks.length === 0 ? "#3F4052" : "#A78BFA"} />
+                <MaterialCommunityIcons name="play" size={18} color={item.tracks.length === 0 ? "#5F6070" : "#FFFFFF"} />
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => {
@@ -398,10 +446,10 @@ export default function QueueList({
                     ]
                   );
                 }}
-                style={styles.playlistActionIconBtn}
+                style={styles.playlistDeleteRowBtn}
                 activeOpacity={0.7}
               >
-                <MaterialCommunityIcons name="trash-can-outline" size={22} color="#EF4444" />
+                <MaterialCommunityIcons name="trash-can-outline" size={18} color="#EF4444" />
               </TouchableOpacity>
             </View>
           </View>
@@ -471,7 +519,9 @@ export default function QueueList({
             {/* Empty state handlers */}
             {!isLoading && displayTracks.length === 0 && (
               <View style={styles.emptyWrapper}>
-                <MaterialCommunityIcons name="music-off" size={48} color="#3F4052" />
+                <View style={styles.emptyIconContainer}>
+                  <MaterialCommunityIcons name="music-off" size={32} color="#A78BFA" />
+                </View>
                 <Text style={styles.emptyText}>No se encontraron canciones</Text>
                 {currentSource === 'local' && !searchQuery && (
                   <Text style={styles.emptySubText}>Usa "Escanear Audio" o "Importar MP3" para cargar música local.</Text>
@@ -503,15 +553,14 @@ export default function QueueList({
               >
                 <Image source={{ uri: item.artworkUrl || defaultArtwork }} style={styles.queueArtwork} />
                 <View style={styles.queueDetails}>
-                  <Text
-                    style={[
-                      styles.queueTitle,
-                      isCurrent && styles.queueTextActive,
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {item.title}
-                  </Text>
+                  <View style={styles.queueTitleRow}>
+                    {isCurrent && (
+                      <MaterialCommunityIcons name="volume-high" size={16} color="#A78BFA" style={{ marginRight: 6 }} />
+                    )}
+                    <Text style={[styles.queueTitle, isCurrent && styles.queueTextActive]} numberOfLines={1}>
+                      {item.title}
+                    </Text>
+                  </View>
                   <Text style={styles.queueArtist} numberOfLines={1}>
                     {item.artist}
                   </Text>
@@ -520,9 +569,7 @@ export default function QueueList({
 
               <View style={styles.rightActionsRow}>
                 {isCurrent && (
-                  <View style={styles.playingIndicator}>
-                    <Text style={styles.playingIndicatorText}>SONANDO</Text>
-                  </View>
+                  <MaterialCommunityIcons name="volume-high" size={20} color="#A78BFA" style={{ marginRight: 8 }} />
                 )}
                  <TouchableOpacity
                    onPress={() => setSelectedTrackForOptions(item)}

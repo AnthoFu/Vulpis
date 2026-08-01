@@ -32,6 +32,9 @@ export default function useAppController() {
   const [tracks, setTracks] = useState(localTracks);
   const [isSourceChanging, setIsSourceChanging] = useState(false);
 
+  // Flag para evitar que el polling sobreescriba la cola durante un reordenamiento nativo
+  const isReorderingRef = useRef(false);
+
   // Hooks personalizados para logica estandarizada y modular
   const { toast, showToast } = useToast();
 
@@ -138,6 +141,52 @@ export default function useAppController() {
     } catch (e) {
       console.error('[useAppController] Error al eliminar pista de la cola:', e);
       Alert.alert('Error', 'No se pudo eliminar la canción de la cola.');
+    }
+  };
+
+  // Bloquea el polling mientras el usuario arrastra (evita que setPlayQueue del interval sobreescriba la cola en tiempo real)
+  const handleSetDragActive = (active) => {
+    isReorderingRef.current = active;
+  };
+  const handleReorderQueueState = (fromIndex, toIndex) => {
+    setPlayQueue(prev => {
+      const updated = [...prev];
+      const [moved] = updated.splice(fromIndex, 1);
+      updated.splice(toIndex, 0, moved);
+      return updated;
+    });
+  };
+
+  // Sincronización atómica con el reproductor nativo (solo se llama una vez al soltar)
+  const handleSyncReorderNative = async (finalQueue) => {
+    try {
+      if (!finalQueue || finalQueue.length === 0) return;
+      console.log(`[useAppController] Sincronizando cola reordenada con el reproductor nativo (${finalQueue.length} pistas)`);
+
+      isReorderingRef.current = true;
+
+      const currentIndex = finalQueue.findIndex(t => t.mediaId === activeTrack?.mediaId);
+      await TrackPlayer.clear();
+      await TrackPlayer.setMediaItems(finalQueue);
+      if (currentIndex >= 0) {
+        await TrackPlayer.skipToIndex(currentIndex);
+      }
+
+      // Dar tiempo al reproductor a estabilizarse antes de reanudar el polling
+      setTimeout(() => {
+        isReorderingRef.current = false;
+      }, 600);
+
+      AsyncStorage.setItem('vulpis_player_state', JSON.stringify({
+        currentSource: currentSource,
+        playQueue: finalQueue,
+        tracksList: tracks,
+        activeTrackId: activeTrack?.mediaId ?? null,
+        progressPosition: progress.position,
+      })).catch(err => console.error('[useAppController] Error guardando estado reordenado:', err));
+    } catch (e) {
+      isReorderingRef.current = false;
+      console.error('[useAppController] Error al sincronizar cola nativa:', e);
     }
   };
 
@@ -266,13 +315,13 @@ export default function useAppController() {
         console.log('[useAppController] ¡Configuración de TrackPlayer completada exitosamente!');
         
         sub1 = TrackPlayer.addEventListener(Event.MediaItemTransition, (event) => {
-          console.log('[DEBUG] TransiciónElementoMultimedia:', event);
+          // console.log('[DEBUG] TransiciónElementoMultimedia:', event);
         });
         sub2 = TrackPlayer.addEventListener(Event.IsPlayingChanged, (event) => {
-          console.log('[DEBUG] CambióReproduciendo:', event);
+          // console.log('[DEBUG] CambióReproduciendo:', event);
         });
         sub3 = TrackPlayer.addEventListener(Event.PlaybackStateChanged, (event) => {
-          console.log('[DEBUG] EstadoReproducciónCambió:', event);
+          // console.log('[DEBUG] EstadoReproducciónCambió:', event);
         });
 
         if (isMounted) {
@@ -331,7 +380,10 @@ export default function useAppController() {
         setIsPlaying(currentPlaying);
         setRepeatMode(currentRepeat);
         setIsShuffleActive(currentShuffle);
-        setPlayQueue(currentQueue || []);
+        // No sobreescribir la cola si hay un reordenamiento nativo en progreso
+        if (!isReorderingRef.current) {
+          setPlayQueue(currentQueue || []);
+        }
         setProgress({
           position: currentProgress?.position ?? 0,
           duration: currentProgress?.duration ?? 0,
@@ -625,6 +677,9 @@ export default function useAppController() {
     handleDownloadDriveTrack,
     handleAddToQueue,
     handleRemoveFromQueue,
+    handleReorderQueueState,
+    handleSyncReorderNative,
+    handleSetDragActive,
     handleSourceChange,
     handleSelectTrack,
   };

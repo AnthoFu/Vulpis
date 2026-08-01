@@ -5,7 +5,7 @@ module.exports = {
   expo: {
     name: "Vulpis",
     slug: "Vulpis",
-    version: "0.4.2",
+    version: "0.4.3",
     scheme: [
       "vulpis",
       clientIdPrefix ? `com.googleusercontent.apps.${clientIdPrefix}` : null

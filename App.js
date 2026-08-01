@@ -58,6 +58,9 @@ function MainApp() {
     handleDownloadDriveTrack,
     handleAddToQueue,
     handleRemoveFromQueue,
+    handleReorderQueueState,
+    handleSyncReorderNative,
+    handleSetDragActive,
     handleSourceChange,
     handleSelectTrack,
   } = useAppController();
@@ -145,7 +148,8 @@ function MainApp() {
       {/* Modal del reproductor a pantalla completa */}
       <Modal
         visible={isFullPlayerVisible}
-        animationType="slide"
+        transparent={true}
+        animationType="none"
         onRequestClose={() => setIsFullPlayerVisible(false)}
       >
         <PlayerCard
@@ -158,6 +162,9 @@ function MainApp() {
           tracks={tracks}
           playQueue={playQueue}
           onRemoveFromQueue={handleRemoveFromQueue}
+          onReorderQueueState={handleReorderQueueState}
+          onSyncReorderNative={handleSyncReorderNative}
+          onDragActive={handleSetDragActive}
           onClose={() => setIsFullPlayerVisible(false)}
           onSelectTrack={handleSelectTrack}
           initialQueueVisible={startWithQueueVisible}

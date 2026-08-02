@@ -1,37 +1,16 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { Text, View } from 'react-native';
+import styles from '../styles/ProgressBar.styles';
 import Slider from '@react-native-community/slider';
-import TrackPlayer from '@rntp/player';
+import useProgressBar from '../hooks/useProgressBar';
 
 export default function ProgressBar({ position, duration }) {
-  const [isSeeking, setIsSeeking] = useState(false);
-  const [seekPosition, setSeekPosition] = useState(0);
-
-  const formatTime = (seconds) => {
-    if (isNaN(seconds) || seconds < 0) return '00:00';
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const handleValueChange = (val) => {
-    setSeekPosition(val);
-    if (!isSeeking) {
-      setIsSeeking(true);
-    }
-  };
-
-  const handleSlidingComplete = async (val) => {
-    try {
-      await TrackPlayer.seekTo(val);
-    } catch (e) {
-      console.error('Error seeking in TrackPlayer:', e);
-    } finally {
-      setIsSeeking(false);
-    }
-  };
-
-  const displayPosition = isSeeking ? seekPosition : position;
+  const {
+    displayPosition,
+    formatTime,
+    handleValueChange,
+    handleSlidingComplete,
+  } = useProgressBar({ position, duration });
 
   return (
     <View style={styles.progressContainer}>
@@ -53,26 +32,3 @@ export default function ProgressBar({ position, duration }) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  progressContainer: {
-    width: '100%',
-    marginBottom: 24,
-  },
-  slider: {
-    width: '100%',
-    height: 40,
-  },
-  timeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: -4, // Adjust slightly since slider has built-in padding
-    paddingHorizontal: 4,
-  },
-  timeText: {
-    color: '#8E8F9E',
-    fontSize: 12,
-    fontFamily: 'monospace',
-  },
-});
-

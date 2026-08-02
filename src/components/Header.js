@@ -1,8 +1,43 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { Text, View, TouchableOpacity, ActivityIndicator } from 'react-native';
+import styles from '../styles/Header.styles';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-export default function Header({ onMenuPress }) {
+export default function Header({ 
+  onMenuPress, 
+  currentSource,
+  tracksCount = 0,
+  playlistsCount = 0,
+  isDriveConnected = false,
+  isLoading = false
+}) {
+  const getHeaderInfo = () => {
+    switch (currentSource) {
+      case 'local':
+        return {
+          title: 'Biblioteca',
+          subtitle: `${tracksCount} CANCIONES`
+        };
+      case 'private':
+        return {
+          title: 'Google Drive',
+          subtitle: isDriveConnected ? `${tracksCount} PISTAS EN LA NUBE` : 'DESCONECTADO'
+        };
+      case 'playlists':
+        return {
+          title: 'Playlists',
+          subtitle: `${playlistsCount} LISTAS CREADAS`
+        };
+      default:
+        return {
+          title: 'Vulpis',
+          subtitle: 'NUBE DE AUDIO HÍBRIDA'
+        };
+    }
+  };
+
+  const { title, subtitle } = getHeaderInfo();
+
   return (
     <View style={styles.headerContainer}>
       <TouchableOpacity onPress={onMenuPress} style={styles.iconButton} activeOpacity={0.7}>
@@ -10,60 +45,20 @@ export default function Header({ onMenuPress }) {
       </TouchableOpacity>
       
       <View style={styles.titleContainer}>
-        <Text style={styles.headerSubtitle}>REPRODUCTOR NATIVO</Text>
-        <Text style={styles.headerTitle}>VULPIS</Text>
+        <Text style={styles.headerSubtitle}>{subtitle}</Text>
+        <Text style={styles.headerTitle}>{title}</Text>
       </View>
       
       <View style={styles.iconButtonPlaceholder}>
-        <MaterialCommunityIcons name="cloud-sync-outline" size={22} color="#8B5CF6" />
+        {isLoading ? (
+          <ActivityIndicator size="small" color="#8B5CF6" />
+        ) : (
+          <MaterialCommunityIcons name="music-note" size={20} color="#4E4F62" />
+        )}
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  headerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    paddingVertical: 10,
-    marginBottom: 10,
-  },
-  iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#161722',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#2C2D3C',
-  },
-  iconButtonPlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#161722',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.15)',
-  },
-  titleContainer: {
-    alignItems: 'center',
-  },
-  headerSubtitle: {
-    color: '#8B5CF6',
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 2,
-  },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '800',
-    letterSpacing: 3,
-    marginTop: 2,
-  },
-});
+
+

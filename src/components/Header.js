@@ -9,7 +9,6 @@ export default function Header({
   tracksCount = 0,
   playlistsCount = 0,
   isDriveConnected = false,
-  onRefresh,
   isLoading = false
 }) {
   const getHeaderInfo = () => {
@@ -50,30 +49,16 @@ export default function Header({
         <Text style={styles.headerTitle}>{title}</Text>
       </View>
       
-      {onRefresh ? (
-        <TouchableOpacity 
-          onPress={onRefresh} 
-          disabled={isLoading}
-          style={styles.iconButton} 
-          activeOpacity={0.7}
-        >
-          {isLoading ? (
-            <ActivityIndicator size="small" color="#8B5CF6" />
-          ) : (
-            <MaterialCommunityIcons 
-              name={currentSource === 'local' ? 'folder-sync-outline' : 'cloud-sync-outline'} 
-              size={22} 
-              color="#A78BFA" 
-            />
-          )}
-        </TouchableOpacity>
-      ) : (
-        <View style={styles.iconButtonPlaceholder}>
+      <View style={styles.iconButtonPlaceholder}>
+        {isLoading ? (
+          <ActivityIndicator size="small" color="#8B5CF6" />
+        ) : (
           <MaterialCommunityIcons name="music-note" size={20} color="#4E4F62" />
-        </View>
-      )}
+        )}
+      </View>
     </View>
   );
 }
+
 
 

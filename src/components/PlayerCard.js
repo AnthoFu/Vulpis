@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Text, View, Image, TouchableOpacity, FlatList, Animated, StyleSheet, Modal, TouchableWithoutFeedback, Dimensions } from 'react-native';
+import { Text, View, Image, TouchableOpacity, FlatList, Animated, StyleSheet, Modal, TouchableWithoutFeedback, Dimensions, ScrollView, ActivityIndicator } from 'react-native';
 import styles from '../styles/PlayerCard.styles';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,6 +9,7 @@ import Controls from './Controls';
 import usePlayerCard from '../hooks/usePlayerCard';
 import useSheetAnimation from '../hooks/useSheetAnimation';
 import { SPRING, DURATION } from '../constants/animations';
+import { parseLrcLyrics } from '../utils/metadata';
 
 export default function PlayerCard({
   activeTrack,
@@ -32,6 +33,11 @@ export default function PlayerCard({
   const {
     isQueueVisible,
     setIsQueueVisible,
+    isLyricsVisible,
+    setIsLyricsVisible,
+    lyricsText,
+    rawLyrics,
+    isLoadingLyrics,
     colorA,
     colorB,
     fadeAnim,
@@ -52,6 +58,12 @@ export default function PlayerCard({
     translateY: queueTranslateY,
     backdropOpacity: queueBackdropOpacity,
   } = useSheetAnimation({ isOpen: isQueueVisible });
+
+  const {
+    visible: lyricsSheetVisible,
+    translateY: lyricsTranslateY,
+    backdropOpacity: lyricsBackdropOpacity,
+  } = useSheetAnimation({ isOpen: isLyricsVisible });
 
   const SCREEN_HEIGHT = Dimensions.get('window').height;
   const playerSlideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
@@ -81,17 +93,13 @@ export default function PlayerCard({
   const dragStartY = useRef(0);
   const dragYAnim = useRef(new Animated.Value(0)).current;
   const hasMoved = useRef(false);
-  // Flag que indica si hay un drag activo: bloquea la sincronización del ref desde el prop
-  // para evitar que re-renders intermedios sobreescriban los swaps manuales
   const isDragActiveRef = useRef(false);
   const playQueueRef = useRef(playQueue);
-  // Solo sincronizar desde el prop cuando NO hay un drag activo
   if (!isDragActiveRef.current) {
     playQueueRef.current = playQueue;
   }
 
   const handleDragStart = (index, pageY) => {
-    // NO llamar setState aquí: causaría re-render → FlatList desmonta el item → gesto muere
     originalDragIndex.current = index;
     activeDragIndex.current = index;
     dragStartY.current = pageY;
@@ -107,14 +115,12 @@ export default function PlayerCard({
     const ITEM_HEIGHT = 62;
     const diffY = pageY - dragStartY.current;
 
-    // Activar feedback visual solo tras mover >8px (evita re-render prematuro que mata el gesto)
     if (!hasMoved.current && Math.abs(diffY) > 8) {
       hasMoved.current = true;
       setDraggingIndex(activeDragIndex.current);
       setScrollEnabled(false);
     }
 
-    // Traslación continua y suave mientras el usuario mueve el dedo
     dragYAnim.setValue(diffY);
 
     const steps = Math.round(diffY / ITEM_HEIGHT);
@@ -124,14 +130,11 @@ export default function PlayerCard({
       const queue = playQueueRef.current || [];
       const queueLen = queue.length;
 
-      // ── IMPORTANTE: leer el item arrastrado del ref sincrónico ──
       const draggedItem = queue[currentIdx];
       const isActive = draggedItem && activeTrack && draggedItem.mediaId === activeTrack.mediaId;
       targetIdx = Math.max(isActive ? 0 : 1, Math.min(targetIdx, queueLen - 1));
 
-
       if (targetIdx !== currentIdx) {
-        // Actualizar playQueueRef sincrónicamente ANTES del re-render (fix stale ref)
         const updatedQueue = [...queue];
         const [moved] = updatedQueue.splice(currentIdx, 1);
         updatedQueue.splice(targetIdx, 0, moved);
@@ -155,10 +158,9 @@ export default function PlayerCard({
     } else {
       if (onDragActive) onDragActive(false);
     }
-    // Si hubo sync nativa, el polling se reanuda después del timeout de 600ms en handleSyncReorderNative
 
     hasMoved.current = false;
-    isDragActiveRef.current = false; // Descongelar: el prop puede sincronizar el ref de nuevo
+    isDragActiveRef.current = false;
     originalDragIndex.current = null;
     activeDragIndex.current = null;
     setDraggingIndex(null);
@@ -169,14 +171,12 @@ export default function PlayerCard({
   const renderBackground = () => {
     return (
       <View style={StyleSheet.absoluteFill}>
-        {/* Capa A (Color Base / Anterior) */}
         <LinearGradient
           colors={[colorA, '#090A0F']}
           style={StyleSheet.absoluteFill}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
         />
-        {/* Capa B (Color de Destino, Desvaneciéndose) */}
         <Animated.View style={[StyleSheet.absoluteFill, { opacity: fadeAnim }]}>
           <LinearGradient
             colors={[colorB, '#090A0F']}
@@ -185,11 +185,42 @@ export default function PlayerCard({
             end={{ x: 0, y: 1 }}
           />
         </Animated.View>
-        {/* Superposición oscura para asegurar que el texto sea siempre legible */}
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(9, 10, 15, 0.4)' }]} />
       </View>
     );
-  };  // Vista normal del reproductor en pantalla completa
+  };
+
+  const parsedLines = parseLrcLyrics(rawLyrics);
+  let activeLyricLine = null;
+  if (parsedLines && parsedLines.length > 0) {
+    const hasTimestamps = parsedLines.some(l => l.time !== null);
+    if (hasTimestamps) {
+      for (let i = 0; i < parsedLines.length; i++) {
+        const item = parsedLines[i];
+        if (item.time !== null && position >= item.time) {
+          activeLyricLine = item.text;
+        }
+      }
+    } else if (lyricsText) {
+      activeLyricLine = lyricsText.split('\n').find(line => line.trim().length > 0) || null;
+    }
+  }
+
+  const lyricFadeAnim = useRef(new Animated.Value(1)).current;
+  const prevLyricRef = useRef(activeLyricLine);
+
+  useEffect(() => {
+    if (prevLyricRef.current !== activeLyricLine) {
+      prevLyricRef.current = activeLyricLine;
+      lyricFadeAnim.setValue(0);
+      Animated.timing(lyricFadeAnim, {
+        toValue: 1,
+        duration: 650,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [activeLyricLine]);
+
   return (
     <Animated.View
       style={[
@@ -231,6 +262,34 @@ export default function PlayerCard({
           <Text style={styles.trackArtist} numberOfLines={1}>
             {currentTrackArtist}
           </Text>
+
+          {activeLyricLine && (
+            <Animated.View
+              style={{
+                opacity: lyricFadeAnim,
+                transform: [
+                  {
+                    translateY: lyricFadeAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [10, 0],
+                    }),
+                  },
+                ],
+                width: '100%',
+              }}
+            >
+              <TouchableOpacity 
+                onPress={() => setIsLyricsVisible(true)}
+                activeOpacity={0.8}
+                style={styles.liveLyricContainer}
+              >
+                <MaterialCommunityIcons name="microphone-variant" size={14} color="rgba(167, 139, 250, 0.7)" style={{ marginRight: 6 }} />
+                <Text style={styles.liveLyricText} numberOfLines={1}>
+                  {activeLyricLine}
+                </Text>
+              </TouchableOpacity>
+            </Animated.View>
+          )}
         </View>
 
         <ProgressBar position={position} duration={duration} />
@@ -245,18 +304,129 @@ export default function PlayerCard({
           onSelectTrack={onSelectTrack}
         />
 
-        {/* Botón de controles de pie de página */}
+        {/* Botones de pie de página: Letras y Cola */}
         <View style={styles.footerRow}>
+          <TouchableOpacity
+            onPress={() => setIsLyricsVisible(true)}
+            style={[styles.footerButton, { marginRight: 12 }]}
+            activeOpacity={0.7}
+          >
+            <MaterialCommunityIcons name="microphone-variant" size={18} color="#A78BFA" style={{ marginRight: 6 }} />
+            <Text style={styles.footerButtonText}>Letras</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             onPress={() => setIsQueueVisible(true)}
             style={styles.footerButton}
             activeOpacity={0.7}
           >
-            <MaterialCommunityIcons name="playlist-play" size={22} color="#8E8F9E" style={{ marginRight: 6 }} />
-            <Text style={styles.footerButtonText}>Ver Cola de Reproducción</Text>
+            <MaterialCommunityIcons name="playlist-play" size={20} color="#8E8F9E" style={{ marginRight: 6 }} />
+            <Text style={styles.footerButtonText}>Cola</Text>
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* SUPERPOSICIÓN DE LETRAS (ESTILO SPOTIFY) */}
+      {lyricsSheetVisible && (
+        <View style={styles.bottomSheetOverlay}>
+          <TouchableWithoutFeedback onPress={() => setIsLyricsVisible(false)}>
+            <Animated.View style={[styles.bottomSheetBackdrop, { opacity: lyricsBackdropOpacity }]} />
+          </TouchableWithoutFeedback>
+          
+          <Animated.View
+            style={[
+              styles.lyricsSheetContent,
+              {
+                paddingBottom: Math.max(insets.bottom, 20),
+                transform: [{ translateY: lyricsTranslateY }],
+              },
+            ]}
+          >
+            <View style={styles.bottomSheetHandleWrapper}>
+              <View style={styles.bottomSheetHandle} />
+            </View>
+
+            <View style={styles.lyricsHeader}>
+              <View style={{ flex: 1, paddingRight: 8 }}>
+                <Text style={styles.lyricsTitle} numberOfLines={1}>Letras</Text>
+                <Text style={styles.lyricsTrackSub} numberOfLines={1}>
+                  {currentTrackTitle} • {currentTrackArtist}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setIsLyricsVisible(false)}
+                style={styles.lyricsCloseBtn}
+                activeOpacity={0.7}
+              >
+                <MaterialCommunityIcons name="close" size={24} color="#8E8F9E" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              style={styles.lyricsScrollView}
+              contentContainerStyle={styles.lyricsScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {isLoadingLyrics ? (
+                <View style={styles.lyricsLoadingContainer}>
+                  <ActivityIndicator size="large" color="#8B5CF6" />
+                  <Text style={styles.lyricsLoadingText}>Cargando letra de la canción...</Text>
+                </View>
+              ) : lyricsText ? (
+                (() => {
+                  const parsedLines = parseLrcLyrics(rawLyrics);
+                  const hasTimestamps = parsedLines.some(l => l.time !== null);
+
+                  if (hasTimestamps) {
+                    let activeIndex = -1;
+                    for (let i = 0; i < parsedLines.length; i++) {
+                      const item = parsedLines[i];
+                      if (item.time !== null && position >= item.time) {
+                        activeIndex = i;
+                      }
+                    }
+
+                    return (
+                      <View>
+                        {parsedLines.map((line, idx) => {
+                          const isActive = idx === activeIndex;
+                          return (
+                            <Text
+                              key={idx}
+                              style={[
+                                styles.lyricLineText,
+                                isActive && styles.lyricLineActiveText,
+                              ]}
+                            >
+                              {line.text}
+                            </Text>
+                          );
+                        })}
+                      </View>
+                    );
+                  }
+
+                  return (
+                    <Text style={styles.lyricsBodyText}>
+                      {lyricsText}
+                    </Text>
+                  );
+                })()
+              ) : (
+                <View style={styles.emptyLyricsContainer}>
+                  <View style={styles.emptyLyricsIconCircle}>
+                    <MaterialCommunityIcons name="microphone-off" size={36} color="#A78BFA" />
+                  </View>
+                  <Text style={styles.emptyLyricsTitle}>Parece que no hay letras para esta canción</Text>
+                  <Text style={styles.emptyLyricsSub}>
+                    No se encontraron letras integradas en los metadatos de esta canción ni en archivos de texto adjuntos.
+                  </Text>
+                </View>
+              )}
+            </ScrollView>
+          </Animated.View>
+        </View>
+      )}
 
       {/* SUPERPOSICIÓN DE LA COLA DE REPRODUCCIÓN (ESTILO BOTTOM SHEET) */}
       {queueSheetVisible && (
@@ -395,3 +565,4 @@ export default function PlayerCard({
     </Animated.View>
   );
 }
+

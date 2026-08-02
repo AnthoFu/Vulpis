@@ -56,32 +56,39 @@ export default function useLocalLibrary({
     }
   };
 
-  const handleScanLocal = async () => {
+  const handleScanLocal = async (options = {}) => {
+    const isSilent = typeof options === 'object' && options?.silent === true;
     try {
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert(
-          'Permiso denegado',
-          'Necesitamos acceso a tu biblioteca de medios para buscar archivos de audio.'
-        );
-        return;
+        if (!isSilent) {
+          Alert.alert(
+            'Permiso denegado',
+            'Necesitamos acceso a tu biblioteca de medios para buscar archivos de audio.'
+          );
+        }
+        return [];
       }
 
       setIsSourceChanging(true);
 
       let media = await MediaLibrary.getAssetsAsync({
         mediaType: [MediaLibrary.MediaType.audio],
-        first: 100,
+        first: 200,
       });
 
-      const assetsList = media.assets.filter(
-        (asset) => asset.filename && asset.filename.toLowerCase().endsWith('.mp3')
+      const assetsList = (media.assets || []).filter(
+        (asset) =>
+          asset.filename &&
+          /\.(mp3|m4a|wav|flac|aac|ogg)$/i.test(asset.filename)
       );
 
       if (assetsList.length === 0) {
-        Alert.alert('Escaneo Completado', 'No se encontraron archivos .mp3 en el dispositivo.');
+        if (!isSilent) {
+          Alert.alert('Escaneo Completado', 'No se encontraron archivos de audio en el dispositivo.');
+        }
         setIsSourceChanging(false);
-        return;
+        return [];
       }
 
       const newTracks = [];
@@ -91,20 +98,27 @@ export default function useLocalLibrary({
         newTracks.push({
           mediaId: asset.id || `local-scanned-${i}-${Date.now()}`,
           url: asset.uri,
-          title: meta.title || asset.filename.replace(/\.mp3$/i, ''),
+          title: meta.title || asset.filename.replace(/\.[^/.]+$/, ''),
           artist: meta.artist || 'Audio Escaneado',
           artworkUrl: meta.artworkUrl || defaultCover,
+          lyrics: meta.lyrics || null,
         });
       }
 
       await saveLocalTracks(newTracks);
-      Alert.alert(
-        'Escaneo Completado',
-        `Se encontraron y cargaron ${newTracks.length} archivos .mp3 en tu biblioteca local.`
-      );
+      if (!isSilent) {
+        Alert.alert(
+          'Escaneo Completado',
+          `Se encontraron y cargaron ${newTracks.length} archivos de audio en tu biblioteca local.`
+        );
+      }
+      return newTracks;
     } catch (e) {
       console.error('Error al escanear audio local:', e);
-      Alert.alert('Error', 'Hubo un problema al escanear los archivos locales.');
+      if (!isSilent) {
+        Alert.alert('Error', 'Hubo un problema al escanear los archivos locales.');
+      }
+      return [];
     } finally {
       setIsSourceChanging(false);
     }
@@ -113,7 +127,7 @@ export default function useLocalLibrary({
   const handleImportMp3 = async () => {
     try {
       const res = await DocumentPicker.getDocumentAsync({
-        type: 'audio/mpeg',
+        type: ['audio/*', 'audio/mpeg', 'audio/mp3', 'audio/m4a'],
         copyToCacheDirectory: true,
         multiple: true,
       });
@@ -129,9 +143,10 @@ export default function useLocalLibrary({
         importedTracks.push({
           mediaId: `imported-${Date.now()}-${i}`,
           url: asset.uri,
-          title: meta.title || asset.name.replace(/\.mp3$/i, ''),
+          title: meta.title || asset.name.replace(/\.[^/.]+$/, ''),
           artist: meta.artist || 'Archivo Importado',
           artworkUrl: meta.artworkUrl || defaultCover,
+          lyrics: meta.lyrics || null,
         });
       }
 
@@ -154,7 +169,7 @@ export default function useLocalLibrary({
   const handleResetLocal = async () => {
     Alert.alert(
       'Restablecer Biblioteca',
-      '¿Estás seguro de que quieres restablecer la biblioteca local? Esto eliminará tus canciones importadas/escaneadas y volverá a las canciones de prueba.',
+      '¿Estás seguro de que quieres restablecer la biblioteca local? Se escaneará nuevamente la música del teléfono.',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -164,15 +179,14 @@ export default function useLocalLibrary({
             setIsSourceChanging(true);
             try {
               await AsyncStorage.removeItem('vulpis_local_tracks');
-              setLocalLibraryTracks(localTracks);
+              setLocalLibraryTracks([]);
               setHasCustomLocalTracks(false);
 
               if (currentSourceRef.current === 'local') {
-                setTracks(localTracks);
+                setTracks([]);
                 await TrackPlayer.clear();
-                await TrackPlayer.setMediaItems(localTracks);
-                await TrackPlayer.skipToIndex(0);
               }
+              await handleScanLocal({ silent: false });
             } catch (e) {
               console.error('Error al restablecer pistas locales:', e);
             } finally {

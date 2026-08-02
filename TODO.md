@@ -9,6 +9,7 @@
 - [X] Refactorizacion de estilos
 - [x] Refactorizacion de vistas y logica (Podriamos hacerlo tipo angular? Evitar mezclar logica con vistas)
 - [x] Mejora estetica, cambio de titulos. "Reproductor nativo" Es necesario?
-- [] Nueva vista: Letras. Agregar un sistema de lectura de letras de canciones, estilo spotify (si es que en los metadatos de la cancion hay letra)
-- [] Eliminar las canciones por defecto, escaneo automatico de musica cada vez que entra a la palicacion
+- [X] Nueva vista: Letras. Agregar un sistema de lectura de letras de canciones, estilo spotify (si es que en los metadatos de la cancion hay letra)
+- [X] Eliminar las canciones por defecto, escaneo automatico de musica cada vez que entra a la palicacion
 - [X] Modularizar las animaciones: Todas deben ser parecidas y escalables
+- [] Mejora en el sistema de letras. Implementacion de busqueda automatica de letras por nombre de cancion? (Posible busqueda de API para letras de canciones Online)

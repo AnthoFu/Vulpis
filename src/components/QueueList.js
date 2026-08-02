@@ -473,25 +473,6 @@ export default function QueueList({
             {/* Google Drive Status Panel (only under private source library tab) */}
             {currentSource === 'private' && renderGoogleDrivePanel()}
 
-            {/* Actions for local library */}
-            {currentSource === 'local' && !isLoading && (
-              <View style={styles.localActionsRow}>
-                <TouchableOpacity onPress={onScanLocal} style={styles.actionButton} activeOpacity={0.7}>
-                  <MaterialCommunityIcons name="magnify" size={16} color="#A78BFA" />
-                  <Text style={styles.actionButtonText}>Escanear Audio</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={onImportMp3} style={styles.actionButton} activeOpacity={0.7}>
-                  <MaterialCommunityIcons name="file-import-outline" size={16} color="#A78BFA" />
-                  <Text style={styles.actionButtonText}>Importar MP3</Text>
-                </TouchableOpacity>
-                {hasCustomLocalTracks && (
-                  <TouchableOpacity onPress={onResetLocal} style={[styles.actionButton, styles.resetButton]} activeOpacity={0.7}>
-                    <MaterialCommunityIcons name="cached" size={16} color="#EF4444" />
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-
             {/* Search Input (only visible in library view) */}
             {(currentSource === 'local' || (currentSource === 'private' && isDriveConnected)) && (
               <View style={styles.searchSection}>

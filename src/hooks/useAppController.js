@@ -217,7 +217,7 @@ export default function useAppController() {
         console.log('[useAppController] Configurando pistas en la cola del reproductor...');
         
         // Cargar pistas locales personalizadas del almacenamiento si existen
-        let initialTracks = localTracks;
+        let initialTracks = [];
         try {
           const stored = await AsyncStorage.getItem('vulpis_local_tracks');
           if (stored) {
@@ -303,14 +303,22 @@ export default function useAppController() {
               });
             }
           }
-        } else {
-          // Configuración predeterminada
+        } else if (initialTracks.length > 0) {
+          // Configuración predeterminada con pistas almacenadas
           await TrackPlayer.setMediaItems(initialTracks);
           await TrackPlayer.skipToIndex(0);
           if (isMounted) {
             setPlayQueue(initialTracks);
           }
         }
+
+        // Ejecución de escaneo automático en segundo plano al entrar a la aplicación
+        setTimeout(() => {
+          console.log('[useAppController] Iniciando escaneo automático de canciones locales...');
+          handleScanLocal({ silent: true }).catch(err => {
+            console.log('[useAppController] Error en escaneo automático inicial:', err);
+          });
+        }, 300);
 
         console.log('[useAppController] ¡Configuración de TrackPlayer completada exitosamente!');
         

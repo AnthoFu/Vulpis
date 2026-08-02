@@ -38,6 +38,7 @@ function base64ToUint8Array(base64) {
 }
 
 function arrayBufferToBase64(bytes) {
+  if (!bytes || typeof bytes.length !== 'number' || bytes.length === 0) return '';
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   let base64 = '';
   const len = bytes.length;
@@ -56,6 +57,119 @@ function arrayBufferToBase64(bytes) {
   return base64;
 }
 
+export function formatLyricsText(rawLyrics) {
+  if (!rawLyrics || typeof rawLyrics !== 'string') return '';
+  // Elimina marcas de tiempo tipo [00:12.34] o [01:23] para mostrar texto limpio
+  const cleaned = rawLyrics.replace(/\[\d{2}:\d{2}(?:\.\d{2,3})?\]/g, '').trim();
+  return cleaned;
+}
+
+export function parseLrcLyrics(rawLyrics) {
+  if (!rawLyrics || typeof rawLyrics !== 'string') return [];
+  const lines = rawLyrics.split('\n');
+  const result = [];
+  const timeRegex = /\[(\d{2}):(\d{2})(?:\.(\d{2,3}))?\]/g;
+
+  for (const line of lines) {
+    const matches = [...line.matchAll(timeRegex)];
+    const text = line.replace(timeRegex, '').trim();
+    if (matches.length > 0) {
+      for (const m of matches) {
+        const min = parseInt(m[1], 10);
+        const sec = parseInt(m[2], 10);
+        const ms = m[3] ? parseInt(m[3].padEnd(3, '0'), 10) : 0;
+        const timeInSeconds = min * 60 + sec + ms / 1000;
+        if (text) {
+          result.push({ time: timeInSeconds, text });
+        }
+      }
+    } else if (line.trim()) {
+      result.push({ time: null, text: line.trim() });
+    }
+  }
+
+  result.sort((a, b) => (a.time ?? 0) - (b.time ?? 0));
+  return result;
+}
+
+
+function getLyricsFromTags(tags) {
+  if (!tags) return null;
+
+  if (tags.lyrics) {
+    if (typeof tags.lyrics === 'string' && tags.lyrics.trim().length > 0) {
+      return tags.lyrics.trim();
+    }
+    if (typeof tags.lyrics === 'object' && tags.lyrics !== null) {
+      const text = tags.lyrics.lyrics || tags.lyrics.text || tags.lyrics.data;
+      if (typeof text === 'string' && text.trim().length > 0) {
+        return text.trim();
+      }
+    }
+  }
+
+  if (tags.USLT) {
+    if (typeof tags.USLT === 'string' && tags.USLT.trim().length > 0) {
+      return tags.USLT.trim();
+    }
+    if (typeof tags.USLT === 'object' && tags.USLT !== null) {
+      if (tags.USLT.data) {
+        if (typeof tags.USLT.data === 'string' && tags.USLT.data.trim().length > 0) {
+          return tags.USLT.data.trim();
+        }
+        if (typeof tags.USLT.data === 'object' && tags.USLT.data !== null) {
+          if (typeof tags.USLT.data.lyrics === 'string' && tags.USLT.data.lyrics.trim().length > 0) {
+            return tags.USLT.data.lyrics.trim();
+          }
+          if (typeof tags.USLT.data.text === 'string' && tags.USLT.data.text.trim().length > 0) {
+            return tags.USLT.data.text.trim();
+          }
+        }
+      }
+      if (typeof tags.USLT.lyrics === 'string' && tags.USLT.lyrics.trim().length > 0) {
+        return tags.USLT.lyrics.trim();
+      }
+    }
+  }
+
+  if (tags.unsynchronisedLyrics) {
+    if (typeof tags.unsynchronisedLyrics === 'string' && tags.unsynchronisedLyrics.trim().length > 0) {
+      return tags.unsynchronisedLyrics.trim();
+    }
+    if (typeof tags.unsynchronisedLyrics === 'object' && tags.unsynchronisedLyrics !== null) {
+      const text = tags.unsynchronisedLyrics.lyrics || tags.unsynchronisedLyrics.text;
+      if (typeof text === 'string' && text.trim().length > 0) {
+        return text.trim();
+      }
+    }
+  }
+
+  return null;
+}
+
+const checkSidecarLyrics = async (fileUri) => {
+  try {
+    if (!fileUri || typeof fileUri !== 'string' || (!fileUri.startsWith('file://') && !fileUri.startsWith('/'))) return null;
+    const lrcUri = fileUri.replace(/\.[^/.]+$/, '.lrc');
+    const txtUri = fileUri.replace(/\.[^/.]+$/, '.txt');
+
+    const lrcInfo = await FileSystem.getInfoAsync(lrcUri);
+    if (lrcInfo.exists) {
+      const content = await FileSystem.readAsStringAsync(lrcUri);
+      if (content && content.trim().length > 0) return content.trim();
+    }
+
+    const txtInfo = await FileSystem.getInfoAsync(txtUri);
+    if (txtInfo.exists) {
+      const content = await FileSystem.readAsStringAsync(txtUri);
+      if (content && content.trim().length > 0) return content.trim();
+    }
+  } catch (e) {
+    // Ignorar errores de archivo adjunto
+  }
+  return null;
+};
+
 export const extractMetadata = async (fileUri) => {
   return new Promise(async (resolve) => {
     try {
@@ -72,30 +186,43 @@ export const extractMetadata = async (fileUri) => {
 
       console.log('[MetadataExtractor] Extrayendo etiquetas con jsmediatags...');
       jsmediatags.read(standardArray, {
-        onSuccess: (tag) => {
-          const tags = tag.tags;
+        onSuccess: async (tag) => {
+          const tags = tag.tags || {};
           console.log('[MetadataExtractor] onSuccess. Título:', tags.title, 'Artista:', tags.artist, 'TieneImagen:', !!tags.picture);
           const title = tags.title || null;
           const artist = tags.artist || null;
           let artworkUrl = null;
 
-          if (tags.picture) {
+          if (tags.picture && tags.picture.data) {
             const { data, format } = tags.picture;
             const base64 = arrayBufferToBase64(data);
-            artworkUrl = `data:${format};base64,${base64}`;
-            console.log('[MetadataExtractor] Portada extraída exitosamente.');
+            if (base64) {
+              artworkUrl = `data:${format || 'image/jpeg'};base64,${base64}`;
+              console.log('[MetadataExtractor] Portada extraída exitosamente.');
+            }
           }
 
-          resolve({ title, artist, artworkUrl });
+          let lyrics = getLyricsFromTags(tags);
+          if (!lyrics) {
+            lyrics = await checkSidecarLyrics(fileUri);
+          }
+          if (lyrics) {
+            console.log('[MetadataExtractor] Letra de la canción extraída exitosamente.');
+          }
+
+          resolve({ title, artist, artworkUrl, lyrics });
         },
-        onError: (error) => {
+        onError: async (error) => {
           console.log('[MetadataExtractor] Error de jsmediatags:', error);
-          resolve({ title: null, artist: null, artworkUrl: null });
+          const sidecarLyrics = await checkSidecarLyrics(fileUri);
+          resolve({ title: null, artist: null, artworkUrl: null, lyrics: sidecarLyrics });
         }
       });
     } catch (e) {
       console.error('[MetadataExtractor] Error al leer el archivo:', e);
-      resolve({ title: null, artist: null, artworkUrl: null });
+      const sidecarLyrics = await checkSidecarLyrics(fileUri);
+      resolve({ title: null, artist: null, artworkUrl: null, lyrics: sidecarLyrics });
     }
   });
 };
+

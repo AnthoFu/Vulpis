@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Image, Animated } from 'react-native';
 import TrackPlayer from '@rntp/player';
 import ImageColors from 'react-native-image-colors';
+import { extractMetadata, formatLyricsText } from '../utils/metadata';
 
 export default function usePlayerCard({
   activeTrack,
@@ -9,6 +10,11 @@ export default function usePlayerCard({
   initialQueueVisible,
 }) {
   const [isQueueVisible, setIsQueueVisible] = useState(initialQueueVisible);
+  const [isLyricsVisible, setIsLyricsVisible] = useState(false);
+  const [lyricsText, setLyricsText] = useState(null);
+  const [rawLyrics, setRawLyrics] = useState(null);
+  const [isLoadingLyrics, setIsLoadingLyrics] = useState(false);
+
   const [colorA, setColorA] = useState('#161722');
   const [colorB, setColorB] = useState('#161722');
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -23,6 +29,69 @@ export default function usePlayerCard({
   const currentTrackTitle = activeTrack?.title ?? defaultTrack.title;
   const currentTrackArtist = activeTrack?.artist ?? defaultTrack.artist;
   const currentTrackArtwork = activeTrack?.artworkUrl ?? defaultTrack.artworkUrl;
+
+  // Cargar/extraer letras automáticamente cuando cambia la pista activa
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadLyrics() {
+      if (!activeTrack) {
+        if (isMounted) {
+          setLyricsText(null);
+          setRawLyrics(null);
+        }
+        return;
+      }
+
+      // Si la pista ya contiene letras
+      if (activeTrack.lyrics) {
+        if (isMounted) {
+          setRawLyrics(activeTrack.lyrics);
+          setLyricsText(formatLyricsText(activeTrack.lyrics));
+          setIsLoadingLyrics(false);
+        }
+        return;
+      }
+
+      // Si no tiene letras guardadas pero es un archivo local, intentar extraer metadatos
+      if (activeTrack.url && (activeTrack.url.startsWith('file://') || activeTrack.url.startsWith('/'))) {
+        try {
+          if (isMounted) setIsLoadingLyrics(true);
+          const meta = await extractMetadata(activeTrack.url);
+          if (isMounted) {
+            if (meta && meta.lyrics) {
+              activeTrack.lyrics = meta.lyrics;
+              setRawLyrics(meta.lyrics);
+              setLyricsText(formatLyricsText(meta.lyrics));
+            } else {
+              setRawLyrics(null);
+              setLyricsText(null);
+            }
+          }
+        } catch (err) {
+          console.error('[usePlayerCard] Error al extraer letra de la pista activa:', err);
+          if (isMounted) {
+            setRawLyrics(null);
+            setLyricsText(null);
+          }
+        } finally {
+          if (isMounted) setIsLoadingLyrics(false);
+        }
+      } else {
+        if (isMounted) {
+          setRawLyrics(null);
+          setLyricsText(null);
+          setIsLoadingLyrics(false);
+        }
+      }
+    }
+
+    loadLyrics();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeTrack?.mediaId, activeTrack?.url]);
 
   useEffect(() => {
     let isMounted = true;
@@ -96,6 +165,11 @@ export default function usePlayerCard({
   return {
     isQueueVisible,
     setIsQueueVisible,
+    isLyricsVisible,
+    setIsLyricsVisible,
+    lyricsText,
+    rawLyrics,
+    isLoadingLyrics,
     colorA,
     colorB,
     fadeAnim,
@@ -108,3 +182,4 @@ export default function usePlayerCard({
     togglePlayback,
   };
 }
+

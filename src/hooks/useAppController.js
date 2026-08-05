@@ -28,6 +28,7 @@ export default function useAppController() {
 
   // Estados del menú lateral de navegación y de la fuente
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [currentSource, setCurrentSource] = useState('local'); // 'local' | 'private'
   const [tracks, setTracks] = useState(localTracks);
   const [isSourceChanging, setIsSourceChanging] = useState(false);
@@ -657,6 +658,8 @@ export default function useAppController() {
     playQueue,
     isDrawerOpen,
     setIsDrawerOpen,
+    isSettingsOpen,
+    setIsSettingsOpen,
     currentSource,
     tracks,
     isSourceChanging,

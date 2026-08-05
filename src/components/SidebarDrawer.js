@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import appConfig from '../../app.config';
 import useSidebarDrawer from '../hooks/useSidebarDrawer';
 
-export default function SidebarDrawer({ isOpen, onClose, currentSource, onSelectSource }) {
+export default function SidebarDrawer({ isOpen, onClose, currentSource, onSelectSource, onOpenSettings }) {
   const insets = useSafeAreaInsets();
   const { visible, slideAnim, fadeAnim } = useSidebarDrawer({ isOpen });
 
@@ -121,7 +121,14 @@ export default function SidebarDrawer({ isOpen, onClose, currentSource, onSelect
 
           {/* Footer */}
           <View style={styles.footer}>
-            <TouchableOpacity style={styles.settingsButton} activeOpacity={0.8}>
+            <TouchableOpacity 
+              style={styles.settingsButton} 
+              activeOpacity={0.8}
+              onPress={() => {
+                onClose();
+                if (onOpenSettings) onOpenSettings();
+              }}
+            >
               <MaterialCommunityIcons name="cog-outline" size={20} color="#8E8F9E" />
               <Text style={styles.settingsLabel}>Ajustes</Text>
             </TouchableOpacity>

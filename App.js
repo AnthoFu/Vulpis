@@ -13,6 +13,7 @@ import PlayerCard from './src/components/PlayerCard';
 import MiniPlayer from './src/components/MiniPlayer';
 import QueueList from './src/components/QueueList';
 import SidebarDrawer from './src/components/SidebarDrawer';
+import SettingsModal from './src/components/SettingsModal';
 import useAppController from './src/hooks/useAppController';
 
 function MainApp() {
@@ -31,10 +32,13 @@ function MainApp() {
     playQueue,
     isDrawerOpen,
     setIsDrawerOpen,
+    isSettingsOpen,
+    setIsSettingsOpen,
     currentSource,
     tracks,
     isSourceChanging,
     toast,
+    showToast,
     playlists,
     handleCreatePlaylist,
     handleDeletePlaylist,
@@ -181,6 +185,14 @@ function MainApp() {
         onClose={() => setIsDrawerOpen(false)}
         currentSource={currentSource}
         onSelectSource={handleSourceChange}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+      />
+
+      {/* Modal de Ajustes */}
+      <SettingsModal
+        visible={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        onShowToast={showToast}
       />
     </View>
   );

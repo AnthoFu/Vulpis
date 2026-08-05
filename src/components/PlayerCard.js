@@ -10,6 +10,7 @@ import usePlayerCard from '../hooks/usePlayerCard';
 import useSheetAnimation from '../hooks/useSheetAnimation';
 import { SPRING, DURATION } from '../constants/animations';
 import { parseLrcLyrics } from '../utils/metadata';
+import EditLyricsModal from './EditLyricsModal';
 
 export default function PlayerCard({
   activeTrack,
@@ -29,6 +30,7 @@ export default function PlayerCard({
   initialQueueVisible = false,
 }) {
   const insets = useSafeAreaInsets();
+  const [isEditLyricsVisible, setIsEditLyricsVisible] = useState(false);
   
   const {
     isQueueVisible,
@@ -47,6 +49,9 @@ export default function PlayerCard({
     currentTrackArtwork,
     selectTrackFromQueue,
     togglePlayback,
+    handleSaveCustomLyrics,
+    handleResetCustomLyrics,
+    handleFetchOnlineLyricsForce,
   } = usePlayerCard({
     activeTrack,
     tracks,
@@ -326,7 +331,6 @@ export default function PlayerCard({
         </View>
       </View>
 
-      {/* SUPERPOSICIÓN DE LETRAS (ESTILO SPOTIFY) */}
       {lyricsSheetVisible && (
         <View style={styles.bottomSheetOverlay}>
           <TouchableWithoutFeedback onPress={() => setIsLyricsVisible(false)}>
@@ -353,13 +357,22 @@ export default function PlayerCard({
                   {currentTrackTitle} • {currentTrackArtist}
                 </Text>
               </View>
-              <TouchableOpacity
-                onPress={() => setIsLyricsVisible(false)}
-                style={styles.lyricsCloseBtn}
-                activeOpacity={0.7}
-              >
-                <MaterialCommunityIcons name="close" size={24} color="#8E8F9E" />
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <TouchableOpacity
+                  onPress={() => setIsEditLyricsVisible(true)}
+                  style={styles.lyricsCloseBtn}
+                  activeOpacity={0.7}
+                >
+                  <MaterialCommunityIcons name="pencil-outline" size={22} color="#A78BFA" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setIsLyricsVisible(false)}
+                  style={styles.lyricsCloseBtn}
+                  activeOpacity={0.7}
+                >
+                  <MaterialCommunityIcons name="close" size={24} color="#8E8F9E" />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <ScrollView
@@ -419,8 +432,16 @@ export default function PlayerCard({
                   </View>
                   <Text style={styles.emptyLyricsTitle}>Parece que no hay letras para esta canción</Text>
                   <Text style={styles.emptyLyricsSub}>
-                    No se encontraron letras integradas en los metadatos de esta canción ni en archivos de texto adjuntos.
+                    No se encontraron letras integradas en los metadatos de esta canción ni en línea.
                   </Text>
+                  <TouchableOpacity
+                    style={styles.addLyricsBtn}
+                    onPress={() => setIsEditLyricsVisible(true)}
+                    activeOpacity={0.8}
+                  >
+                    <MaterialCommunityIcons name="pencil" size={18} color="#FFFFFF" />
+                    <Text style={styles.addLyricsBtnText}>Escribir o editar letra</Text>
+                  </TouchableOpacity>
                 </View>
               )}
             </ScrollView>
@@ -428,10 +449,19 @@ export default function PlayerCard({
         </View>
       )}
 
-      {/* SUPERPOSICIÓN DE LA COLA DE REPRODUCCIÓN (ESTILO BOTTOM SHEET) */}
+      <EditLyricsModal
+        visible={isEditLyricsVisible}
+        onClose={() => setIsEditLyricsVisible(false)}
+        initialLyrics={rawLyrics}
+        trackTitle={currentTrackTitle}
+        trackArtist={currentTrackArtist}
+        onSave={handleSaveCustomLyrics}
+        onReset={handleResetCustomLyrics}
+        onFetchOnline={handleFetchOnlineLyricsForce}
+      />
+
       {queueSheetVisible && (
         <View style={styles.bottomSheetOverlay}>
-          {/* Backdrop táctil para cerrar */}
           <TouchableWithoutFeedback onPress={() => setIsQueueVisible(false)}>
             <Animated.View style={[styles.bottomSheetBackdrop, { opacity: queueBackdropOpacity }]} />
           </TouchableWithoutFeedback>

@@ -224,6 +224,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     lineHeight: 18,
   },
+  addLyricsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: '#8B5CF6',
+    marginTop: 18,
+  },
+  addLyricsBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
   queueListContent: {
     paddingVertical: 12,
     paddingHorizontal: 0,

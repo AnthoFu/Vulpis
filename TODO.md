@@ -12,4 +12,9 @@
 - [X] Nueva vista: Letras. Agregar un sistema de lectura de letras de canciones, estilo spotify (si es que en los metadatos de la cancion hay letra)
 - [X] Eliminar las canciones por defecto, escaneo automatico de musica cada vez que entra a la palicacion
 - [X] Modularizar las animaciones: Todas deben ser parecidas y escalables
-- [] Mejora en el sistema de letras. Implementacion de busqueda automatica de letras por nombre de cancion? (Posible busqueda de API para letras de canciones Online)
+- [x] Mejora en el sistema de letras: Búsqueda automática en API pública
+  - [x] Añadir opción en Ajustes/Configuración: "Buscar letras en línea" (Desactivado por defecto).
+  - [x] Integración con API pública de letras (LRCLIB API - soporta letras normales y sincronizadas .lrc).
+  - [x] Implementar algoritmo de coincidencia aproximada (Fuzzy Matching / % de similitud por Título y Artista mediante Coeficiente Sørensen-Dice).
+  - [x] Sistema de almacenamiento/caché local de letras descargadas para evitar peticiones redundantes a la API.
+  - [x] Cascada de prioridad en [`usePlayerCard`](file:///home/anthofu/Escritorio/git/Vulpis/src/hooks/usePlayerCard.js#L37): Metadatos ID3 locales -> Caché local -> API en línea (si está activada) -> "Letra no encontrada".

@@ -217,6 +217,10 @@ export default function QueueList({
           keyExtractor={(item, index) => `${item.mediaId}-${index}`}
           contentContainerStyle={[styles.listContent, contentContainerStyle]}
           showsVerticalScrollIndicator={false}
+          initialNumToRender={12}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews={true}
           ListHeaderComponent={
             <>
               {ListHeaderComponent}
@@ -343,6 +347,10 @@ export default function QueueList({
         keyExtractor={(item) => item.id}
         contentContainerStyle={[styles.listContent, contentContainerStyle]}
         showsVerticalScrollIndicator={false}
+        initialNumToRender={12}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        removeClippedSubviews={true}
         ListHeaderComponent={
           <>
             {ListHeaderComponent}
@@ -466,6 +474,10 @@ export default function QueueList({
       <FlatList
         data={listData}
         keyExtractor={(item, index) => `${item.mediaId}-${index}`}
+        initialNumToRender={12}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        removeClippedSubviews={true}
         ListHeaderComponent={
           <>
             {ListHeaderComponent}

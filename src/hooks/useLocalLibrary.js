@@ -23,11 +23,17 @@ export default function useLocalLibrary({
   const [hasCustomLocalTracks, setHasCustomLocalTracks] = useState(false);
 
   const currentSourceRef = useRef(currentSource);
+  const localTracksRef = useRef(localLibraryTracks);
+
   useEffect(() => {
     currentSourceRef.current = currentSource;
   }, [currentSource]);
 
-  const saveLocalTracks = async (newTracksList) => {
+  useEffect(() => {
+    localTracksRef.current = localLibraryTracks;
+  }, [localLibraryTracks]);
+
+  const saveLocalTracks = async (newTracksList, shouldUpdatePlayer = true) => {
     setLocalLibraryTracks(newTracksList);
     setHasCustomLocalTracks(true);
     await AsyncStorage.setItem('vulpis_local_tracks', JSON.stringify(newTracksList));
@@ -35,27 +41,32 @@ export default function useLocalLibrary({
     if (currentSourceRef.current === 'local') {
       setTracks(newTracksList);
 
-      try {
-        const active = TrackPlayer.getActiveMediaItem();
-        await TrackPlayer.clear();
-        await TrackPlayer.setMediaItems(newTracksList);
+      if (shouldUpdatePlayer) {
+        try {
+          const active = TrackPlayer.getActiveMediaItem();
+          await TrackPlayer.clear();
+          await TrackPlayer.setMediaItems(newTracksList);
 
-        if (active) {
-          const idx = newTracksList.findIndex((t) => t.mediaId === active.mediaId);
-          if (idx !== -1) {
-            await TrackPlayer.skipToIndex(idx);
+          if (active) {
+            const idx = newTracksList.findIndex((t) => t.mediaId === active.mediaId);
+            if (idx !== -1) {
+              await TrackPlayer.skipToIndex(idx);
+            } else {
+              await TrackPlayer.skipToIndex(0);
+            }
           } else {
             await TrackPlayer.skipToIndex(0);
           }
-        } else {
-          await TrackPlayer.skipToIndex(0);
+        } catch (err) {
+          console.error('[saveLocalTracks] Error al sincronizar TrackPlayer:', err);
         }
-      } catch (err) {
-        console.error('[saveLocalTracks] Error al sincronizar TrackPlayer:', err);
       }
     }
   };
 
+  /**
+   * Escaneo ultra-optimizado con caché incremental y procesamiento por lotes no bloqueante.
+   */
   const handleScanLocal = async (options = {}) => {
     const isSilent = typeof options === 'object' && options?.silent === true;
     try {
@@ -70,84 +81,195 @@ export default function useLocalLibrary({
         return [];
       }
 
-      setIsSourceChanging(true);
+      if (!isSilent) {
+        setIsSourceChanging(true);
+      }
 
-      let media = await MediaLibrary.getAssetsAsync({
-        mediaType: [MediaLibrary.MediaType.audio],
-        first: 200,
+      // 1. Obtener todas las pistas de audio disponibles en el almacenamiento
+      let allAssets = [];
+      let hasNextPage = true;
+      let endCursor = null;
+
+      while (hasNextPage && allAssets.length < 2000) {
+        const media = await MediaLibrary.getAssetsAsync({
+          mediaType: [MediaLibrary.MediaType.audio],
+          first: 300,
+          after: endCursor,
+        });
+
+        if (media.assets && media.assets.length > 0) {
+          allAssets.push(...media.assets);
+        }
+
+        hasNextPage = media.hasNextPage;
+        endCursor = media.endCursor;
+        if (!hasNextPage) break;
+      }
+
+      // 2. Filtrar extensiones válidas y excluir clips de audio del sistema / notas de voz (< 10s)
+      const validExtensions = /\.(mp3|m4a|wav|flac|aac|ogg|opus)$/i;
+      const assetsList = allAssets.filter((asset) => {
+        if (!asset.filename || !validExtensions.test(asset.filename)) return false;
+        if (asset.duration && asset.duration > 0 && asset.duration < 10) return false;
+        return true;
       });
 
-      const assetsList = (media.assets || []).filter(
-        (asset) =>
-          asset.filename &&
-          /\.(mp3|m4a|wav|flac|aac|ogg)$/i.test(asset.filename)
-      );
+      // 3. Construir mapa de caché de la biblioteca existente para reutilizar metadatos en 0ms
+      let currentCache = localTracksRef.current || [];
+      if (currentCache.length === 0) {
+        try {
+          const stored = await AsyncStorage.getItem('vulpis_local_tracks');
+          if (stored) {
+            currentCache = JSON.parse(stored) || [];
+          }
+        } catch (e) {
+          // Ignorar
+        }
+      }
 
-      if (assetsList.length === 0) {
+      const cachedMap = new Map();
+      const customTracks = []; // Conservar pistas importadas manualmente o de Google Drive
+
+      for (const track of currentCache) {
+        if (
+          track.mediaId &&
+          (track.mediaId.startsWith('imported-') || track.mediaId.startsWith('local-drive-'))
+        ) {
+          customTracks.push(track);
+        }
+        if (track.url) cachedMap.set(track.url, track);
+        if (track.mediaId) cachedMap.set(track.mediaId, track);
+      }
+
+      if (assetsList.length === 0 && customTracks.length === 0) {
         if (!isSilent) {
           Alert.alert('Escaneo Completado', 'No se encontraron archivos de audio en el dispositivo.');
         }
-        setIsSourceChanging(false);
+        if (!isSilent) setIsSourceChanging(false);
         return [];
       }
 
+      // 4. Identificar qué pistas ya tienen metadatos cacheados y cuáles son nuevas
       const newTracks = [];
+      const pendingAssetsToExtract = [];
+
       for (let i = 0; i < assetsList.length; i++) {
         const asset = assetsList[i];
-        const meta = await extractMetadata(asset.uri);
-        newTracks.push({
-          mediaId: asset.id || `local-scanned-${i}-${Date.now()}`,
-          url: asset.uri,
-          title: meta.title || asset.filename.replace(/\.[^/.]+$/, ''),
-          artist: meta.artist || 'Audio Escaneado',
-          artworkUrl: meta.artworkUrl || defaultCover,
-          lyrics: meta.lyrics || null,
-        });
+        const cached = cachedMap.get(asset.uri) || cachedMap.get(asset.id);
+
+        if (cached && cached.title) {
+          // Reutilizar de inmediato
+          newTracks.push({
+            ...cached,
+            mediaId: asset.id || cached.mediaId,
+            url: asset.uri,
+            duration: asset.duration || cached.duration,
+          });
+        } else {
+          // Nueva pista detectada para extraer metadatos
+          pendingAssetsToExtract.push({ asset, index: i });
+        }
       }
 
-      await saveLocalTracks(newTracks);
+      // 5. Procesar únicamente las canciones nuevas en pequeños lotes concurrentes (4 a la vez)
+      if (pendingAssetsToExtract.length > 0) {
+        const BATCH_SIZE = 4;
+        for (let i = 0; i < pendingAssetsToExtract.length; i += BATCH_SIZE) {
+          const batch = pendingAssetsToExtract.slice(i, i + BATCH_SIZE);
+          const results = await Promise.all(
+            batch.map(async ({ asset, index }) => {
+              const meta = await extractMetadata(asset.uri);
+              return {
+                mediaId: asset.id || `local-scanned-${index}-${Date.now()}`,
+                url: asset.uri,
+                title: meta.title || asset.filename.replace(/\.[^/.]+$/, ''),
+                artist: meta.artist || 'Audio Local',
+                artworkUrl: meta.artworkUrl || defaultCover,
+                lyrics: meta.lyrics || null,
+                duration: asset.duration || 0,
+              };
+            })
+          );
+          newTracks.push(...results);
+
+          // Ceder el hilo principal para mantener 120/60 FPS fluidos
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+      }
+
+      // 6. Unir pistas escaneadas con pistas importadas/drive
+      const combinedTracks = [...customTracks, ...newTracks];
+
+      // 7. Comprobar si hubo cambios reales con respecto a lo que ya está en memoria
+      const isIdentical =
+        currentCache.length === combinedTracks.length &&
+        currentCache.every(
+          (t, idx) =>
+            t.mediaId === combinedTracks[idx]?.mediaId &&
+            t.url === combinedTracks[idx]?.url &&
+            t.title === combinedTracks[idx]?.title
+        );
+
+      if (isIdentical) {
+        // Nada cambió, salir sin reescrituras innecesarias en disco ni reseteos de reproductor
+        if (!isSilent) setIsSourceChanging(false);
+        return combinedTracks;
+      }
+
+      await saveLocalTracks(combinedTracks, !isSilent);
+
       if (!isSilent) {
         Alert.alert(
           'Escaneo Completado',
-          `Se encontraron y cargaron ${newTracks.length} archivos de audio en tu biblioteca local.`
+          `Se cargaron ${combinedTracks.length} canciones en tu biblioteca local.`
         );
       }
-      return newTracks;
+      return combinedTracks;
     } catch (e) {
-      console.error('Error al escanear audio local:', e);
+      console.error('[useLocalLibrary] Error al escanear audio local:', e);
       if (!isSilent) {
         Alert.alert('Error', 'Hubo un problema al escanear los archivos locales.');
       }
       return [];
     } finally {
-      setIsSourceChanging(false);
+      if (!isSilent) {
+        setIsSourceChanging(false);
+      }
     }
   };
 
   const handleImportMp3 = async () => {
     try {
       const res = await DocumentPicker.getDocumentAsync({
-        type: ['audio/*', 'audio/mpeg', 'audio/mp3', 'audio/m4a'],
+        type: ['audio/*', 'audio/mpeg', 'audio/mp3', 'audio/m4a', 'audio/flac', 'audio/wav'],
         copyToCacheDirectory: true,
         multiple: true,
       });
 
-      if (res.canceled) return;
+      if (res.canceled || !res.assets || res.assets.length === 0) return;
 
       setIsSourceChanging(true);
 
       const importedTracks = [];
-      for (let i = 0; i < res.assets.length; i++) {
-        const asset = res.assets[i];
-        const meta = await extractMetadata(asset.uri);
-        importedTracks.push({
-          mediaId: `imported-${Date.now()}-${i}`,
-          url: asset.uri,
-          title: meta.title || asset.name.replace(/\.[^/.]+$/, ''),
-          artist: meta.artist || 'Archivo Importado',
-          artworkUrl: meta.artworkUrl || defaultCover,
-          lyrics: meta.lyrics || null,
-        });
+      const BATCH_SIZE = 4;
+
+      for (let i = 0; i < res.assets.length; i += BATCH_SIZE) {
+        const batch = res.assets.slice(i, i + BATCH_SIZE);
+        const results = await Promise.all(
+          batch.map(async (asset, idx) => {
+            const meta = await extractMetadata(asset.uri);
+            return {
+              mediaId: `imported-${Date.now()}-${i + idx}`,
+              url: asset.uri,
+              title: meta.title || asset.name.replace(/\.[^/.]+$/, ''),
+              artist: meta.artist || 'Archivo Importado',
+              artworkUrl: meta.artworkUrl || defaultCover,
+              lyrics: meta.lyrics || null,
+            };
+          })
+        );
+        importedTracks.push(...results);
+        await new Promise((resolve) => setTimeout(resolve, 0));
       }
 
       const existingCustom = hasCustomLocalTracks ? localLibraryTracks : [];
@@ -201,19 +323,17 @@ export default function useLocalLibrary({
   const handleDeleteLocalTrack = async (track) => {
     setIsSourceChanging(true);
     try {
-      // 1. Si es una pista escaneada del sistema (su id no empieza con prefijos de importación/descarga/prueba)
-      const isSystemAsset = 
-        track.mediaId && 
-        !track.mediaId.startsWith('imported-') && 
-        !track.mediaId.startsWith('local-drive-') && 
+      // 1. Si es una pista escaneada del sistema
+      const isSystemAsset =
+        track.mediaId &&
+        !track.mediaId.startsWith('imported-') &&
+        !track.mediaId.startsWith('local-drive-') &&
         !track.mediaId.startsWith('local-track-');
 
       if (isSystemAsset) {
-        // Pedir permiso y eliminar del almacenamiento del sistema público
         try {
           const deleted = await MediaLibrary.deleteAssetsAsync([track.mediaId]);
           if (!deleted) {
-            // El usuario canceló o falló la eliminación en el sistema
             setIsSourceChanging(false);
             return;
           }
@@ -228,7 +348,7 @@ export default function useLocalLibrary({
           return;
         }
       } else if (track.url && track.url.startsWith('file://')) {
-        // 2. Si es un archivo físico local en el almacenamiento persistente privado de la app, borrarlo
+        // 2. Si es un archivo físico privado de la app
         try {
           const fileInfo = await FileSystem.getInfoAsync(track.url);
           if (fileInfo.exists) {
@@ -255,20 +375,20 @@ export default function useLocalLibrary({
 
       // 4. Quitar del estado de la cola de reproducción
       if (playQueue && setPlayQueue) {
-        const updatedQueue = playQueue.filter(t => t.mediaId !== track.mediaId);
+        const updatedQueue = playQueue.filter((t) => t.mediaId !== track.mediaId);
         setPlayQueue(updatedQueue);
       }
 
       // 5. Quitar de la biblioteca local (AsyncStorage y estado)
       const existingCustom = hasCustomLocalTracks ? localLibraryTracks : [];
-      const updatedTracks = existingCustom.filter(t => t.mediaId !== track.mediaId);
-      
+      const updatedTracks = existingCustom.filter((t) => t.mediaId !== track.mediaId);
+
       await saveLocalTracks(updatedTracks);
-      
+
       if (showToast) {
         showToast(
-          isSystemAsset 
-            ? 'Archivo eliminado del teléfono' 
+          isSystemAsset
+            ? 'Archivo eliminado del teléfono'
             : 'Canción eliminada de la biblioteca'
         );
       }

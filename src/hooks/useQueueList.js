@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Image, Alert } from 'react-native';
 import TrackPlayer from '@rntp/player';
 
@@ -86,14 +86,17 @@ export default function useQueueList({
     }
   };
 
-  // Filter regular tracks by search query
-  const displayTracks = (tracks || []).filter((track) => {
-    if (!searchQuery) return true;
-    const title = (track.title || '').toLowerCase();
-    const artist = (track.artist || '').toLowerCase();
-    const query = searchQuery.toLowerCase();
-    return title.includes(query) || artist.includes(query);
-  });
+  // Filter regular tracks by search query with memoization
+  const displayTracks = useMemo(() => {
+    if (!tracks || tracks.length === 0) return [];
+    if (!searchQuery || searchQuery.trim() === '') return tracks;
+    const query = searchQuery.toLowerCase().trim();
+    return tracks.filter((track) => {
+      const title = (track.title || '').toLowerCase();
+      const artist = (track.artist || '').toLowerCase();
+      return title.includes(query) || artist.includes(query);
+    });
+  }, [tracks, searchQuery]);
 
   const defaultArtwork = Image.resolveAssetSource(require('../../assets/default-cover.jpg')).uri;
 

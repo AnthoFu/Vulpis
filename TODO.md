@@ -21,13 +21,13 @@
   - [x] Caché local persistente para letras descargadas.
   - [x] Cascada de prioridad en [`usePlayerCard`](file:///home/anthofu/Escritorio/git/Vulpis/src/hooks/usePlayerCard.js#L37): ID3 locales -> Caché local -> API pública en línea -> "Letra no encontrada".
 - [x] **Temporizador de Apagado (Sleep Timer):** Opción para detener la reproducción automáticamente después de X minutos (15m, 30m, 60m o al finalizar la pista actual).
+- [x] **Fundido Cruzado (Crossfade):** Transición suave entre canciones para evitar pausas o cortes bruscos al cambiar de pista.
 
 ---
 
 # Mejoras por hacer
 
 - [ ] **Ecualizador de Audio (EQ):** Ecualizador con presets integrados (Rock, Pop, Jazz, Bass Boost, etc.).
-- [ ] **Fundido Cruzado (Crossfade):** Transición suave entre canciones para evitar pausas o cortes bruscos al cambiar de pista.
 - [ ] **Normalización de Volumen (ReplayGain):** Mantener un nivel de volumen uniforme entre pistas de distintos álbumes o fuentes.
 - [ ] **Búsqueda Instantánea y Filtrado:** Barra de búsqueda en la biblioteca para filtrar rápidamente por Título, Artista, Álbum o Género.
 - [ ] **Sistema de Favoritos ("Me Gusta"):** Botón de acceso rápido (corazón) para añadir/quitar canciones a una lista automática de "Favoritos".

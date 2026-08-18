@@ -10,6 +10,7 @@ import {
   saveCustomLyrics,
   removeCustomLyrics,
 } from '../utils/onlineLyrics';
+import { smoothTrackTransition, getCrossfadeSettings } from '../utils/crossfade';
 
 export default function usePlayerCard({
   activeTrack,
@@ -266,8 +267,11 @@ export default function usePlayerCard({
   const selectTrackFromQueue = async (index) => {
     try {
       console.log(`[usePlayerCard Queue] Saltando al índice: ${index}`);
-      await TrackPlayer.skipToIndex(index);
-      await TrackPlayer.play();
+      const crossfade = await getCrossfadeSettings();
+      await smoothTrackTransition(async () => {
+        await TrackPlayer.skipToIndex(index);
+        await TrackPlayer.play();
+      }, crossfade?.enabled);
     } catch (e) {
       console.error('[usePlayerCard Queue] Error al saltar al índice:', e);
     }

@@ -72,6 +72,8 @@ function MainApp() {
     timeRemainingFormatted,
     startSleepTimer,
     cancelSleepTimer,
+    crossfadeSettings,
+    handleUpdateCrossfade,
   } = useAppController();
 
   if (!isPlayerInitialized) {
@@ -186,6 +188,7 @@ function MainApp() {
           timeRemainingFormatted={timeRemainingFormatted}
           onSelectTimer={startSleepTimer}
           onCancelTimer={cancelSleepTimer}
+          crossfadeSettings={crossfadeSettings}
         />
       </Modal>
 
@@ -208,6 +211,8 @@ function MainApp() {
         timeRemainingFormatted={timeRemainingFormatted}
         onSelectTimer={startSleepTimer}
         onCancelTimer={cancelSleepTimer}
+        crossfadeSettings={crossfadeSettings}
+        onUpdateCrossfade={handleUpdateCrossfade}
       />
     </View>
   );

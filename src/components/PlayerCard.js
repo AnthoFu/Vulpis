@@ -34,6 +34,7 @@ export default function PlayerCard({
   timeRemainingFormatted = null,
   onSelectTimer,
   onCancelTimer,
+  crossfadeSettings,
 }) {
   const insets = useSafeAreaInsets();
   const [isEditLyricsVisible, setIsEditLyricsVisible] = useState(false);
@@ -314,6 +315,7 @@ export default function PlayerCard({
           playQueue={playQueue}
           activeTrack={activeTrack}
           onSelectTrack={onSelectTrack}
+          crossfadeSettings={crossfadeSettings}
         />
 
         {/* Botones de pie de página: Letras, Cola y Temporizador */}

@@ -77,6 +77,7 @@ const styles = StyleSheet.create({
   },
   pillContainer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
     marginTop: 8,
   },

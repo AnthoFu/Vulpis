@@ -13,6 +13,13 @@ import usePlaylists from './usePlaylists';
 import useLocalLibrary from './useLocalLibrary';
 import useGoogleDrive from './useGoogleDrive';
 import useSleepTimer from './useSleepTimer';
+import {
+  getCrossfadeSettings,
+  saveCrossfadeSettings,
+  handleAutoCrossfadeProgress,
+  smoothTrackTransition,
+  DEFAULT_CROSSFADE_SETTINGS,
+} from '../utils/crossfade';
 
 export default function useAppController() {
   const insets = useSafeAreaInsets();
@@ -54,6 +61,23 @@ export default function useAppController() {
     activeTrack,
     showToast,
   });
+
+  const [crossfadeSettings, setCrossfadeSettings] = useState(DEFAULT_CROSSFADE_SETTINGS);
+  const crossfadeSettingsRef = useRef(crossfadeSettings);
+
+  useEffect(() => {
+    crossfadeSettingsRef.current = crossfadeSettings;
+  }, [crossfadeSettings]);
+
+  useEffect(() => {
+    getCrossfadeSettings().then(setCrossfadeSettings);
+  }, []);
+
+  const handleUpdateCrossfade = async (newSettings) => {
+    setCrossfadeSettings(newSettings);
+    await saveCrossfadeSettings(newSettings);
+    showToast(newSettings.enabled ? `Fundido cruzado activado (${newSettings.duration}s)` : 'Fundido cruzado desactivado');
+  };
 
   const {
     playlists,
@@ -414,6 +438,16 @@ export default function useAppController() {
           duration: currentProgress?.duration ?? 0,
         });
 
+        // Manejo automático de fundido cruzado cerca del final de la pista
+        handleAutoCrossfadeProgress({
+          position: currentProgress?.position ?? 0,
+          duration: currentProgress?.duration ?? 0,
+          isPlaying: currentPlaying,
+          crossfadeEnabled: crossfadeSettingsRef.current?.enabled ?? false,
+          crossfadeDuration: crossfadeSettingsRef.current?.duration ?? 4,
+          activeTrackId: currentActive?.mediaId ?? null,
+        });
+
         // Verificación de persistencia del estado
         const pos = currentProgress?.position ?? 0;
         const trackId = currentActive?.mediaId ?? null;
@@ -631,12 +665,13 @@ export default function useAppController() {
           await AsyncStorage.setItem('vulpis_playlists', JSON.stringify(updatedPlaylists));
           
           console.log('[useAppController] Cargando pista con archivo local guardado en caché:', localUri);
-          await TrackPlayer.clear();
-          await TrackPlayer.setMediaItems(updatedTracks);
-          
-          const newIdx = updatedTracks.findIndex(t => t.mediaId === item.mediaId);
-          await TrackPlayer.skipToIndex(newIdx !== -1 ? newIdx : index);
-          await TrackPlayer.play();
+          await smoothTrackTransition(async () => {
+            await TrackPlayer.clear();
+            await TrackPlayer.setMediaItems(updatedTracks);
+            const newIdx = updatedTracks.findIndex(t => t.mediaId === item.mediaId);
+            await TrackPlayer.skipToIndex(newIdx !== -1 ? newIdx : index);
+            await TrackPlayer.play();
+          }, crossfadeSettingsRef.current?.enabled);
         } else {
           Alert.alert('Error', 'No se pudo descargar el archivo de Google Drive.');
         }
@@ -648,10 +683,12 @@ export default function useAppController() {
       }
     } else {
       try {
-        await TrackPlayer.clear();
-        await TrackPlayer.setMediaItems(trackListToLoad);
-        await TrackPlayer.skipToIndex(index);
-        await TrackPlayer.play();
+        await smoothTrackTransition(async () => {
+          await TrackPlayer.clear();
+          await TrackPlayer.setMediaItems(trackListToLoad);
+          await TrackPlayer.skipToIndex(index);
+          await TrackPlayer.play();
+        }, crossfadeSettingsRef.current?.enabled);
       } catch (e) {
         console.error('[useAppController] Error al seleccionar pista:', e);
       }
@@ -717,5 +754,7 @@ export default function useAppController() {
     cancelSleepTimer,
     isSleepTimerModalOpen,
     setIsSleepTimerModalOpen,
+    crossfadeSettings,
+    handleUpdateCrossfade,
   };
 }

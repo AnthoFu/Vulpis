@@ -12,6 +12,7 @@ import useToast from './useToast';
 import usePlaylists from './usePlaylists';
 import useLocalLibrary from './useLocalLibrary';
 import useGoogleDrive from './useGoogleDrive';
+import useSleepTimer from './useSleepTimer';
 
 export default function useAppController() {
   const insets = useSafeAreaInsets();
@@ -38,6 +39,21 @@ export default function useAppController() {
 
   // Hooks personalizados para logica estandarizada y modular
   const { toast, showToast } = useToast();
+
+  const [isSleepTimerModalOpen, setIsSleepTimerModalOpen] = useState(false);
+
+  const {
+    isTimerActive,
+    timerMode,
+    secondsRemaining,
+    timeRemainingFormatted,
+    startSleepTimer,
+    cancelSleepTimer,
+  } = useSleepTimer({
+    isPlaying,
+    activeTrack,
+    showToast,
+  });
 
   const {
     playlists,
@@ -693,5 +709,13 @@ export default function useAppController() {
     handleSetDragActive,
     handleSourceChange,
     handleSelectTrack,
+    isTimerActive,
+    timerMode,
+    secondsRemaining,
+    timeRemainingFormatted,
+    startSleepTimer,
+    cancelSleepTimer,
+    isSleepTimerModalOpen,
+    setIsSleepTimerModalOpen,
   };
 }

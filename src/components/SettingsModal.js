@@ -11,8 +11,19 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import styles from '../styles/SettingsModal.styles';
 import { getSettings, saveSettings, clearLyricsCache } from '../utils/onlineLyrics';
+import SleepTimerModal from './SleepTimerModal';
 
-export default function SettingsModal({ visible, onClose, onShowToast }) {
+export default function SettingsModal({
+  visible,
+  onClose,
+  onShowToast,
+  isTimerActive = false,
+  timerMode = null,
+  timeRemainingFormatted = null,
+  onSelectTimer,
+  onCancelTimer,
+}) {
+  const [isSleepTimerVisible, setIsSleepTimerVisible] = useState(false);
   const [settings, setSettingsState] = useState({
     onlineLyricsEnabled: false,
     matchThreshold: 0.75,
@@ -149,6 +160,34 @@ export default function SettingsModal({ visible, onClose, onShowToast }) {
                 </View>
               )}
 
+              {/* Temporizador de apagado */}
+              <View style={styles.settingSection}>
+                <View style={styles.settingRow}>
+                  <View style={styles.settingTextCol}>
+                    <Text style={styles.settingLabel}>Temporizador de apagado</Text>
+                    <Text style={styles.settingDescription}>
+                      {isTimerActive
+                        ? `Activo (${timeRemainingFormatted || 'En curso'})`
+                        : 'Detén la reproducción automáticamente después de un tiempo'}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.actionTimerBtn, isTimerActive && styles.actionTimerBtnActive]}
+                    onPress={() => setIsSleepTimerVisible(true)}
+                    activeOpacity={0.7}
+                  >
+                    <MaterialCommunityIcons
+                      name={isTimerActive ? "bed-clock" : "timer-outline"}
+                      size={18}
+                      color={isTimerActive ? "#A78BFA" : "#8B5CF6"}
+                    />
+                    <Text style={[styles.actionTimerBtnText, isTimerActive && styles.actionTimerBtnTextActive]}>
+                      {isTimerActive ? (timeRemainingFormatted || 'Activo') : 'Configurar'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
               {/* Limpiar Caché */}
               <View style={styles.settingSection}>
                 <Text style={styles.subSectionTitle}>Almacenamiento</Text>
@@ -166,6 +205,16 @@ export default function SettingsModal({ visible, onClose, onShowToast }) {
           </TouchableWithoutFeedback>
         </View>
       </TouchableWithoutFeedback>
+
+      <SleepTimerModal
+        visible={isSleepTimerVisible}
+        onClose={() => setIsSleepTimerVisible(false)}
+        isTimerActive={isTimerActive}
+        timerMode={timerMode}
+        timeRemainingFormatted={timeRemainingFormatted}
+        onSelectTimer={onSelectTimer}
+        onCancelTimer={onCancelTimer}
+      />
     </Modal>
   );
 }

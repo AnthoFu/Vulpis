@@ -11,6 +11,7 @@ import useSheetAnimation from '../hooks/useSheetAnimation';
 import { SPRING, DURATION } from '../constants/animations';
 import { parseLrcLyrics } from '../utils/metadata';
 import EditLyricsModal from './EditLyricsModal';
+import SleepTimerModal from './SleepTimerModal';
 
 export default function PlayerCard({
   activeTrack,
@@ -28,9 +29,15 @@ export default function PlayerCard({
   onClose,
   onSelectTrack,
   initialQueueVisible = false,
+  isTimerActive = false,
+  timerMode = null,
+  timeRemainingFormatted = null,
+  onSelectTimer,
+  onCancelTimer,
 }) {
   const insets = useSafeAreaInsets();
   const [isEditLyricsVisible, setIsEditLyricsVisible] = useState(false);
+  const [isSleepTimerVisible, setIsSleepTimerVisible] = useState(false);
   
   const {
     isQueueVisible,
@@ -309,11 +316,11 @@ export default function PlayerCard({
           onSelectTrack={onSelectTrack}
         />
 
-        {/* Botones de pie de página: Letras y Cola */}
+        {/* Botones de pie de página: Letras, Cola y Temporizador */}
         <View style={styles.footerRow}>
           <TouchableOpacity
             onPress={() => setIsLyricsVisible(true)}
-            style={[styles.footerButton, { marginRight: 12 }]}
+            style={[styles.footerButton, { marginRight: 8 }]}
             activeOpacity={0.7}
           >
             <MaterialCommunityIcons name="microphone-variant" size={18} color="#A78BFA" style={{ marginRight: 6 }} />
@@ -322,11 +329,27 @@ export default function PlayerCard({
 
           <TouchableOpacity
             onPress={() => setIsQueueVisible(true)}
-            style={styles.footerButton}
+            style={[styles.footerButton, { marginRight: 8 }]}
             activeOpacity={0.7}
           >
             <MaterialCommunityIcons name="playlist-play" size={20} color="#8E8F9E" style={{ marginRight: 6 }} />
             <Text style={styles.footerButtonText}>Cola</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setIsSleepTimerVisible(true)}
+            style={[styles.footerButton, isTimerActive && styles.footerButtonActive]}
+            activeOpacity={0.7}
+          >
+            <MaterialCommunityIcons
+              name={isTimerActive ? "bed-clock" : "timer-outline"}
+              size={18}
+              color={isTimerActive ? "#A78BFA" : "#8E8F9E"}
+              style={{ marginRight: 6 }}
+            />
+            <Text style={[styles.footerButtonText, isTimerActive && styles.footerButtonTextActive]}>
+              {isTimerActive ? (timeRemainingFormatted || 'Activo') : 'Apagado'}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -458,6 +481,16 @@ export default function PlayerCard({
         onSave={handleSaveCustomLyrics}
         onReset={handleResetCustomLyrics}
         onFetchOnline={handleFetchOnlineLyricsForce}
+      />
+
+      <SleepTimerModal
+        visible={isSleepTimerVisible}
+        onClose={() => setIsSleepTimerVisible(false)}
+        isTimerActive={isTimerActive}
+        timerMode={timerMode}
+        timeRemainingFormatted={timeRemainingFormatted}
+        onSelectTimer={onSelectTimer}
+        onCancelTimer={onCancelTimer}
       />
 
       {queueSheetVisible && (

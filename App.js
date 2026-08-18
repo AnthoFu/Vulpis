@@ -67,6 +67,11 @@ function MainApp() {
     handleSetDragActive,
     handleSourceChange,
     handleSelectTrack,
+    isTimerActive,
+    timerMode,
+    timeRemainingFormatted,
+    startSleepTimer,
+    cancelSleepTimer,
   } = useAppController();
 
   if (!isPlayerInitialized) {
@@ -176,6 +181,11 @@ function MainApp() {
           onClose={() => setIsFullPlayerVisible(false)}
           onSelectTrack={handleSelectTrack}
           initialQueueVisible={startWithQueueVisible}
+          isTimerActive={isTimerActive}
+          timerMode={timerMode}
+          timeRemainingFormatted={timeRemainingFormatted}
+          onSelectTimer={startSleepTimer}
+          onCancelTimer={cancelSleepTimer}
         />
       </Modal>
 
@@ -193,6 +203,11 @@ function MainApp() {
         visible={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         onShowToast={showToast}
+        isTimerActive={isTimerActive}
+        timerMode={timerMode}
+        timeRemainingFormatted={timeRemainingFormatted}
+        onSelectTimer={startSleepTimer}
+        onCancelTimer={cancelSleepTimer}
       />
     </View>
   );

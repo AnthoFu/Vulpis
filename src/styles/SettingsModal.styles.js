@@ -135,6 +135,30 @@ const styles = StyleSheet.create({
     fontSize: 11,
     flex: 1,
   },
+  actionTimerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: '#161722',
+    borderWidth: 1,
+    borderColor: '#262838',
+  },
+  actionTimerBtnActive: {
+    backgroundColor: 'rgba(139, 92, 246, 0.15)',
+    borderColor: '#8B5CF6',
+  },
+  actionTimerBtnText: {
+    color: '#94A3B8',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  actionTimerBtnTextActive: {
+    color: '#A78BFA',
+    fontWeight: '700',
+  },
 });
 
 export default styles;

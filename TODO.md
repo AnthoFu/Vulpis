@@ -20,12 +20,12 @@
   - [x] Algoritmo de coincidencia aproximada (Fuzzy Matching por Coeficiente Sørensen-Dice).
   - [x] Caché local persistente para letras descargadas.
   - [x] Cascada de prioridad en [`usePlayerCard`](file:///home/anthofu/Escritorio/git/Vulpis/src/hooks/usePlayerCard.js#L37): ID3 locales -> Caché local -> API pública en línea -> "Letra no encontrada".
+- [x] **Temporizador de Apagado (Sleep Timer):** Opción para detener la reproducción automáticamente después de X minutos (15m, 30m, 60m o al finalizar la pista actual).
 
 ---
 
 # Mejoras por hacer
 
-- [ ] **Temporizador de Apagado (Sleep Timer):** Opción para detener la reproducción automáticamente después de X minutos (15m, 30m, 60m o al finalizar la pista actual).
 - [ ] **Ecualizador de Audio (EQ):** Ecualizador con presets integrados (Rock, Pop, Jazz, Bass Boost, etc.).
 - [ ] **Fundido Cruzado (Crossfade):** Transición suave entre canciones para evitar pausas o cortes bruscos al cambiar de pista.
 - [ ] **Normalización de Volumen (ReplayGain):** Mantener un nivel de volumen uniforme entre pistas de distintos álbumes o fuentes.
@@ -49,3 +49,4 @@
 - [ ] **Migración a `@shopify/flash-list`:** Reemplazar `FlatList` tradicional por `FlashList` para optimizar el rendimiento y la fluidez del scroll con miles de canciones.
 - [ ] **Migración Gradual a TypeScript:** Añadir tipado estricto para modelos de datos (`Track`, `Playlist`), hooks e interfaces de servicios.
 - [ ] **Suite de Pruebas Unitarias (Jest):** Implementar tests para lógica crítica como `drive.js`, `metadata.js` y `onlineLyrics.js`.
+- [ ] Resolver error: `ERROR  [useAppController] Error al leer el estado guardado del reproductor: [Error: Row too big to fit into CursorWindow requiredPos=0, totalRows=1]`

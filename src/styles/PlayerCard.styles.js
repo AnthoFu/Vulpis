@@ -112,10 +112,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(44, 45, 60, 0.6)',
   },
+  footerButtonActive: {
+    backgroundColor: 'rgba(139, 92, 246, 0.18)',
+    borderColor: 'rgba(139, 92, 246, 0.5)',
+  },
   footerButtonText: {
     color: '#8E8F9E',
     fontSize: 13,
     fontWeight: '600',
+  },
+  footerButtonTextActive: {
+    color: '#A78BFA',
   },
   lyricsSheetContent: {
     height: '75%',

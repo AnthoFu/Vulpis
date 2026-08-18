@@ -151,6 +151,42 @@ Habilita los permisos de desarrollador en tu dispositivo:
    ```
 4. **Importante:** Mantente atento a la pantalla de tu móvil. Cuando diga `Installing...` en la terminal, pulsa **Instalar** en la ventana emergente que aparecerá en tu teléfono.
 
+### 📦 Compilación y Generación de APK (.apk)
+
+Para compilar e instalar la aplicación como un archivo `.apk` independiente en cualquier dispositivo Android, puedes usar cualquiera de los siguientes métodos:
+
+#### 1. Modo Preview con EAS Build (Recomendado para distribución de pruebas)
+Genera un instalador `.apk` listo para compartir y probar:
+
+- **Compilación en la nube (EAS Cloud):**
+  ```bash
+  npx eas build -p android --profile preview
+  ```
+
+- **Compilación local en tu máquina (con EAS CLI):**
+  ```bash
+  npx eas build -p android --profile preview --local
+  ```
+
+#### 2. Compilación Nativa Local con Gradle
+También puedes generar los binarios `.apk` directamente usando Gradle:
+
+- **Generar APK Release (Optimizado / Producción):**
+  ```bash
+  npm run apk:release
+  # o manualmente: cd android && ./gradlew assembleRelease
+  ```
+  > 📁 **Ubicación del archivo generado:**  
+  > `android/app/build/outputs/apk/release/app-release.apk`
+
+- **Generar APK Debug (Depuración / Pruebas):**
+  ```bash
+  npm run apk:debug
+  # o manualmente: cd android && ./gradlew assembleDebug
+  ```
+  > 📁 **Ubicación del archivo generado:**  
+  > `android/app/build/outputs/apk/debug/app-debug.apk`
+
 ---
 
 ## 🤝 Contribuciones

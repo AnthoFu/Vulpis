@@ -10,7 +10,8 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     width: '100%',
-    maxWidth: 380,
+    maxWidth: 400,
+    maxHeight: '88%',
     backgroundColor: '#0F1017',
     borderRadius: 20,
     borderWidth: 1,
@@ -21,6 +22,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 20,
     elevation: 20,
+  },
+  scrollView: {
+    maxHeight: '100%',
+  },
+  scrollContent: {
+    paddingBottom: 10,
   },
   header: {
     flexDirection: 'row',

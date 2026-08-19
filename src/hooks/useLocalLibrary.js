@@ -187,6 +187,7 @@ export default function useLocalLibrary({
                 artworkUrl: meta.artworkUrl || defaultCover,
                 lyrics: meta.lyrics || null,
                 duration: asset.duration || 0,
+                replayGain: meta.replayGain || null,
               };
             })
           );
@@ -265,6 +266,7 @@ export default function useLocalLibrary({
               artist: meta.artist || 'Archivo Importado',
               artworkUrl: meta.artworkUrl || defaultCover,
               lyrics: meta.lyrics || null,
+              replayGain: meta.replayGain || null,
             };
           })
         );

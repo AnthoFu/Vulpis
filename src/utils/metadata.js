@@ -1,5 +1,6 @@
 import jsmediatags from 'jsmediatags/dist/jsmediatags.min.js';
 import * as FileSystem from 'expo-file-system/legacy';
+import { parseGainDb, parsePeak, parseITunNorm, extractReplayGainFromJsMediaTags } from './replayGain';
 
 const INITIAL_CHUNK_SIZE = 256 * 1024; // 256 KB es suficiente para el 98% de metadatos ID3
 const MAX_TAG_SIZE = 2 * 1024 * 1024; // 2 MB límite de seguridad para etiquetas gigantes con fotos HD
@@ -281,6 +282,12 @@ async function parseFastID3(bytes, fileUri) {
     artist: null,
     artworkUrl: null,
     lyrics: null,
+    replayGain: {
+      trackGain: null,
+      trackPeak: null,
+      albumGain: null,
+      albumPeak: null,
+    },
   };
 
   while (offset < tagLimit - (versionMajor === 2 ? 6 : 10)) {
@@ -427,8 +434,128 @@ async function parseFastID3(bytes, fileUri) {
         console.warn('[MetadataExtractor] Error extrayendo carátula ID3:', picErr);
       }
     }
+    // Etiquetas de texto definidas por el usuario (TXXX / TXX) para ReplayGain
+    else if (frameId === 'TXXX' || frameId === 'TXX') {
+      try {
+        let pos = dataStart + 1; // saltar encoding
+        let desc = '';
+        let val = '';
+        if (encoding === 1 || encoding === 2) {
+          let descEnd = pos;
+          while (descEnd + 1 < dataStart + frameSize) {
+            if (bytes[descEnd] === 0 && bytes[descEnd + 1] === 0) {
+              break;
+            }
+            descEnd += 2;
+          }
+          desc = decodeText(bytes.subarray(pos, descEnd), encoding).trim();
+          const valStart = Math.min(descEnd + 2, dataStart + frameSize);
+          val = decodeText(bytes.subarray(valStart, dataStart + frameSize), encoding).trim();
+        } else {
+          let descEnd = pos;
+          while (descEnd < dataStart + frameSize && bytes[descEnd] !== 0) {
+            descEnd++;
+          }
+          desc = decodeText(bytes.subarray(pos, descEnd), encoding).trim();
+          const valStart = Math.min(descEnd + 1, dataStart + frameSize);
+          val = decodeText(bytes.subarray(valStart, dataStart + frameSize), encoding).trim();
+        }
+
+        if (desc && val) {
+          const descLower = desc.toLowerCase();
+          if (descLower === 'replaygain_track_gain' || descLower === 'replaygain_gain' || descLower === 'rg_track_gain') {
+            const g = parseGainDb(val);
+            if (g !== null) result.replayGain.trackGain = g;
+          } else if (descLower === 'replaygain_track_peak' || descLower === 'rg_track_peak') {
+            const p = parsePeak(val);
+            if (p !== null) result.replayGain.trackPeak = p;
+          } else if (descLower === 'replaygain_album_gain' || descLower === 'rg_album_gain') {
+            const g = parseGainDb(val);
+            if (g !== null) result.replayGain.albumGain = g;
+          } else if (descLower === 'replaygain_album_peak' || descLower === 'rg_album_peak') {
+            const p = parsePeak(val);
+            if (p !== null) result.replayGain.albumPeak = p;
+          } else if (descLower === 'itunnorm' || descLower.includes('itunnorm')) {
+            const norm = parseITunNorm(val);
+            if (norm) {
+              if (result.replayGain.trackGain === null) result.replayGain.trackGain = norm.gain;
+              if (result.replayGain.trackPeak === null && norm.peak !== null) result.replayGain.trackPeak = norm.peak;
+            }
+          }
+        }
+      } catch (txxxErr) {
+        // Ignorar error en frame TXXX
+      }
+    }
+    // Comentarios ID3 (COMM / COM) con posible SoundCheck / iTunNORM
+    else if (frameId === 'COMM' || frameId === 'COM') {
+      try {
+        let pos = dataStart + 4; // saltar encoding (1) y lenguaje (3)
+        let desc = '';
+        let val = '';
+        if (encoding === 1 || encoding === 2) {
+          let descEnd = pos;
+          while (descEnd + 1 < dataStart + frameSize) {
+            if (bytes[descEnd] === 0 && bytes[descEnd + 1] === 0) {
+              break;
+            }
+            descEnd += 2;
+          }
+          desc = decodeText(bytes.subarray(pos, descEnd), encoding).trim();
+          const valStart = Math.min(descEnd + 2, dataStart + frameSize);
+          val = decodeText(bytes.subarray(valStart, dataStart + frameSize), encoding).trim();
+        } else {
+          let descEnd = pos;
+          while (descEnd < dataStart + frameSize && bytes[descEnd] !== 0) {
+            descEnd++;
+          }
+          desc = decodeText(bytes.subarray(pos, descEnd), encoding).trim();
+          const valStart = Math.min(descEnd + 1, dataStart + frameSize);
+          val = decodeText(bytes.subarray(valStart, dataStart + frameSize), encoding).trim();
+        }
+
+        if ((desc && desc.toLowerCase().includes('itunnorm')) || (val && val.includes(' 00000'))) {
+          const norm = parseITunNorm(val);
+          if (norm) {
+            if (result.replayGain.trackGain === null) result.replayGain.trackGain = norm.gain;
+            if (result.replayGain.trackPeak === null && norm.peak !== null) result.replayGain.trackPeak = norm.peak;
+          }
+        }
+      } catch (commErr) {
+        // Ignorar error en frame COMM
+      }
+    }
+    // Ajuste de volumen relativo ID3 (RVA2)
+    else if (frameId === 'RVA2') {
+      try {
+        let pos = dataStart;
+        while (pos < dataStart + frameSize && bytes[pos] !== 0) {
+          pos++;
+        }
+        pos++; // saltar null
+        if (pos + 3 <= dataStart + frameSize) {
+          const rawGain = (bytes[pos + 1] << 8) | bytes[pos + 2];
+          const signedGain = (rawGain & 0x8000) ? (rawGain - 0x10000) : rawGain;
+          const gainDb = signedGain / 512.0;
+          if (result.replayGain.trackGain === null) {
+            result.replayGain.trackGain = gainDb;
+          }
+        }
+      } catch (rvaErr) {
+        // Ignorar error en frame RVA2
+      }
+    }
 
     offset += headerSize + frameSize;
+  }
+
+  const hasReplayGain =
+    result.replayGain.trackGain !== null ||
+    result.replayGain.trackPeak !== null ||
+    result.replayGain.albumGain !== null ||
+    result.replayGain.albumPeak !== null;
+  if (!hasReplayGain) {
+    result.replayGain = null;
   }
 
   return result;
@@ -516,7 +643,7 @@ const checkSidecarLyrics = async (fileUri) => {
  * En lugar de cargar archivos completos de 20-50MB en RAM, lee únicamente el bloque de cabecera (128-256KB).
  */
 export const extractMetadata = async (fileUri) => {
-  if (!fileUri) return { title: null, artist: null, artworkUrl: null, lyrics: null };
+  if (!fileUri) return { title: null, artist: null, artworkUrl: null, lyrics: null, replayGain: null };
 
   try {
     // 1. Leer solo el primer bloque (256 KB) del archivo
@@ -536,7 +663,7 @@ export const extractMetadata = async (fileUri) => {
 
     if (!base64Chunk || base64Chunk.length === 0) {
       const sidecar = await checkSidecarLyrics(fileUri);
-      return { title: null, artist: null, artworkUrl: null, lyrics: sidecar };
+      return { title: null, artist: null, artworkUrl: null, lyrics: sidecar, replayGain: null };
     }
 
     let byteArray = base64ToUint8Array(base64Chunk);
@@ -566,7 +693,7 @@ export const extractMetadata = async (fileUri) => {
 
       // Parser nativo rápido
       const parsed = await parseFastID3(byteArray, fileUri);
-      if (parsed && (parsed.title || parsed.artist || parsed.artworkUrl || parsed.lyrics)) {
+      if (parsed && (parsed.title || parsed.artist || parsed.artworkUrl || parsed.lyrics || parsed.replayGain)) {
         if (!parsed.lyrics) {
           parsed.lyrics = await checkSidecarLyrics(fileUri);
         }
@@ -595,17 +722,19 @@ export const extractMetadata = async (fileUri) => {
             lyrics = await checkSidecarLyrics(fileUri);
           }
 
-          resolve({ title, artist, artworkUrl, lyrics });
+          const replayGain = extractReplayGainFromJsMediaTags(tags);
+
+          resolve({ title, artist, artworkUrl, lyrics, replayGain });
         },
         onError: async () => {
           const sidecarLyrics = await checkSidecarLyrics(fileUri);
-          resolve({ title: null, artist: null, artworkUrl: null, lyrics: sidecarLyrics });
+          resolve({ title: null, artist: null, artworkUrl: null, lyrics: sidecarLyrics, replayGain: null });
         },
       });
     });
   } catch (e) {
     console.warn('[MetadataExtractor] Error al leer metadatos de:', fileUri, e);
     const sidecarLyrics = await checkSidecarLyrics(fileUri);
-    return { title: null, artist: null, artworkUrl: null, lyrics: sidecarLyrics };
+    return { title: null, artist: null, artworkUrl: null, lyrics: sidecarLyrics, replayGain: null };
   }
 };

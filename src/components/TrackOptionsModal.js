@@ -35,6 +35,15 @@ export default function TrackOptionsModal({
           <Text style={styles.modalSubtitle} numberOfLines={1}>
             {track.artist}
           </Text>
+
+          {track.replayGain && (track.replayGain.trackGain !== null || track.replayGain.albumGain !== null) && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 }}>
+              <MaterialCommunityIcons name="volume-medium" size={14} color="#8B5CF6" />
+              <Text style={{ color: '#A78BFA', fontSize: 12, fontWeight: '500' }}>
+                ReplayGain: {track.replayGain.trackGain !== null ? `${track.replayGain.trackGain > 0 ? '+' : ''}${track.replayGain.trackGain.toFixed(2)} dB` : `${track.replayGain.albumGain > 0 ? '+' : ''}${track.replayGain.albumGain.toFixed(2)} dB (Álbum)`}
+              </Text>
+            </View>
+          )}
           
           <View style={styles.modalDivider} />
 

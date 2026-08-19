@@ -361,6 +361,8 @@ export default function useGoogleDrive({
           title: meta.title || track.title || tempFilename.replace(/\.mp3$/i, ''),
           artist: meta.artist || track.artist || 'Descargado de Drive',
           artworkUrl: meta.artworkUrl || track.artworkUrl || defaultCover,
+          lyrics: meta.lyrics || null,
+          replayGain: meta.replayGain || null,
         };
 
         const existingCustom = hasCustomLocalTracks ? localLibraryTracks : [];

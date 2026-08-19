@@ -74,6 +74,8 @@ function MainApp() {
     cancelSleepTimer,
     crossfadeSettings,
     handleUpdateCrossfade,
+    replayGainSettings,
+    handleUpdateReplayGain,
   } = useAppController();
 
   if (!isPlayerInitialized) {
@@ -213,6 +215,8 @@ function MainApp() {
         onCancelTimer={cancelSleepTimer}
         crossfadeSettings={crossfadeSettings}
         onUpdateCrossfade={handleUpdateCrossfade}
+        replayGainSettings={replayGainSettings}
+        onUpdateReplayGain={handleUpdateReplayGain}
       />
     </View>
   );

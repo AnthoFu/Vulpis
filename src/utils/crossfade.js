@@ -12,6 +12,26 @@ let currentFadeTimer = null;
 let isAutoFading = false;
 let lastFadedTrackId = null;
 let currentVol = 1.0;
+let activeBaselineVol = 1.0;
+
+/**
+ * Establece el volumen base de la pista activa (calculado por ReplayGain).
+ */
+export function setActiveBaselineVolume(vol) {
+  const safeVol = Math.max(0, Math.min(1, typeof vol === 'number' && !isNaN(vol) ? vol : 1.0));
+  activeBaselineVol = safeVol;
+  if (!isAutoFading && !currentFadeTimer) {
+    currentVol = safeVol;
+    TrackPlayer.setVolume(safeVol);
+  }
+}
+
+/**
+ * Obtiene el volumen base activo actual.
+ */
+export function getActiveBaselineVolume() {
+  return activeBaselineVol;
+}
 
 /**
  * Obtiene la configuración de fundido cruzado guardada.
@@ -50,7 +70,7 @@ export function fadeVolume(targetVolume, durationMs = 300) {
     }
 
     const startVol = currentVol;
-    const endVol = Math.max(0, Math.min(1, targetVolume));
+    const endVol = Math.max(0, Math.min(1, typeof targetVolume === 'number' ? targetVolume : activeBaselineVol));
 
     if (durationMs <= 0 || Math.abs(startVol - endVol) < 0.02) {
       currentVol = endVol;
@@ -93,22 +113,23 @@ export function fadeOut(durationMs = 250) {
 }
 
 /**
- * Aumenta el volumen a targetVolume (por defecto 1.0).
+ * Aumenta el volumen a targetVolume (por defecto activeBaselineVol).
  */
-export function fadeIn(durationMs = 250, targetVolume = 1.0) {
-  return fadeVolume(targetVolume, durationMs);
+export function fadeIn(durationMs = 250, targetVolume = null) {
+  const target = typeof targetVolume === 'number' ? targetVolume : activeBaselineVol;
+  return fadeVolume(target, durationMs);
 }
 
 /**
- * Restablece el volumen a 1.0 inmediatamente si no hay un fundido en curso.
+ * Restablece el volumen a activeBaselineVol inmediatamente si no hay un fundido en curso.
  */
 export function resetVolumeToNormal() {
   if (currentFadeTimer) {
     clearInterval(currentFadeTimer);
     currentFadeTimer = null;
   }
-  currentVol = 1.0;
-  TrackPlayer.setVolume(1.0);
+  currentVol = activeBaselineVol;
+  TrackPlayer.setVolume(activeBaselineVol);
 }
 
 /**
@@ -116,7 +137,9 @@ export function resetVolumeToNormal() {
  */
 export async function smoothTrackTransition(actionFn, isEnabled = true, transitionMs = 250) {
   if (!isEnabled) {
-    return await actionFn();
+    const result = await actionFn();
+    resetVolumeToNormal();
+    return result;
   }
 
   try {
@@ -133,7 +156,7 @@ export async function smoothTrackTransition(actionFn, isEnabled = true, transiti
   }
 
   try {
-    await fadeIn(transitionMs, 1.0);
+    await fadeIn(transitionMs, activeBaselineVol);
   } catch (e) {
     console.log('[Crossfade] Error en fadeIn de transición:', e);
   }
@@ -166,7 +189,7 @@ export function handleAutoCrossfadeProgress({
     if (isAutoFading) {
       isAutoFading = false;
       const fadeInDuration = Math.min(2000, crossfadeDuration * 400);
-      fadeIn(fadeInDuration, 1.0);
+      fadeIn(fadeInDuration, activeBaselineVol);
     }
     lastFadedTrackId = activeTrackId;
   }
@@ -179,13 +202,14 @@ export function handleAutoCrossfadeProgress({
     if (!currentFadeTimer) {
       isAutoFading = true;
       const progressRatio = remaining / fadeDuration; // De 1.0 a 0.0
-      const targetVol = Math.max(0.05, Math.min(1.0, (1 - Math.cos(progressRatio * Math.PI)) / 2));
+      const curve = (1 - Math.cos(progressRatio * Math.PI)) / 2;
+      const targetVol = Math.max(0.02, activeBaselineVol * curve);
       currentVol = targetVol;
       TrackPlayer.setVolume(targetVol);
     }
-  } else if (!isAutoFading && !currentFadeTimer && currentVol < 0.98) {
-    // Si no está en zona de fundido ni en animación, asegurarse de que el volumen esté al 100%
-    currentVol = 1.0;
-    TrackPlayer.setVolume(1.0);
+  } else if (!isAutoFading && !currentFadeTimer && Math.abs(currentVol - activeBaselineVol) > 0.02) {
+    // Si no está en zona de fundido ni en animación, asegurarse de que el volumen esté en su línea base
+    currentVol = activeBaselineVol;
+    TrackPlayer.setVolume(activeBaselineVol);
   }
 }

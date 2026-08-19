@@ -20,6 +20,13 @@ import {
   smoothTrackTransition,
   DEFAULT_CROSSFADE_SETTINGS,
 } from '../utils/crossfade';
+import {
+  getReplayGainSettings,
+  saveReplayGainSettings,
+  DEFAULT_REPLAYGAIN_SETTINGS,
+  applyReplayGainToPlayer,
+  calculateTrackVolumeMultiplier,
+} from '../utils/replayGain';
 
 export default function useAppController() {
   const insets = useSafeAreaInsets();
@@ -77,6 +84,35 @@ export default function useAppController() {
     setCrossfadeSettings(newSettings);
     await saveCrossfadeSettings(newSettings);
     showToast(newSettings.enabled ? `Fundido cruzado activado (${newSettings.duration}s)` : 'Fundido cruzado desactivado');
+  };
+
+  const [replayGainSettings, setReplayGainSettings] = useState(DEFAULT_REPLAYGAIN_SETTINGS);
+  const replayGainSettingsRef = useRef(replayGainSettings);
+
+  useEffect(() => {
+    replayGainSettingsRef.current = replayGainSettings;
+  }, [replayGainSettings]);
+
+  useEffect(() => {
+    getReplayGainSettings().then((loaded) => {
+      setReplayGainSettings(loaded);
+      if (activeTrack) {
+        applyReplayGainToPlayer(activeTrack, loaded);
+      }
+    });
+  }, []);
+
+  const handleUpdateReplayGain = async (newSettings) => {
+    setReplayGainSettings(newSettings);
+    await saveReplayGainSettings(newSettings);
+    if (activeTrack) {
+      applyReplayGainToPlayer(activeTrack, newSettings);
+    }
+    showToast(
+      newSettings.enabled
+        ? `ReplayGain activado (Modo: ${newSettings.mode === 'album' ? 'Álbum' : 'Pista'})`
+        : 'ReplayGain desactivado'
+    );
   };
 
   const {
@@ -413,6 +449,7 @@ export default function useAppController() {
     let lastSavedSec = -1;
     let lastSavedTrackId = null;
     let lastSavedQueueLen = -1;
+    let lastAppliedTrackId = null;
 
     const updatePlayerState = () => {
       try {
@@ -438,6 +475,13 @@ export default function useAppController() {
           duration: currentProgress?.duration ?? 0,
         });
 
+        // Aplicar normalización de volumen ReplayGain cuando cambia la pista activa
+        const activeTrackId = currentActive?.mediaId ?? null;
+        if (activeTrackId && activeTrackId !== lastAppliedTrackId) {
+          lastAppliedTrackId = activeTrackId;
+          applyReplayGainToPlayer(currentActive, replayGainSettingsRef.current);
+        }
+
         // Manejo automático de fundido cruzado cerca del final de la pista
         handleAutoCrossfadeProgress({
           position: currentProgress?.position ?? 0,
@@ -445,7 +489,7 @@ export default function useAppController() {
           isPlaying: currentPlaying,
           crossfadeEnabled: crossfadeSettingsRef.current?.enabled ?? false,
           crossfadeDuration: crossfadeSettingsRef.current?.duration ?? 4,
-          activeTrackId: currentActive?.mediaId ?? null,
+          activeTrackId: activeTrackId,
         });
 
         // Verificación de persistencia del estado
@@ -756,5 +800,7 @@ export default function useAppController() {
     setIsSleepTimerModalOpen,
     crossfadeSettings,
     handleUpdateCrossfade,
+    replayGainSettings,
+    handleUpdateReplayGain,
   };
 }

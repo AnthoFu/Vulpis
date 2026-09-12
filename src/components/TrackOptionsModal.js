@@ -34,7 +34,15 @@ export default function TrackOptionsModal({
           </Text>
           <Text style={styles.modalSubtitle} numberOfLines={1}>
             {track.artist}
+            {track.album && track.album !== 'Álbum Desconocido' && track.album !== 'Desconocido' ? ` • ${track.album}` : ''}
           </Text>
+
+          {track.genre && (
+            <View style={styles.modalGenreBadge}>
+              <MaterialCommunityIcons name="guitar-acoustic" size={12} color="#A78BFA" style={{ marginRight: 4 }} />
+              <Text style={styles.modalGenreText}>{track.genre}</Text>
+            </View>
+          )}
 
           {track.replayGain && (track.replayGain.trackGain !== null || track.replayGain.albumGain !== null) && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 }}>

@@ -115,6 +115,51 @@ function arrayBufferToBase64(bytes) {
   return base64;
 }
 
+const ID3_GENRES = [
+  'Blues', 'Classic Rock', 'Country', 'Dance', 'Disco', 'Funk', 'Grunge', 'Hip-Hop',
+  'Jazz', 'Metal', 'New Age', 'Oldies', 'Other', 'Pop', 'R&B', 'Rap', 'Reggae', 'Rock',
+  'Techno', 'Industrial', 'Alternative', 'Ska', 'Death Metal', 'Pranks', 'Soundtrack',
+  'Euro-Techno', 'Ambient', 'Trip-Hop', 'Vocal', 'Jazz+Funk', 'Fusion', 'Trance',
+  'Classical', 'Instrumental', 'Acid', 'House', 'Game', 'Sound Clip', 'Gospel', 'Noise',
+  'AlternRock', 'Bass', 'Soul', 'Punk', 'Space', 'Meditative', 'Instrumental Pop',
+  'Instrumental Rock', 'Ethnic', 'Gothic', 'Darkwave', 'Techno-Industrial', 'Electronic',
+  'Pop-Folk', 'Eurodance', 'Dream', 'Southern Rock', 'Comedy', 'Cult', 'Gangsta', 'Top 40',
+  'Christian Rap', 'Pop/Funk', 'Jungle', 'Native American', 'Cabaret', 'New Wave',
+  'Psychadelic', 'Rave', 'Showtunes', 'Trailer', 'Lo-Fi', 'Tribal', 'Acid Punk',
+  'Acid Jazz', 'Polka', 'Retro', 'Musical', 'Rock & Roll', 'Hard Rock', 'Folk', 'Folk-Rock',
+  'National Folk', 'Swing', 'Fast Fusion', 'Bebob', 'Latin', 'Revival', 'Celtic', 'Bluegrass',
+  'Avantgarde', 'Gothic Rock', 'Progressive Rock', 'Psychedelic Rock', 'Symphonic Rock', 'Slow Rock',
+  'Big Band', 'Chorus', 'Easy Listening', 'Acoustic', 'Humour', 'Speech', 'Chanson', 'Opera',
+  'Chamber Music', 'Sonata', 'Symphony', 'Booty Bass', 'Primus', 'Porn Groove', 'Satire',
+  'Slow Jam', 'Club', 'Tango', 'Samba', 'Folklore', 'Ballad', 'Power Ballad', 'Rhythmic Soul',
+  'Freestyle', 'Duet', 'Punk Rock', 'Drum Solo', 'Acapella', 'Euro-House', 'Dance Hall'
+];
+
+export function cleanGenreString(raw) {
+  if (!raw || typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  // Si viene como "(17)" o "(17)Rock"
+  const match = trimmed.match(/^\((\d+)\)(.*)$/);
+  if (match) {
+    const code = parseInt(match[1], 10);
+    const remainder = match[2].trim();
+    if (remainder) return remainder;
+    if (code >= 0 && code < ID3_GENRES.length) return ID3_GENRES[code];
+  }
+
+  // Si viene solo como número "17"
+  if (/^\d+$/.test(trimmed)) {
+    const code = parseInt(trimmed, 10);
+    if (code >= 0 && code < ID3_GENRES.length) return ID3_GENRES[code];
+  }
+
+  // Quitar caracteres nulos o terminadores
+  const cleaned = trimmed.replace(/\0/g, '').trim();
+  return cleaned || null;
+}
+
 export function formatLyricsText(rawLyrics) {
   if (!rawLyrics || typeof rawLyrics !== 'string') return '';
   return rawLyrics.replace(/\[\d{2}:\d{2}(?:\.\d{2,3})?\]/g, '').trim();
@@ -280,6 +325,8 @@ async function parseFastID3(bytes, fileUri) {
   const result = {
     title: null,
     artist: null,
+    album: null,
+    genre: null,
     artworkUrl: null,
     lyrics: null,
     replayGain: {
@@ -341,6 +388,15 @@ async function parseFastID3(bytes, fileUri) {
     // Artista
     else if ((frameId === 'TPE1' || frameId === 'TP1') && !result.artist) {
       result.artist = decodeText(bytes.subarray(dataStart + 1, dataStart + frameSize), encoding);
+    }
+    // Álbum
+    else if ((frameId === 'TALB' || frameId === 'TAL') && !result.album) {
+      result.album = decodeText(bytes.subarray(dataStart + 1, dataStart + frameSize), encoding);
+    }
+    // Género
+    else if ((frameId === 'TCON' || frameId === 'TCO') && !result.genre) {
+      const rawGenre = decodeText(bytes.subarray(dataStart + 1, dataStart + frameSize), encoding);
+      result.genre = cleanGenreString(rawGenre);
     }
     // Letra no sincronizada (USLT / ULT)
     else if ((frameId === 'USLT' || frameId === 'ULT') && !result.lyrics) {
@@ -643,7 +699,7 @@ const checkSidecarLyrics = async (fileUri) => {
  * En lugar de cargar archivos completos de 20-50MB en RAM, lee únicamente el bloque de cabecera (128-256KB).
  */
 export const extractMetadata = async (fileUri) => {
-  if (!fileUri) return { title: null, artist: null, artworkUrl: null, lyrics: null, replayGain: null };
+  if (!fileUri) return { title: null, artist: null, album: null, genre: null, artworkUrl: null, lyrics: null, replayGain: null };
 
   try {
     // 1. Leer solo el primer bloque (256 KB) del archivo
@@ -663,7 +719,7 @@ export const extractMetadata = async (fileUri) => {
 
     if (!base64Chunk || base64Chunk.length === 0) {
       const sidecar = await checkSidecarLyrics(fileUri);
-      return { title: null, artist: null, artworkUrl: null, lyrics: sidecar, replayGain: null };
+      return { title: null, artist: null, album: null, genre: null, artworkUrl: null, lyrics: sidecar, replayGain: null };
     }
 
     let byteArray = base64ToUint8Array(base64Chunk);
@@ -693,7 +749,7 @@ export const extractMetadata = async (fileUri) => {
 
       // Parser nativo rápido
       const parsed = await parseFastID3(byteArray, fileUri);
-      if (parsed && (parsed.title || parsed.artist || parsed.artworkUrl || parsed.lyrics || parsed.replayGain)) {
+      if (parsed && (parsed.title || parsed.artist || parsed.album || parsed.genre || parsed.artworkUrl || parsed.lyrics || parsed.replayGain)) {
         if (!parsed.lyrics) {
           parsed.lyrics = await checkSidecarLyrics(fileUri);
         }
@@ -710,6 +766,8 @@ export const extractMetadata = async (fileUri) => {
           const tags = tag.tags || {};
           const title = tags.title || null;
           const artist = tags.artist || null;
+          const album = tags.album || null;
+          const genre = cleanGenreString(tags.genre) || null;
           let artworkUrl = null;
 
           if (tags.picture && tags.picture.data) {
@@ -724,17 +782,17 @@ export const extractMetadata = async (fileUri) => {
 
           const replayGain = extractReplayGainFromJsMediaTags(tags);
 
-          resolve({ title, artist, artworkUrl, lyrics, replayGain });
+          resolve({ title, artist, album, genre, artworkUrl, lyrics, replayGain });
         },
         onError: async () => {
           const sidecarLyrics = await checkSidecarLyrics(fileUri);
-          resolve({ title: null, artist: null, artworkUrl: null, lyrics: sidecarLyrics, replayGain: null });
+          resolve({ title: null, artist: null, album: null, genre: null, artworkUrl: null, lyrics: sidecarLyrics, replayGain: null });
         },
       });
     });
   } catch (e) {
     console.warn('[MetadataExtractor] Error al leer metadatos de:', fileUri, e);
     const sidecarLyrics = await checkSidecarLyrics(fileUri);
-    return { title: null, artist: null, artworkUrl: null, lyrics: sidecarLyrics, replayGain: null };
+    return { title: null, artist: null, album: null, genre: null, artworkUrl: null, lyrics: sidecarLyrics, replayGain: null };
   }
 };

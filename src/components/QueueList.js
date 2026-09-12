@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Text,
   View,
@@ -7,6 +7,7 @@ import {
   FlatList,
   ActivityIndicator,
   TextInput,
+  ScrollView,
 } from 'react-native';
 import styles from '../styles/QueueList.styles';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -52,6 +53,11 @@ export default function QueueList({
     isProcessing,
     searchQuery,
     setSearchQuery,
+    searchFilter,
+    setSearchFilter,
+    searchFilters,
+    searchPlaceholder,
+    handleClearSearch,
     selectedPlaylistId,
     setSelectedPlaylistId,
     showCreateInput,
@@ -69,6 +75,7 @@ export default function QueueList({
     handleCreateNewPlaylist,
     handleCreateAndAdd,
     displayTracks,
+    filterTrackList,
     defaultArtwork,
   } = useQueueList({
     tracks,
@@ -203,13 +210,9 @@ export default function QueueList({
 
     // 1. Detalles de una sola lista de reproducción seleccionada
     if (selectedPlaylist) {
-      const filteredPlaylistTracks = selectedPlaylist.tracks.filter(track => {
-        if (!searchQuery) return true;
-        const title = (track.title || '').toLowerCase();
-        const artist = (track.artist || '').toLowerCase();
-        const query = searchQuery.toLowerCase();
-        return title.includes(query) || artist.includes(query);
-      });
+      const filteredPlaylistTracks = selectedPlaylist.tracks
+        ? filterTrackList(selectedPlaylist.tracks, searchQuery, searchFilter)
+        : [];
 
       return (
         <FlatList
@@ -264,19 +267,76 @@ export default function QueueList({
                 </View>
               </View>
 
-              {/* Search bar */}
+              {/* Search bar & Filter chips in playlist */}
               {selectedPlaylist.tracks.length > 0 && (
-                <View style={[styles.searchSection, { marginBottom: 16 }]}>
+                <View style={styles.searchSection}>
                   <View style={styles.searchContainer}>
-                    <MaterialCommunityIcons name="magnify" size={20} color="#5F6070" style={styles.searchIcon} />
+                    <MaterialCommunityIcons name="magnify" size={20} color="#8B5CF6" style={styles.searchIcon} />
                     <TextInput
-                      placeholder="Buscar en playlist..."
+                      placeholder={searchPlaceholder}
                       placeholderTextColor="#5F6070"
                       value={searchQuery}
                       onChangeText={setSearchQuery}
                       style={styles.searchInput}
+                      returnKeyType="search"
+                      clearButtonMode="never"
                     />
+                    {searchQuery.length > 0 && (
+                      <TouchableOpacity
+                        onPress={handleClearSearch}
+                        style={styles.searchClearBtn}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        activeOpacity={0.7}
+                      >
+                        <MaterialCommunityIcons name="close-circle" size={18} color="#8E8F9E" />
+                      </TouchableOpacity>
+                    )}
                   </View>
+
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.filterChipsScroll}
+                    style={styles.filterChipsContainer}
+                  >
+                    {searchFilters.map((filter) => {
+                      const isActive = searchFilter === filter.id;
+                      return (
+                        <TouchableOpacity
+                          key={filter.id}
+                          onPress={() => setSearchFilter(filter.id)}
+                          style={[
+                            styles.filterChip,
+                            isActive && styles.filterChipActive,
+                          ]}
+                          activeOpacity={0.7}
+                        >
+                          <MaterialCommunityIcons
+                            name={filter.icon}
+                            size={13}
+                            color={isActive ? "#FFFFFF" : "#8E8F9E"}
+                            style={{ marginRight: 5 }}
+                          />
+                          <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
+                            {filter.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+
+                  {searchQuery.trim().length > 0 && (
+                    <View style={styles.searchResultsInfoRow}>
+                      <Text style={styles.searchResultsInfoText}>
+                        {filteredPlaylistTracks.length === 1
+                          ? `1 coincidencia en ${searchFilters.find((f) => f.id === searchFilter)?.label || 'Todos'}`
+                          : `${filteredPlaylistTracks.length} coincidencias en ${searchFilters.find((f) => f.id === searchFilter)?.label || 'Todos'}`}
+                      </Text>
+                      <TouchableOpacity onPress={handleClearSearch} activeOpacity={0.7}>
+                        <Text style={styles.searchResultsClearText}>Limpiar</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
               )}
             </>
@@ -284,10 +344,33 @@ export default function QueueList({
           ListEmptyComponent={
             <View style={styles.emptyWrapper}>
               <View style={styles.emptyIconContainer}>
-                <MaterialCommunityIcons name="music-note-plus" size={32} color="#A78BFA" />
+                <MaterialCommunityIcons
+                  name={searchQuery ? "text-search" : "music-note-plus"}
+                  size={32}
+                  color="#A78BFA"
+                />
               </View>
-              <Text style={styles.emptyText}>Playlist vacía</Text>
-              <Text style={styles.emptySubText}>Añade canciones desde tu Biblioteca Local o Google Drive pulsando en los tres puntos de cada pista.</Text>
+              <Text style={styles.emptyText}>
+                {searchQuery ? `Sin resultados para "${searchQuery}"` : 'Playlist vacía'}
+              </Text>
+              {searchQuery ? (
+                <>
+                  <Text style={styles.emptySubText}>
+                    No hay pistas que coincidan con el filtro en esta lista de reproducción.
+                  </Text>
+                  <TouchableOpacity
+                    onPress={handleClearSearch}
+                    style={styles.clearSearchBtn}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.clearSearchBtnText}>Mostrar todas las canciones</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <Text style={styles.emptySubText}>
+                  Añade canciones desde tu Biblioteca Local o Google Drive pulsando en los tres puntos de cada pista.
+                </Text>
+              )}
             </View>
           }
           renderItem={({ item, index }) => {
@@ -310,9 +393,17 @@ export default function QueueList({
                         {item.title}
                       </Text>
                     </View>
-                    <Text style={styles.queueArtist} numberOfLines={1}>
-                      {item.artist}
-                    </Text>
+                    <View style={styles.queueSubtitleRow}>
+                      <Text style={styles.queueArtist} numberOfLines={1}>
+                        {item.artist}
+                        {item.album && item.album !== 'Álbum Desconocido' && item.album !== 'Desconocido' ? ` • ${item.album}` : ''}
+                      </Text>
+                      {item.genre ? (
+                        <View style={styles.genreBadge}>
+                          <Text style={styles.genreBadgeText} numberOfLines={1}>{item.genre}</Text>
+                        </View>
+                      ) : null}
+                    </View>
                   </View>
                 </TouchableOpacity>
 
@@ -485,19 +576,78 @@ export default function QueueList({
             {/* Google Drive Status Panel (only under private source library tab) */}
             {currentSource === 'private' && renderGoogleDrivePanel()}
 
-            {/* Search Input (only visible in library view) */}
+            {/* Search Input & Filter Chips (only visible in library view) */}
             {(currentSource === 'local' || (currentSource === 'private' && isDriveConnected)) && (
               <View style={styles.searchSection}>
                 <View style={styles.searchContainer}>
-                  <MaterialCommunityIcons name="magnify" size={20} color="#5F6070" style={styles.searchIcon} />
+                  <MaterialCommunityIcons name="magnify" size={20} color="#8B5CF6" style={styles.searchIcon} />
                   <TextInput
-                    placeholder="Buscar canción o artista..."
+                    placeholder={searchPlaceholder}
                     placeholderTextColor="#5F6070"
                     value={searchQuery}
                     onChangeText={setSearchQuery}
                     style={styles.searchInput}
+                    returnKeyType="search"
+                    clearButtonMode="never"
                   />
+                  {searchQuery.length > 0 && (
+                    <TouchableOpacity
+                      onPress={handleClearSearch}
+                      style={styles.searchClearBtn}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      activeOpacity={0.7}
+                    >
+                      <MaterialCommunityIcons name="close-circle" size={18} color="#8E8F9E" />
+                    </TouchableOpacity>
+                  )}
                 </View>
+
+                {/* Filter Chips */}
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.filterChipsScroll}
+                  style={styles.filterChipsContainer}
+                >
+                  {searchFilters.map((filter) => {
+                    const isActive = searchFilter === filter.id;
+                    return (
+                      <TouchableOpacity
+                        key={filter.id}
+                        onPress={() => setSearchFilter(filter.id)}
+                        style={[
+                          styles.filterChip,
+                          isActive && styles.filterChipActive,
+                        ]}
+                        activeOpacity={0.7}
+                      >
+                        <MaterialCommunityIcons
+                          name={filter.icon}
+                          size={13}
+                          color={isActive ? "#FFFFFF" : "#8E8F9E"}
+                          style={{ marginRight: 5 }}
+                        />
+                        <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
+                          {filter.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+
+                {/* Search Feedback Row */}
+                {searchQuery.trim().length > 0 && (
+                  <View style={styles.searchResultsInfoRow}>
+                    <Text style={styles.searchResultsInfoText}>
+                      {displayTracks.length === 1
+                        ? `1 coincidencia en ${searchFilters.find((f) => f.id === searchFilter)?.label || 'Todos'}`
+                        : `${displayTracks.length} coincidencias en ${searchFilters.find((f) => f.id === searchFilter)?.label || 'Todos'}`}
+                    </Text>
+                    <TouchableOpacity onPress={handleClearSearch} activeOpacity={0.7}>
+                      <Text style={styles.searchResultsClearText}>Limpiar</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
             )}
 
@@ -513,14 +663,37 @@ export default function QueueList({
             {!isLoading && displayTracks.length === 0 && (
               <View style={styles.emptyWrapper}>
                 <View style={styles.emptyIconContainer}>
-                  <MaterialCommunityIcons name="music-off" size={32} color="#A78BFA" />
+                  <MaterialCommunityIcons
+                    name={searchQuery ? "text-search" : "music-off"}
+                    size={32}
+                    color="#A78BFA"
+                  />
                 </View>
-                <Text style={styles.emptyText}>No se encontraron canciones</Text>
-                {currentSource === 'local' && !searchQuery && (
-                  <Text style={styles.emptySubText}>Usa "Escanear Audio" o "Importar MP3" para cargar música local.</Text>
-                )}
-                {currentSource === 'private' && isDriveConnected && !searchQuery && (
-                  <Text style={styles.emptySubText}>No se encontraron archivos .mp3 en tu Google Drive.</Text>
+                <Text style={styles.emptyText}>
+                  {searchQuery ? `Sin resultados para "${searchQuery}"` : 'No se encontraron canciones'}
+                </Text>
+                {searchQuery ? (
+                  <>
+                    <Text style={styles.emptySubText}>
+                      No se encontraron canciones que coincidan con el filtro "{searchFilters.find((f) => f.id === searchFilter)?.label}".
+                    </Text>
+                    <TouchableOpacity
+                      onPress={handleClearSearch}
+                      style={styles.clearSearchBtn}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.clearSearchBtnText}>Mostrar todas las canciones</Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <>
+                    {currentSource === 'local' && (
+                      <Text style={styles.emptySubText}>Usa "Escanear Audio" o "Importar MP3" para cargar música local.</Text>
+                    )}
+                    {currentSource === 'private' && isDriveConnected && (
+                      <Text style={styles.emptySubText}>No se encontraron archivos .mp3 en tu Google Drive.</Text>
+                    )}
+                  </>
                 )}
               </View>
             )}
@@ -554,9 +727,17 @@ export default function QueueList({
                       {item.title}
                     </Text>
                   </View>
-                  <Text style={styles.queueArtist} numberOfLines={1}>
-                    {item.artist}
-                  </Text>
+                  <View style={styles.queueSubtitleRow}>
+                    <Text style={styles.queueArtist} numberOfLines={1}>
+                      {item.artist}
+                      {item.album && item.album !== 'Álbum Desconocido' && item.album !== 'Desconocido' ? ` • ${item.album}` : ''}
+                    </Text>
+                    {item.genre ? (
+                      <View style={styles.genreBadge}>
+                        <Text style={styles.genreBadgeText} numberOfLines={1}>{item.genre}</Text>
+                      </View>
+                    ) : null}
+                  </View>
                 </View>
               </TouchableOpacity>
 

@@ -59,6 +59,62 @@ const styles = StyleSheet.create({
     fontSize: 14,
     height: '100%',
   },
+  searchClearBtn: {
+    padding: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 4,
+  },
+  filterChipsContainer: {
+    marginTop: 10,
+    marginBottom: 2,
+  },
+  filterChipsScroll: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 2,
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#12131A',
+    borderWidth: 1,
+    borderColor: '#1F202E',
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  filterChipActive: {
+    backgroundColor: 'rgba(139, 92, 246, 0.16)',
+    borderColor: '#8B5CF6',
+  },
+  filterChipText: {
+    color: '#8E8F9E',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  filterChipTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  searchResultsInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    paddingHorizontal: 4,
+  },
+  searchResultsInfoText: {
+    color: '#8E8F9E',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  searchResultsClearText: {
+    color: '#A78BFA',
+    fontSize: 12,
+    fontWeight: '700',
+  },
   localActionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -154,6 +210,41 @@ const styles = StyleSheet.create({
   queueArtist: {
     color: '#8E8F9E',
     fontSize: 13,
+  },
+  queueSubtitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+    gap: 6,
+  },
+  genreBadge: {
+    backgroundColor: 'rgba(139, 92, 246, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.25)',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    alignSelf: 'center',
+  },
+  genreBadgeText: {
+    color: '#A78BFA',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  clearSearchBtn: {
+    marginTop: 14,
+    backgroundColor: 'rgba(139, 92, 246, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.25)',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+  },
+  clearSearchBtnText: {
+    color: '#A78BFA',
+    fontSize: 13,
+    fontWeight: '700',
   },
   playingIndicator: {
     flexDirection: 'row',
@@ -716,6 +807,22 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '700',
+  },
+  modalGenreBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(139, 92, 246, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.25)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginTop: 6,
+  },
+  modalGenreText: {
+    color: '#A78BFA',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
 

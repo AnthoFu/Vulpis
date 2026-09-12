@@ -360,6 +360,8 @@ export default function useGoogleDrive({
           url: persistentLocalUri,
           title: meta.title || track.title || tempFilename.replace(/\.mp3$/i, ''),
           artist: meta.artist || track.artist || 'Descargado de Drive',
+          album: meta.album || track.album || 'Google Drive',
+          genre: meta.genre || track.genre || null,
           artworkUrl: meta.artworkUrl || track.artworkUrl || defaultCover,
           lyrics: meta.lyrics || null,
           replayGain: meta.replayGain || null,

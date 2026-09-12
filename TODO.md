@@ -30,12 +30,19 @@
   - [x] Integración bidireccional suave con el motor de Fundido Cruzado (Crossfade).
   - [x] Panel de configuración interactivo en Ajustes y visualización en el modal de opciones de pista.
 
+- [x] **Búsqueda Instantánea y Filtrado:** Barra de búsqueda en la biblioteca para filtrar rápidamente por Título, Artista, Álbum o Género.
+  - [x] Extracción nativa de etiquetas ID3v2 para Álbum (`TALB`/`TAL`) y Género (`TCON`/`TCO`) con decodificación de géneros estándar ID3v1.
+  - [x] Selector interactivo con chips/pestañas de filtro ("Todos", "Título", "Artista", "Álbum", "Género").
+  - [x] Búsqueda normalizada sin distinción de mayúsculas/minúsculas ni acentos diacríticos.
+  - [x] Botón de limpieza rápida con un solo toque (icono 'X') y contador interactivo de coincidencias.
+  - [x] Visualización de Álbum y etiquetas de Género en las filas de canciones y en el modal de detalles.
+  - [x] Soporte completo en la Biblioteca Local, Google Drive y dentro de Playlists individuales.
+
 ---
 
 # Mejoras por hacer
 
 - [ ] **Ecualizador de Audio (EQ):** Ecualizador con presets integrados (Rock, Pop, Jazz, Bass Boost, etc.).
-- [ ] **Búsqueda Instantánea y Filtrado:** Barra de búsqueda en la biblioteca para filtrar rápidamente por Título, Artista, Álbum o Género.
 - [ ] **Sistema de Favoritos ("Me Gusta"):** Botón de acceso rápido (corazón) para añadir/quitar canciones a una lista automática de "Favoritos".
 - [ ] **Organización por Pestañas:** Vistas divididas por Canciones, Árbol de Artistas, Álbumes y Listas de Reproducción.
 - [ ] **Ordenamiento Multicriterio:** Opción para ordenar listas por Nombre, Artista, Duración, Fecha de adición o Número de reproducciones.

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Image, Animated } from 'react-native';
 import TrackPlayer from '@rntp/player';
 import ImageColors from 'react-native-image-colors';
@@ -264,8 +264,13 @@ export default function usePlayerCard({
     };
   }, [currentTrackArtwork]);
 
-  const selectTrackFromQueue = async (index) => {
+  const selectTrackFromQueue = useCallback(async (indexOrItem, maybeIndex) => {
     try {
+      let index = typeof indexOrItem === 'number' ? indexOrItem : maybeIndex;
+      if (typeof index !== 'number' || isNaN(index)) {
+        console.error('[usePlayerCard Queue] Índice inválido recibido:', indexOrItem, maybeIndex);
+        return;
+      }
       console.log(`[usePlayerCard Queue] Saltando al índice: ${index}`);
       const crossfade = await getCrossfadeSettings();
       await smoothTrackTransition(async () => {
@@ -275,9 +280,9 @@ export default function usePlayerCard({
     } catch (e) {
       console.error('[usePlayerCard Queue] Error al saltar al índice:', e);
     }
-  };
+  }, []);
 
-  const togglePlayback = async (isPlayingState) => {
+  const togglePlayback = useCallback(async (isPlayingState) => {
     try {
       if (isPlayingState) {
         await TrackPlayer.pause();
@@ -287,7 +292,7 @@ export default function usePlayerCard({
     } catch (e) {
       console.error('[usePlayerCard] Error al alternar reproducción:', e);
     }
-  };
+  }, []);
 
   return {
     isQueueVisible,

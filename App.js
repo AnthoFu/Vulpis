@@ -62,6 +62,8 @@ function MainApp() {
     handleDownloadDriveTrack,
     handleAddToQueue,
     handleRemoveFromQueue,
+    handleMoveQueueItem,
+    handleClearUpcomingQueue,
     handleReorderQueueState,
     handleSyncReorderNative,
     handleSetDragActive,
@@ -179,6 +181,8 @@ function MainApp() {
           tracks={tracks}
           playQueue={playQueue}
           onRemoveFromQueue={handleRemoveFromQueue}
+          onMoveQueueItem={handleMoveQueueItem}
+          onClearUpcomingQueue={handleClearUpcomingQueue}
           onReorderQueueState={handleReorderQueueState}
           onSyncReorderNative={handleSyncReorderNative}
           onDragActive={handleSetDragActive}

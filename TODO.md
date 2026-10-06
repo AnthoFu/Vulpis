@@ -19,7 +19,7 @@
   - [x] Integración con API pública de letras (LRCLIB API - soporte para letras sincrónicas .lrc y normales).
   - [x] Algoritmo de coincidencia aproximada (Fuzzy Matching por Coeficiente Sørensen-Dice).
   - [x] Caché local persistente para letras descargadas.
-  - [x] Cascada de prioridad en [`usePlayerCard`](file:///home/anthofu/Escritorio/git/Vulpis/src/hooks/usePlayerCard.js#L37): ID3 locales -> Caché local -> API pública en línea -> "Letra no encontrada".
+  - [x] Cascada de prioridad en [`usePlayerCard`] ID3 locales -> Caché local -> API pública en línea -> "Letra no encontrada".
 - [x] **Temporizador de Apagado (Sleep Timer):** Opción para detener la reproducción automáticamente después de X minutos (15m, 30m, 60m o al finalizar la pista actual).
 - [x] **Fundido Cruzado (Crossfade):** Transición suave entre canciones para evitar pausas o cortes bruscos al cambiar de pista.
 - [x] **Normalización de Volumen (ReplayGain):** Mantener un nivel de volumen uniforme entre pistas de distintos álbumes o fuentes.
@@ -34,9 +34,17 @@
   - [x] Extracción nativa de etiquetas ID3v2 para Álbum (`TALB`/`TAL`) y Género (`TCON`/`TCO`) con decodificación de géneros estándar ID3v1.
   - [x] Selector interactivo con chips/pestañas de filtro ("Todos", "Título", "Artista", "Álbum", "Género").
   - [x] Búsqueda normalizada sin distinción de mayúsculas/minúsculas ni acentos diacríticos.
-  - [x] Botón de limpieza rápida con un solo toque (icono 'X') y contador interactivo de coincidencias.
   - [x] Visualización de Álbum y etiquetas de Género en las filas de canciones y en el modal de detalles.
   - [x] Soporte completo en la Biblioteca Local, Google Drive y dentro de Playlists individuales.
+- [x] **Refactorización Integral de la Cola de Reproducción y Drag & Move:**
+  - [x] Sincronización nativa fluida con `TrackPlayer.moveMediaItem(fromIndex, toIndex)` sin cortes de audio ni reinicios de canción.
+  - [x] Modularización de la hoja de la cola en [`QueueSheet.js`]
+  - [x] Estructura visual estilo Spotify: sección fija "Reproduciendo ahora" + sección reordenable "A continuación" + historial desplegable "Anteriores".
+  - [x] Drag & Move táctil con PanResponder independiente, elevación visual, seguimiento en tiempo real y apertura de hueco en slots adyacentes.
+  - [x] Controles rápidos de accesibilidad: botones para subir (🔼) y bajar (🔽) por pista, y botón para "Vaciar cola" con confirmación.
+  - [x] Claves únicas estables (`queueId`) para evitar desmontaje de componentes en React durante el arrastre.
+  - [x] Protección del bucle de polling en `useAppController` mediante bandera de reordenamiento atómico (`isReorderingRef`).
+- [x] Resolver error: `ERROR  [useAppController] Error al leer el estado guardado del reproductor: [Error: Row too big to fit into CursorWindow requiredPos=0, totalRows=1]` (Sanitización de carátulas base64 y exclusión de listas redundantes en `vulpis_player_state`).
 
 ---
 
@@ -62,4 +70,3 @@
 - [ ] **Migración a `@shopify/flash-list`:** Reemplazar `FlatList` tradicional por `FlashList` para optimizar el rendimiento y la fluidez del scroll con miles de canciones.
 - [ ] **Migración Gradual a TypeScript:** Añadir tipado estricto para modelos de datos (`Track`, `Playlist`), hooks e interfaces de servicios.
 - [ ] **Suite de Pruebas Unitarias (Jest):** Implementar tests para lógica crítica como `drive.js`, `metadata.js` y `onlineLyrics.js`.
-- [ ] Resolver error: `ERROR  [useAppController] Error al leer el estado guardado del reproductor: [Error: Row too big to fit into CursorWindow requiredPos=0, totalRows=1]`

@@ -1,15 +1,97 @@
-# Cosas por mejorar VULPIS 🦊
-- [x] Refactorizar logs -> Traducción al español
-- [x] Refactorización de comentarios -> Traducción al español
-- [x] Mejora del icon -> Averiguar como mostrarlo correctamente en las pantallas principales de los teléfonos
-- [X] Capacidad de descarga de la nube drive a local
-- [X] Capacidad de eliminar canciones locales 
-- [x] Mejora visual en la lista de reproduccion y en la cola de reproduccion
-- [x] Refactorizacion de los componentes largos
-- [X] Refactorizacion de estilos
-- [x] Refactorizacion de vistas y logica (Podriamos hacerlo tipo angular? Evitar mezclar logica con vistas)
-- [x] Mejora estetica, cambio de titulos. "Reproductor nativo" Es necesario?
-- [X] Nueva vista: Letras. Agregar un sistema de lectura de letras de canciones, estilo spotify (si es que en los metadatos de la cancion hay letra)
-- [X] Eliminar las canciones por defecto, escaneo automatico de musica cada vez que entra a la palicacion
-- [X] Modularizar las animaciones: Todas deben ser parecidas y escalables
-- [] Mejora en el sistema de letras. Implementacion de busqueda automatica de letras por nombre de cancion? (Posible busqueda de API para letras de canciones Online)
+# Plan de Trabajo y Mejoras - VULPIS 🦊
+
+## ✅ Tareas Completadas
+- [x] Refactorizar logs -> Traducción al español.
+- [x] Refactorización de comentarios -> Traducción al español.
+- [x] Mejora del icono -> Visualización correcta en pantallas principales de los teléfonos.
+- [x] Capacidad de descarga de canciones desde Google Drive a almacenamiento local.
+- [x] Capacidad de eliminar canciones del almacenamiento local.
+- [x] Mejora visual en la lista de reproducción y en la cola de reproducción.
+- [x] Refactorización de componentes largos.
+- [x] Refactorización de estilos.
+- [x] Refactorización de vistas y lógica (Separación limpia de lógica y componentes mediante Custom Hooks).
+- [x] Mejora estética y cambio de títulos.
+- [x] Vista de Letras: Sistema de lectura de letras de canciones estilo Spotify (metadatos ID3).
+- [x] Eliminación de canciones por defecto y escaneo automático de música al iniciar.
+- [x] Modularización de animaciones escalables y homogéneas.
+- [x] Mejora en el sistema de letras: Búsqueda automática en API pública.
+  - [x] Añadir opción en Ajustes/Configuración: "Buscar letras en línea" (Desactivado por defecto).
+  - [x] Integración con API pública de letras (LRCLIB API - soporte para letras sincrónicas .lrc y normales).
+  - [x] Algoritmo de coincidencia aproximada (Fuzzy Matching por Coeficiente Sørensen-Dice).
+  - [x] Caché local persistente para letras descargadas.
+  - [x] Cascada de prioridad en [`usePlayerCard`] ID3 locales -> Caché local -> API pública en línea -> "Letra no encontrada".
+- [x] **Temporizador de Apagado (Sleep Timer):** Opción para detener la reproducción automáticamente después de X minutos (15m, 30m, 60m o al finalizar la pista actual).
+- [x] **Fundido Cruzado (Crossfade):** Transición suave entre canciones para evitar pausas o cortes bruscos al cambiar de pista.
+- [x] **Normalización de Volumen (ReplayGain):** Mantener un nivel de volumen uniforme entre pistas de distintos álbumes o fuentes.
+  - [x] Soporte para extracción de etiquetas ID3v2 (`TXXX`, `COMM`, `RVA2`), FLAC/Vorbis comments y Apple Sound Check (`iTunNORM`).
+  - [x] Modos de normalización: Por Pista (Track Gain) y Por Álbum (Album Gain).
+  - [x] Pre-amplificación acústica configurable (-6 dB a +6 dB) para pistas con y sin ReplayGain.
+  - [x] Sistema de protección contra distorsión y saturación digital (Anti-Clipping Limiter).
+  - [x] Integración bidireccional suave con el motor de Fundido Cruzado (Crossfade).
+  - [x] Panel de configuración interactivo en Ajustes y visualización en el modal de opciones de pista.
+
+- [x] **Búsqueda Instantánea y Filtrado:** Barra de búsqueda en la biblioteca para filtrar rápidamente por Título, Artista, Álbum o Género.
+  - [x] Extracción nativa de etiquetas ID3v2 para Álbum (`TALB`/`TAL`) y Género (`TCON`/`TCO`) con decodificación de géneros estándar ID3v1.
+  - [x] Selector interactivo con chips/pestañas de filtro ("Todos", "Título", "Artista", "Álbum", "Género").
+  - [x] Búsqueda normalizada sin distinción de mayúsculas/minúsculas ni acentos diacríticos.
+  - [x] Visualización de Álbum y etiquetas de Género en las filas de canciones y en el modal de detalles.
+  - [x] Soporte completo en la Biblioteca Local, Google Drive y dentro de Playlists individuales.
+- [x] **Refactorización Integral de la Cola de Reproducción y Drag & Move:**
+  - [x] Sincronización nativa fluida con `TrackPlayer.moveMediaItem(fromIndex, toIndex)` sin cortes de audio ni reinicios de canción.
+  - [x] Modularización de la hoja de la cola en [`QueueSheet.js`]
+  - [x] Estructura visual estilo Spotify: sección fija "Reproduciendo ahora" + sección reordenable "A continuación" + historial desplegable "Anteriores".
+  - [x] Drag & Move táctil con PanResponder independiente, elevación visual, seguimiento en tiempo real y apertura de hueco en slots adyacentes.
+  - [x] Controles rápidos de accesibilidad: botones para subir (🔼) y bajar (🔽) por pista, y botón para "Vaciar cola" con confirmación.
+  - [x] Claves únicas estables (`queueId`) para evitar desmontaje de componentes en React durante el arrastre.
+  - [x] Protección del bucle de polling en `useAppController` mediante bandera de reordenamiento atómico (`isReorderingRef`).
+- [x] Resolver error: `ERROR  [useAppController] Error al leer el estado guardado del reproductor: [Error: Row too big to fit into CursorWindow requiredPos=0, totalRows=1]` (Sanitización de carátulas base64 y exclusión de listas redundantes en `vulpis_player_state`).
+
+---
+
+- [x] **Sistema de Favoritos ("Me Gusta"):**
+  - [x] Botón de acceso rápido con icono de corazón animado (efecto pop/spring) en PlayerCard.js para alternar favoritos en la pista activa.
+  - [x] Lista automática y persistente de "Favoritos" en usePlaylists.js guardada en AsyncStorage con sanitización preventiva de carátulas para evitar desbordes en SQLite (`CursorWindow`).
+  - [x] Tarjeta destacada con degradado rojo/rosa e insignia "AUTOMÁTICA" en la vista de Mis Playlists.
+  - [x] Protección de la lista de Favoritos contra eliminación accidental.
+  - [x] Opción de "Añadir/Quitar de Favoritos" en el modal de opciones de pista [`TrackOptionsModal.js`].
+  - [x] Indicador y selector especial de Favoritos en el selector de listas [`PlaylistPickerModal.js`].
+  - [x] Eliminación directa desde la vista detallada de la lista de Favoritos con icono de corazón activo.
+
+- [x] **Filtro Inteligente de Audio Local (Exclusión de WhatsApp y Grabadoras):**
+  - [x] Creación de utilidad centralizada audioFilter.js para detectar y excluir audios no musicales.
+  - [x] Exclusión de notas de voz y audios de WhatsApp (`AUD-*`, `PTT-*`, rutas `com.whatsapp`, `WhatsApp/Media`, etc.).
+  - [x] Exclusión de audios de Telegram, Messenger, Signal, Discord, Instagram y otras apps de mensajería.
+  - [x] Exclusión de notas de voz y grabaciones de llamadas telefónicas (`sound_recorder`, `voicenote`, `Call_*`, `REC_*`).
+  - [x] Filtrado de sonidos del sistema, tonos de notificación/alarma (< 15s) y cachés privadas de aplicaciones.
+  - [x] Depuración y saneamiento automático de pistas ya almacenadas en caché (`vulpis_local_tracks`).
+
+- [x] **Organización por Pestañas:** Vistas divididas por Canciones, Árbol de Artistas, Álbumes y Listas de Reproducción.
+  - [x] Selector interactivo de 4 pestañas superiores con iconos y diseño responsivo (`LIBRARY_TABS`).
+  - [x] Módulo modular de organización de biblioteca libraryOrganizer.js.
+  - [x] Vista de Árbol de Artistas con agrupación jerárquica (Artista -> Álbumes -> Canciones), avatares circulares y botón para reproducir la discografía completa del artista.
+  - [x] Vista de Álbumes con carátulas cuadradas grandes, información del artista, pistas ordenadas y botón para reproducir el álbum completo.
+  - [x] Integración transparente de Mis Playlists (con lista de reproducción activa, favoritos automáticos y creación).
+  - [x] Buscador adaptativo con filtrado en tiempo real según la pestaña activa (Canciones, Artistas, Álbumes o Playlists).
+
+---
+
+# Mejoras por hacer
+
+- [ ] **Ecualizador de Audio (EQ):** Ecualizador con presets integrados (Rock, Pop, Jazz, Bass Boost, etc.).
+- [ ] **Ordenamiento Multicriterio:** Opción para ordenar listas por Nombre, Artista, Duración, Fecha de adición o Número de reproducciones.
+- [ ] **Exportación e Importación de Playlists:** Respaldar y compartir listas de reproducción en formato `.m3u` o `.json`.
+- [ ] **Historial de Reproducción:** Sección para consultar las canciones escuchadas recientemente.
+- [ ] **Auto-scroll y Resaltado en Letras Sincronizadas (.lrc):** Desplazamiento automático interactivo conforme avanza la canción con resaltado de la línea actual.
+- [ ] **Búsqueda Manual Interactiva de Letras:** Permitir al usuario buscar y seleccionar manualmente la letra en LRCLIB si la búsqueda automática no coincide.
+- [ ] **Editor de Etiquetas ID3 (Tag Editor):** Editar título, artista, álbum y género directamente sobre los archivos MP3 locales.
+- [ ] **Descargador de Carátulas (Album Art Fetcher):** Búsqueda y descarga automática de portadas en alta resolución desde servicios abiertos (Cover Art Archive / MusicBrainz).
+- [ ] **Descarga Offline de Playlists Completas:** Permitir descargar de Google Drive todos los archivos de una lista de reproducción con un solo toque.
+- [ ] **Gestor de Almacenamiento y Caché:** Pantalla en Ajustes que muestre el espacio ocupado por la caché de Drive/Letras con opción de limpieza rápida.
+- [ ] **Soporte para Nuevas Fuentes en la Nube:** Opción para conectar servidores WebDAV, Nextcloud o OneDrive.
+- [ ] **Selector de Temas Visuales:** Opciones de personalización como Tema AMOLED Black, Cyberpunk, Violeta Vulpis o Tema Dinámico que se adapta al color dominante de la carátula de la canción.
+- [ ] **Gestos Táctiles Avanzados en el Reproductor:** Deslizar horizontalmente la carátula para cambiar de pista (anterior/siguiente) y deslizar hacia abajo para minimizar `PlayerCard`.
+- [ ] **Soporte de Widget para Android:** Widget de pantalla de inicio con controles de reproducción y carátula.
+- [ ] **Atajos y Controles Multimedia Avanzados:** Soporte extendido para eventos de auriculares Bluetooth (doble toque, triple toque).
+- [ ] **Migración a `@shopify/flash-list`:** Reemplazar `FlatList` tradicional por `FlashList` para optimizar el rendimiento y la fluidez del scroll con miles de canciones.
+- [ ] **Migración Gradual a TypeScript:** Añadir tipado estricto para modelos de datos (`Track`, `Playlist`), hooks e interfaces de servicios.
+- [ ] **Suite de Pruebas Unitarias (Jest):** Implementar tests para lógica crítica como `drive.js`, `metadata.js` y `onlineLyrics.js`.

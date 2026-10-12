@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import TrackPlayer, { RepeatMode } from '@rntp/player';
+import { smoothTrackTransition } from '../utils/crossfade';
 
 export default function useControls({
   isPlaying,
@@ -9,6 +10,7 @@ export default function useControls({
   playQueue = [],
   activeTrack,
   onSelectTrack,
+  crossfadeSettings = { enabled: false, duration: 4 },
 }) {
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -72,14 +74,16 @@ export default function useControls({
     setIsProcessing(true);
     const timer = setTimeout(() => setIsProcessing(false), 1500);
     try {
-      if (playQueue && playQueue.length > 1) {
-        console.log('[useControls] Saltando a la siguiente pista de la cola');
-        await TrackPlayer.skipToNext();
-        await TrackPlayer.play();
-      } else {
-        console.log('[useControls] La cola tiene 1 o menos pistas, activando respaldo de biblioteca');
-        await playLibraryFallback('next');
-      }
+      await smoothTrackTransition(async () => {
+        if (playQueue && playQueue.length > 1) {
+          console.log('[useControls] Saltando a la siguiente pista de la cola');
+          await TrackPlayer.skipToNext();
+          await TrackPlayer.play();
+        } else {
+          console.log('[useControls] La cola tiene 1 o menos pistas, activando respaldo de biblioteca');
+          await playLibraryFallback('next');
+        }
+      }, crossfadeSettings?.enabled);
     } catch (e) {
       console.log('[useControls] No hay siguiente pista o fin de la cola:', e);
       await playLibraryFallback('next');
@@ -94,14 +98,16 @@ export default function useControls({
     setIsProcessing(true);
     const timer = setTimeout(() => setIsProcessing(false), 1500);
     try {
-      if (playQueue && playQueue.length > 1) {
-        console.log('[useControls] Saltando a la pista anterior de la cola');
-        await TrackPlayer.skipToPrevious();
-        await TrackPlayer.play();
-      } else {
-        console.log('[useControls] La cola tiene 1 o menos pistas, activando respaldo de biblioteca');
-        await playLibraryFallback('prev');
-      }
+      await smoothTrackTransition(async () => {
+        if (playQueue && playQueue.length > 1) {
+          console.log('[useControls] Saltando a la pista anterior de la cola');
+          await TrackPlayer.skipToPrevious();
+          await TrackPlayer.play();
+        } else {
+          console.log('[useControls] La cola tiene 1 o menos pistas, activando respaldo de biblioteca');
+          await playLibraryFallback('prev');
+        }
+      }, crossfadeSettings?.enabled);
     } catch (e) {
       console.log('[useControls] No hay pista anterior o inicio de la cola:', e);
       await playLibraryFallback('prev');

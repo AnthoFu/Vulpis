@@ -11,32 +11,20 @@ export default function Header({
   isDriveConnected = false,
   isLoading = false
 }) {
-  const getHeaderInfo = () => {
+  const getHeaderTitle = () => {
     switch (currentSource) {
       case 'local':
-        return {
-          title: 'Biblioteca',
-          subtitle: `${tracksCount} CANCIONES`
-        };
+        return 'Biblioteca';
       case 'private':
-        return {
-          title: 'Google Drive',
-          subtitle: isDriveConnected ? `${tracksCount} PISTAS EN LA NUBE` : 'DESCONECTADO'
-        };
+        return 'Google Drive';
       case 'playlists':
-        return {
-          title: 'Playlists',
-          subtitle: `${playlistsCount} LISTAS CREADAS`
-        };
+        return 'Playlists';
       default:
-        return {
-          title: 'Vulpis',
-          subtitle: 'NUBE DE AUDIO HÍBRIDA'
-        };
+        return 'Vulpis';
     }
   };
 
-  const { title, subtitle } = getHeaderInfo();
+  const title = getHeaderTitle();
 
   return (
     <View style={styles.headerContainer}>
@@ -45,7 +33,6 @@ export default function Header({
       </TouchableOpacity>
       
       <View style={styles.titleContainer}>
-        <Text style={styles.headerSubtitle}>{subtitle}</Text>
         <Text style={styles.headerTitle}>{title}</Text>
       </View>
       
@@ -59,6 +46,3 @@ export default function Header({
     </View>
   );
 }
-
-
-

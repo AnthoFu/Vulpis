@@ -13,6 +13,7 @@ export default function Controls({
   playQueue = [],
   activeTrack,
   onSelectTrack,
+  crossfadeSettings,
 }) {
   const {
     isProcessing,
@@ -30,6 +31,7 @@ export default function Controls({
     playQueue,
     activeTrack,
     onSelectTrack,
+    crossfadeSettings,
   });
 
   return (

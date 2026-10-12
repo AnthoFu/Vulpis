@@ -6,6 +6,8 @@ import styles from '../styles/QueueList.styles';
 export default function TrackOptionsModal({
   visible,
   track,
+  isFavorite = false,
+  onToggleFavorite,
   onClose,
   onAddToQueue,
   onAddPlaylistPress,
@@ -34,7 +36,24 @@ export default function TrackOptionsModal({
           </Text>
           <Text style={styles.modalSubtitle} numberOfLines={1}>
             {track.artist}
+            {track.album && track.album !== 'Álbum Desconocido' && track.album !== 'Desconocido' ? ` • ${track.album}` : ''}
           </Text>
+
+          {track.genre && (
+            <View style={styles.modalGenreBadge}>
+              <MaterialCommunityIcons name="guitar-acoustic" size={12} color="#A78BFA" style={{ marginRight: 4 }} />
+              <Text style={styles.modalGenreText}>{track.genre}</Text>
+            </View>
+          )}
+
+          {track.replayGain && (track.replayGain.trackGain !== null || track.replayGain.albumGain !== null) && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 }}>
+              <MaterialCommunityIcons name="volume-medium" size={14} color="#8B5CF6" />
+              <Text style={{ color: '#A78BFA', fontSize: 12, fontWeight: '500' }}>
+                ReplayGain: {track.replayGain.trackGain !== null ? `${track.replayGain.trackGain > 0 ? '+' : ''}${track.replayGain.trackGain.toFixed(2)} dB` : `${track.replayGain.albumGain > 0 ? '+' : ''}${track.replayGain.albumGain.toFixed(2)} dB (Álbum)`}
+              </Text>
+            </View>
+          )}
           
           <View style={styles.modalDivider} />
 
@@ -51,6 +70,26 @@ export default function TrackOptionsModal({
             <MaterialCommunityIcons name="playlist-plus" size={22} color="#A78BFA" />
             <Text style={styles.modalOptionText}>Añadir a la cola</Text>
           </TouchableOpacity>
+
+          {onToggleFavorite && (
+            <TouchableOpacity
+              onPress={() => {
+                onClose();
+                onToggleFavorite(track);
+              }}
+              style={styles.modalOption}
+              activeOpacity={0.7}
+            >
+              <MaterialCommunityIcons
+                name={isFavorite ? 'heart' : 'heart-outline'}
+                size={22}
+                color={isFavorite ? '#EF4444' : '#A78BFA'}
+              />
+              <Text style={[styles.modalOptionText, isFavorite && { color: '#EF4444' }]}>
+                {isFavorite ? 'Quitar de Favoritos' : 'Añadir a Favoritos'}
+              </Text>
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             onPress={() => {

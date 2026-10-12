@@ -13,6 +13,7 @@ import PlayerCard from './src/components/PlayerCard';
 import MiniPlayer from './src/components/MiniPlayer';
 import QueueList from './src/components/QueueList';
 import SidebarDrawer from './src/components/SidebarDrawer';
+import SettingsModal from './src/components/SettingsModal';
 import useAppController from './src/hooks/useAppController';
 
 function MainApp() {
@@ -31,11 +32,16 @@ function MainApp() {
     playQueue,
     isDrawerOpen,
     setIsDrawerOpen,
+    isSettingsOpen,
+    setIsSettingsOpen,
     currentSource,
     tracks,
     isSourceChanging,
     toast,
+    showToast,
     playlists,
+    isFavoriteTrack,
+    handleToggleFavorite,
     handleCreatePlaylist,
     handleDeletePlaylist,
     handleAddTrackToPlaylist,
@@ -58,11 +64,22 @@ function MainApp() {
     handleDownloadDriveTrack,
     handleAddToQueue,
     handleRemoveFromQueue,
+    handleMoveQueueItem,
+    handleClearUpcomingQueue,
     handleReorderQueueState,
     handleSyncReorderNative,
     handleSetDragActive,
     handleSourceChange,
     handleSelectTrack,
+    isTimerActive,
+    timerMode,
+    timeRemainingFormatted,
+    startSleepTimer,
+    cancelSleepTimer,
+    crossfadeSettings,
+    handleUpdateCrossfade,
+    replayGainSettings,
+    handleUpdateReplayGain,
   } = useAppController();
 
   if (!isPlayerInitialized) {
@@ -90,6 +107,7 @@ function MainApp() {
         playQueue={playQueue}
         isLoading={isSourceChanging}
         currentSource={currentSource}
+        onSelectSource={handleSourceChange}
         onDeleteLocalTrack={handleDeleteLocalTrack}
         hasCustomLocalTracks={hasCustomLocalTracks}
         onAddToQueue={handleAddToQueue}
@@ -107,6 +125,8 @@ function MainApp() {
         googleRedirectUri={googleRedirectUri}
         onSelectTrack={handleSelectTrack}
         playlists={playlists}
+        isFavoriteTrack={isFavoriteTrack}
+        onToggleFavorite={handleToggleFavorite}
         onCreatePlaylist={handleCreatePlaylist}
         onDeletePlaylist={handleDeletePlaylist}
         onAddTrackToPlaylist={handleAddTrackToPlaylist}
@@ -165,13 +185,23 @@ function MainApp() {
           isShuffleActive={isShuffleActive}
           tracks={tracks}
           playQueue={playQueue}
+          isFavorite={activeTrack ? isFavoriteTrack(activeTrack.mediaId) : false}
+          onToggleFavorite={() => activeTrack && handleToggleFavorite(activeTrack)}
           onRemoveFromQueue={handleRemoveFromQueue}
+          onMoveQueueItem={handleMoveQueueItem}
+          onClearUpcomingQueue={handleClearUpcomingQueue}
           onReorderQueueState={handleReorderQueueState}
           onSyncReorderNative={handleSyncReorderNative}
           onDragActive={handleSetDragActive}
           onClose={() => setIsFullPlayerVisible(false)}
           onSelectTrack={handleSelectTrack}
           initialQueueVisible={startWithQueueVisible}
+          isTimerActive={isTimerActive}
+          timerMode={timerMode}
+          timeRemainingFormatted={timeRemainingFormatted}
+          onSelectTimer={startSleepTimer}
+          onCancelTimer={cancelSleepTimer}
+          crossfadeSettings={crossfadeSettings}
         />
       </Modal>
 
@@ -181,6 +211,23 @@ function MainApp() {
         onClose={() => setIsDrawerOpen(false)}
         currentSource={currentSource}
         onSelectSource={handleSourceChange}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+      />
+
+      {/* Modal de Ajustes */}
+      <SettingsModal
+        visible={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        onShowToast={showToast}
+        isTimerActive={isTimerActive}
+        timerMode={timerMode}
+        timeRemainingFormatted={timeRemainingFormatted}
+        onSelectTimer={startSleepTimer}
+        onCancelTimer={cancelSleepTimer}
+        crossfadeSettings={crossfadeSettings}
+        onUpdateCrossfade={handleUpdateCrossfade}
+        replayGainSettings={replayGainSettings}
+        onUpdateReplayGain={handleUpdateReplayGain}
       />
     </View>
   );

@@ -605,6 +605,25 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 1,
   },
+  favoritePlaylistRow: {
+    backgroundColor: '#18141F',
+    borderColor: 'rgba(239, 68, 68, 0.25)',
+  },
+  favoriteBadge: {
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    alignSelf: 'center',
+  },
+  favoriteBadgeText: {
+    color: '#EF4444',
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
   playlistRowMain: {
     flexDirection: 'row',
     alignItems: 'center',

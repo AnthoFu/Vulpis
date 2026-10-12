@@ -48,10 +48,20 @@
 
 ---
 
+- [x] **Sistema de Favoritos ("Me Gusta"):**
+  - [x] Botón de acceso rápido con icono de corazón animado (efecto pop/spring) en [`PlayerCard.js`] para alternar favoritos en la pista activa.
+  - [x] Lista automática y persistente de "Favoritos" en [`usePlaylists.js`] guardada en AsyncStorage con sanitización preventiva de carátulas para evitar desbordes en SQLite (`CursorWindow`).
+  - [x] Tarjeta destacada con degradado rojo/rosa e insignia "AUTOMÁTICA" en la vista de Mis Playlists.
+  - [x] Protección de la lista de Favoritos contra eliminación accidental.
+  - [x] Opción de "Añadir/Quitar de Favoritos" en el modal de opciones de pista [`TrackOptionsModal.js`].
+  - [x] Indicador y selector especial de Favoritos en el selector de listas [`PlaylistPickerModal.js`].
+  - [x] Eliminación directa desde la vista detallada de la lista de Favoritos con icono de corazón activo.
+
+---
+
 # Mejoras por hacer
 
 - [ ] **Ecualizador de Audio (EQ):** Ecualizador con presets integrados (Rock, Pop, Jazz, Bass Boost, etc.).
-- [ ] **Sistema de Favoritos ("Me Gusta"):** Botón de acceso rápido (corazón) para añadir/quitar canciones a una lista automática de "Favoritos".
 - [ ] **Organización por Pestañas:** Vistas divididas por Canciones, Árbol de Artistas, Álbumes y Listas de Reproducción.
 - [ ] **Ordenamiento Multicriterio:** Opción para ordenar listas por Nombre, Artista, Duración, Fecha de adición o Número de reproducciones.
 - [ ] **Exportación e Importación de Playlists:** Respaldar y compartir listas de reproducción en formato `.m3u` o `.json`.

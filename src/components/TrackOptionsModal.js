@@ -6,6 +6,8 @@ import styles from '../styles/QueueList.styles';
 export default function TrackOptionsModal({
   visible,
   track,
+  isFavorite = false,
+  onToggleFavorite,
   onClose,
   onAddToQueue,
   onAddPlaylistPress,
@@ -68,6 +70,26 @@ export default function TrackOptionsModal({
             <MaterialCommunityIcons name="playlist-plus" size={22} color="#A78BFA" />
             <Text style={styles.modalOptionText}>Añadir a la cola</Text>
           </TouchableOpacity>
+
+          {onToggleFavorite && (
+            <TouchableOpacity
+              onPress={() => {
+                onClose();
+                onToggleFavorite(track);
+              }}
+              style={styles.modalOption}
+              activeOpacity={0.7}
+            >
+              <MaterialCommunityIcons
+                name={isFavorite ? 'heart' : 'heart-outline'}
+                size={22}
+                color={isFavorite ? '#EF4444' : '#A78BFA'}
+              />
+              <Text style={[styles.modalOptionText, isFavorite && { color: '#EF4444' }]}>
+                {isFavorite ? 'Quitar de Favoritos' : 'Añadir a Favoritos'}
+              </Text>
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             onPress={() => {

@@ -23,6 +23,8 @@ export default function PlayerCard({
   isShuffleActive,
   tracks,
   playQueue,
+  isFavorite = false,
+  onToggleFavorite,
   onRemoveFromQueue,
   onMoveQueueItem,
   onClearUpcomingQueue,
@@ -42,6 +44,7 @@ export default function PlayerCard({
   const insets = useSafeAreaInsets();
   const [isEditLyricsVisible, setIsEditLyricsVisible] = useState(false);
   const [isSleepTimerVisible, setIsSleepTimerVisible] = useState(false);
+  const heartScaleAnim = useRef(new Animated.Value(1)).current;
   
   const {
     isQueueVisible,
@@ -103,6 +106,27 @@ export default function PlayerCard({
   const handleTogglePlaybackFromQueue = useCallback(() => {
     togglePlayback(isPlaying);
   }, [togglePlayback, isPlaying]);
+
+  const handleHeartPress = useCallback(() => {
+    Animated.sequence([
+      Animated.spring(heartScaleAnim, {
+        toValue: 1.4,
+        friction: 3,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+      Animated.spring(heartScaleAnim, {
+        toValue: 1,
+        friction: 4,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    if (onToggleFavorite) {
+      onToggleFavorite();
+    }
+  }, [onToggleFavorite, heartScaleAnim]);
 
   const renderBackground = () => {
     return (
@@ -192,12 +216,31 @@ export default function PlayerCard({
       {/* Detalles de la pista, progreso y controles */}
       <View style={styles.bottomSection}>
         <View style={styles.trackDetails}>
-          <Text style={styles.trackTitle} numberOfLines={1}>
-            {currentTrackTitle}
-          </Text>
-          <Text style={styles.trackArtist} numberOfLines={1}>
-            {currentTrackArtist}
-          </Text>
+          <View style={styles.trackDetailsMainRow}>
+            <View style={styles.trackDetailsTextCol}>
+              <Text style={styles.trackTitle} numberOfLines={1}>
+                {currentTrackTitle}
+              </Text>
+              <Text style={styles.trackArtist} numberOfLines={1}>
+                {currentTrackArtist}
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              onPress={handleHeartPress}
+              style={styles.favoriteButton}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <Animated.View style={{ transform: [{ scale: heartScaleAnim }] }}>
+                <MaterialCommunityIcons
+                  name={isFavorite ? 'heart' : 'heart-outline'}
+                  size={26}
+                  color={isFavorite ? '#EF4444' : '#8E8F9E'}
+                />
+              </Animated.View>
+            </TouchableOpacity>
+          </View>
 
           {activeLyricLine && (
             <Animated.View

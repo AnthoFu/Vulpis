@@ -55,7 +55,11 @@ export default function PlaylistPickerModal({
                 style={styles.playlistPickerOption}
                 activeOpacity={0.7}
               >
-                <MaterialCommunityIcons name="playlist-music" size={20} color="#8B5CF6" />
+                <MaterialCommunityIcons
+                  name={item.isFavorites || item.id === 'favorites' ? 'heart' : 'playlist-music'}
+                  size={20}
+                  color={item.isFavorites || item.id === 'favorites' ? '#EF4444' : '#8B5CF6'}
+                />
                 <Text style={styles.playlistPickerName} numberOfLines={1}>
                   {item.name}
                 </Text>

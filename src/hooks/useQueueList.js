@@ -112,10 +112,14 @@ export default function useQueueList({
     if (isProcessing) return;
     setIsProcessing(true);
     try {
-      await TrackPlayer.clear();
-      await TrackPlayer.setMediaItems(playlist.tracks);
-      await TrackPlayer.skipToIndex(0);
-      await TrackPlayer.play();
+      if (onSelectTrack && playlist.tracks.length > 0) {
+        await onSelectTrack(playlist.tracks[0], 0, playlist.tracks);
+      } else {
+        await TrackPlayer.clear();
+        await TrackPlayer.setMediaItems(playlist.tracks);
+        await TrackPlayer.skipToIndex(0);
+        await TrackPlayer.play();
+      }
     } catch (e) {
       console.error('[useQueueList] Error al reproducir la lista de reproducción:', e);
     } finally {

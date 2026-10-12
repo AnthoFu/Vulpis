@@ -40,6 +40,8 @@ function MainApp() {
     toast,
     showToast,
     playlists,
+    isFavoriteTrack,
+    handleToggleFavorite,
     handleCreatePlaylist,
     handleDeletePlaylist,
     handleAddTrackToPlaylist,
@@ -122,6 +124,8 @@ function MainApp() {
         googleRedirectUri={googleRedirectUri}
         onSelectTrack={handleSelectTrack}
         playlists={playlists}
+        isFavoriteTrack={isFavoriteTrack}
+        onToggleFavorite={handleToggleFavorite}
         onCreatePlaylist={handleCreatePlaylist}
         onDeletePlaylist={handleDeletePlaylist}
         onAddTrackToPlaylist={handleAddTrackToPlaylist}
@@ -180,6 +184,8 @@ function MainApp() {
           isShuffleActive={isShuffleActive}
           tracks={tracks}
           playQueue={playQueue}
+          isFavorite={activeTrack ? isFavoriteTrack(activeTrack.mediaId) : false}
+          onToggleFavorite={() => activeTrack && handleToggleFavorite(activeTrack)}
           onRemoveFromQueue={handleRemoveFromQueue}
           onMoveQueueItem={handleMoveQueueItem}
           onClearUpcomingQueue={handleClearUpcomingQueue}

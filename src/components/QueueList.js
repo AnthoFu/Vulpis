@@ -39,6 +39,8 @@ export default function QueueList({
   googleRedirectUri,
   onSelectTrack,
   playlists = [],
+  isFavoriteTrack,
+  onToggleFavorite,
   onCreatePlaylist,
   onDeletePlaylist,
   onAddTrackToPlaylist,
@@ -87,6 +89,20 @@ export default function QueueList({
   });
 
   const renderPlaylistArtwork = (playlist) => {
+    const isFav = playlist.id === 'favorites' || playlist.isFavorites;
+    if (isFav) {
+      return (
+        <LinearGradient
+          colors={['#EF4444', '#EC4899']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.playlistIconWrapperGradient}
+        >
+          <MaterialCommunityIcons name="heart" size={24} color="#FFFFFF" />
+        </LinearGradient>
+      );
+    }
+
     const firstTrackWithArtwork = playlist.tracks?.find(t => t.artworkUrl);
     if (firstTrackWithArtwork) {
       return (
@@ -343,15 +359,30 @@ export default function QueueList({
           }
           ListEmptyComponent={
             <View style={styles.emptyWrapper}>
-              <View style={styles.emptyIconContainer}>
+              <View style={[
+                styles.emptyIconContainer,
+                (selectedPlaylist.id === 'favorites' || selectedPlaylist.isFavorites) && {
+                  backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                }
+              ]}>
                 <MaterialCommunityIcons
-                  name={searchQuery ? "text-search" : "music-note-plus"}
+                  name={
+                    searchQuery
+                      ? 'text-search'
+                      : (selectedPlaylist.id === 'favorites' || selectedPlaylist.isFavorites)
+                        ? 'heart-outline'
+                        : 'music-note-plus'
+                  }
                   size={32}
-                  color="#A78BFA"
+                  color={(selectedPlaylist.id === 'favorites' || selectedPlaylist.isFavorites) && !searchQuery ? '#EF4444' : '#A78BFA'}
                 />
               </View>
               <Text style={styles.emptyText}>
-                {searchQuery ? `Sin resultados para "${searchQuery}"` : 'Playlist vacía'}
+                {searchQuery
+                  ? `Sin resultados para "${searchQuery}"`
+                  : (selectedPlaylist.id === 'favorites' || selectedPlaylist.isFavorites)
+                    ? 'Sin canciones favoritas'
+                    : 'Playlist vacía'}
               </Text>
               {searchQuery ? (
                 <>
@@ -366,6 +397,10 @@ export default function QueueList({
                     <Text style={styles.clearSearchBtnText}>Mostrar todas las canciones</Text>
                   </TouchableOpacity>
                 </>
+              ) : (selectedPlaylist.id === 'favorites' || selectedPlaylist.isFavorites) ? (
+                <Text style={styles.emptySubText}>
+                  Toca el corazón en el reproductor o en las opciones de cualquier canción para guardarla aquí automáticamente.
+                </Text>
               ) : (
                 <Text style={styles.emptySubText}>
                   Añade canciones desde tu Biblioteca Local o Google Drive pulsando en los tres puntos de cada pista.
@@ -375,6 +410,7 @@ export default function QueueList({
           }
           renderItem={({ item, index }) => {
             const isCurrent = activeTrack ? activeTrack.mediaId === item.mediaId : false;
+            const isFavPlaylist = selectedPlaylist.id === 'favorites' || selectedPlaylist.isFavorites;
             return (
               <View style={[styles.queueItem, isCurrent && styles.queueItemActive]}>
                 <TouchableOpacity
@@ -416,7 +452,11 @@ export default function QueueList({
                     style={styles.deleteTrackFromPlaylistBtn}
                     activeOpacity={0.6}
                   >
-                    <MaterialCommunityIcons name="trash-can-outline" size={20} color="#8E8F9E" />
+                    <MaterialCommunityIcons
+                      name={isFavPlaylist ? "heart" : "trash-can-outline"}
+                      size={20}
+                      color={isFavPlaylist ? "#EF4444" : "#8E8F9E"}
+                    />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -507,52 +547,64 @@ export default function QueueList({
             <Text style={styles.emptySubText}>Crea tu primera lista de reproducción arriba para empezar a organizar tu música.</Text>
           </View>
         }
-        renderItem={({ item }) => (
-          <View style={styles.playlistRow}>
-            <TouchableOpacity
-              onPress={() => setSelectedPlaylistId(item.id)}
-              style={styles.playlistRowMain}
-              activeOpacity={0.7}
-            >
-              <View style={styles.playlistArtworkContainer}>
-                {renderPlaylistArtwork(item)}
-              </View>
-              <View style={styles.playlistRowDetails}>
-                <Text style={styles.playlistRowName} numberOfLines={1}>{item.name}</Text>
-                <Text style={styles.playlistRowSub}>
-                  {item.tracks.length} {item.tracks.length === 1 ? 'canción' : 'canciones'}
-                </Text>
-              </View>
-            </TouchableOpacity>
-            
-            <View style={styles.playlistRowActions}>
+        renderItem={({ item }) => {
+          const isFav = item.id === 'favorites' || item.isFavorites;
+          return (
+            <View style={[styles.playlistRow, isFav && styles.favoritePlaylistRow]}>
               <TouchableOpacity
-                onPress={() => handlePlayPlaylist(item)}
-                disabled={item.tracks.length === 0}
-                style={[styles.playlistPlayRowBtn, item.tracks.length === 0 && styles.playlistPlayRowBtnDisabled]}
+                onPress={() => setSelectedPlaylistId(item.id)}
+                style={styles.playlistRowMain}
                 activeOpacity={0.7}
               >
-                <MaterialCommunityIcons name="play" size={18} color={item.tracks.length === 0 ? "#5F6070" : "#FFFFFF"} />
+                <View style={styles.playlistArtworkContainer}>
+                  {renderPlaylistArtwork(item)}
+                </View>
+                <View style={styles.playlistRowDetails}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={styles.playlistRowName} numberOfLines={1}>{item.name}</Text>
+                    {isFav && (
+                      <View style={styles.favoriteBadge}>
+                        <Text style={styles.favoriteBadgeText}>AUTOMÁTICA</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={styles.playlistRowSub}>
+                    {item.tracks.length} {item.tracks.length === 1 ? 'canción' : 'canciones'}
+                  </Text>
+                </View>
               </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => {
-                  Alert.alert(
-                    'Eliminar playlist',
-                    `¿Seguro que deseas eliminar "${item.name}"?`,
-                    [
-                      { text: 'Cancelar', style: 'cancel' },
-                      { text: 'Eliminar', style: 'destructive', onPress: () => onDeletePlaylist && onDeletePlaylist(item.id) }
-                    ]
-                  );
-                }}
-                style={styles.playlistDeleteRowBtn}
-                activeOpacity={0.7}
-              >
-                <MaterialCommunityIcons name="trash-can-outline" size={18} color="#EF4444" />
-              </TouchableOpacity>
+              
+              <View style={styles.playlistRowActions}>
+                <TouchableOpacity
+                  onPress={() => handlePlayPlaylist(item)}
+                  disabled={item.tracks.length === 0}
+                  style={[styles.playlistPlayRowBtn, item.tracks.length === 0 && styles.playlistPlayRowBtnDisabled]}
+                  activeOpacity={0.7}
+                >
+                  <MaterialCommunityIcons name="play" size={18} color={item.tracks.length === 0 ? "#5F6070" : "#FFFFFF"} />
+                </TouchableOpacity>
+                {!isFav && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      Alert.alert(
+                        'Eliminar playlist',
+                        `¿Seguro que deseas eliminar "${item.name}"?`,
+                        [
+                          { text: 'Cancelar', style: 'cancel' },
+                          { text: 'Eliminar', style: 'destructive', onPress: () => onDeletePlaylist && onDeletePlaylist(item.id) }
+                        ]
+                      );
+                    }}
+                    style={styles.playlistDeleteRowBtn}
+                    activeOpacity={0.7}
+                  >
+                    <MaterialCommunityIcons name="trash-can-outline" size={18} color="#EF4444" />
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
-          </View>
-        )}
+          );
+        }}
       />
     );
   }
@@ -762,6 +814,8 @@ export default function QueueList({
       <TrackOptionsModal
         visible={selectedTrackForOptions !== null}
         track={selectedTrackForOptions}
+        isFavorite={selectedTrackForOptions ? isFavoriteTrack?.(selectedTrackForOptions.mediaId) : false}
+        onToggleFavorite={onToggleFavorite}
         onClose={() => setSelectedTrackForOptions(null)}
         onAddToQueue={onAddToQueue}
         onAddPlaylistPress={() => setIsPlaylistPickerVisible(true)}

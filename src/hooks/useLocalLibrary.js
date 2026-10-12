@@ -6,6 +6,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import TrackPlayer from '@rntp/player';
 import { extractMetadata } from '../utils/metadata';
+import { isExcludedAudio } from '../utils/audioFilter';
 import { localTracks } from '../constants/tracks';
 
 export default function useLocalLibrary({
@@ -106,13 +107,8 @@ export default function useLocalLibrary({
         if (!hasNextPage) break;
       }
 
-      // 2. Filtrar extensiones válidas y excluir clips de audio del sistema / notas de voz (< 10s)
-      const validExtensions = /\.(mp3|m4a|wav|flac|aac|ogg|opus)$/i;
-      const assetsList = allAssets.filter((asset) => {
-        if (!asset.filename || !validExtensions.test(asset.filename)) return false;
-        if (asset.duration && asset.duration > 0 && asset.duration < 10) return false;
-        return true;
-      });
+      // 2. Filtrar y excluir notas de voz, audios de mensajería (WhatsApp, Telegram) y grabadoras
+      const assetsList = allAssets.filter((asset) => !isExcludedAudio(asset));
 
       // 3. Construir mapa de caché de la biblioteca existente para reutilizar metadatos en 0ms
       let currentCache = localTracksRef.current || [];

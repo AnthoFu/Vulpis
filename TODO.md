@@ -49,13 +49,21 @@
 ---
 
 - [x] **Sistema de Favoritos ("Me Gusta"):**
-  - [x] Botón de acceso rápido con icono de corazón animado (efecto pop/spring) en [`PlayerCard.js`] para alternar favoritos en la pista activa.
-  - [x] Lista automática y persistente de "Favoritos" en [`usePlaylists.js`] guardada en AsyncStorage con sanitización preventiva de carátulas para evitar desbordes en SQLite (`CursorWindow`).
+  - [x] Botón de acceso rápido con icono de corazón animado (efecto pop/spring) en PlayerCard.js para alternar favoritos en la pista activa.
+  - [x] Lista automática y persistente de "Favoritos" en usePlaylists.js guardada en AsyncStorage con sanitización preventiva de carátulas para evitar desbordes en SQLite (`CursorWindow`).
   - [x] Tarjeta destacada con degradado rojo/rosa e insignia "AUTOMÁTICA" en la vista de Mis Playlists.
   - [x] Protección de la lista de Favoritos contra eliminación accidental.
   - [x] Opción de "Añadir/Quitar de Favoritos" en el modal de opciones de pista [`TrackOptionsModal.js`].
   - [x] Indicador y selector especial de Favoritos en el selector de listas [`PlaylistPickerModal.js`].
   - [x] Eliminación directa desde la vista detallada de la lista de Favoritos con icono de corazón activo.
+
+- [x] **Filtro Inteligente de Audio Local (Exclusión de WhatsApp y Grabadoras):**
+  - [x] Creación de utilidad centralizada audioFilter.js para detectar y excluir audios no musicales.
+  - [x] Exclusión de notas de voz y audios de WhatsApp (`AUD-*`, `PTT-*`, rutas `com.whatsapp`, `WhatsApp/Media`, etc.).
+  - [x] Exclusión de audios de Telegram, Messenger, Signal, Discord, Instagram y otras apps de mensajería.
+  - [x] Exclusión de notas de voz y grabaciones de llamadas telefónicas (`sound_recorder`, `voicenote`, `Call_*`, `REC_*`).
+  - [x] Filtrado de sonidos del sistema, tonos de notificación/alarma (< 15s) y cachés privadas de aplicaciones.
+  - [x] Depuración y saneamiento automático de pistas ya almacenadas en caché (`vulpis_local_tracks`).
 
 ---
 

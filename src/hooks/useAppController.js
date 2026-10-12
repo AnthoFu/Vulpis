@@ -6,6 +6,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { localTracks } from '../constants/tracks';
 import { getStoredToken } from '../utils/drive';
+import { isExcludedAudio } from '../utils/audioFilter';
 
 // Custom Hooks for modular logic
 import useToast from './useToast';
@@ -412,11 +413,15 @@ export default function useAppController() {
           if (stored) {
             const parsed = JSON.parse(stored);
             if (parsed && parsed.length > 0) {
-              initialTracks = parsed;
+              const cleaned = parsed.filter(t => !isExcludedAudio(t));
+              if (cleaned.length !== parsed.length) {
+                AsyncStorage.setItem('vulpis_local_tracks', JSON.stringify(cleaned)).catch(() => {});
+              }
+              initialTracks = cleaned;
               if (isMounted) {
-                setLocalLibraryTracks(parsed);
-                setHasCustomLocalTracks(true);
-                setTracks(parsed);
+                setLocalLibraryTracks(cleaned);
+                setHasCustomLocalTracks(cleaned.length > 0);
+                setTracks(cleaned);
               }
             }
           }
@@ -458,39 +463,45 @@ export default function useAppController() {
             sourceToRestore = 'local';
           }
 
+          // Filtrar cualquier audio de WhatsApp o no deseado que hubiera quedado en la cola guardada
+          const restoredQueue = savedState.playQueue.filter(t => !isExcludedAudio(t));
+          const effectiveQueue = restoredQueue.length > 0 ? restoredQueue : initialTracks;
+
           if (isMounted) {
             setCurrentSource(sourceToRestore);
             
             if (sourceToRestore === 'private') {
-              setPlayQueue(savedState.playQueue);
-              setTracks(savedState.tracksList || savedState.playQueue);
+              setPlayQueue(effectiveQueue);
+              setTracks(savedState.tracksList || effectiveQueue);
             } else {
-              setPlayQueue(savedState.playQueue);
+              setPlayQueue(effectiveQueue);
               setTracks(initialTracks);
             }
           }
 
-          await TrackPlayer.setMediaItems(savedState.playQueue);
-          
-          // Buscar el índice de la pista activa
-          let activeIndex = 0;
-          if (savedState.activeTrackId) {
-            const idx = savedState.playQueue.findIndex(t => t.mediaId === savedState.activeTrackId);
-            if (idx !== -1) {
-              activeIndex = idx;
+          if (effectiveQueue.length > 0) {
+            await TrackPlayer.setMediaItems(effectiveQueue);
+            
+            // Buscar el índice de la pista activa
+            let activeIndex = 0;
+            if (savedState.activeTrackId) {
+              const idx = effectiveQueue.findIndex(t => t.mediaId === savedState.activeTrackId);
+              if (idx !== -1) {
+                activeIndex = idx;
+              }
             }
-          }
-          await TrackPlayer.skipToIndex(activeIndex);
+            await TrackPlayer.skipToIndex(activeIndex);
 
-          if (savedState.progressPosition && savedState.progressPosition > 0) {
-            console.log(`[useAppController] Buscando posición guardada: ${savedState.progressPosition}`);
-            await TrackPlayer.seekTo(savedState.progressPosition);
-            if (isMounted) {
-              const activeTrackItem = savedState.playQueue[activeIndex];
-              setProgress({
-                position: savedState.progressPosition,
-                duration: activeTrackItem ? (activeTrackItem.duration || 0) : 0,
-              });
+            if (savedState.progressPosition && savedState.progressPosition > 0) {
+              console.log(`[useAppController] Buscando posición guardada: ${savedState.progressPosition}`);
+              await TrackPlayer.seekTo(savedState.progressPosition);
+              if (isMounted) {
+                const activeTrackItem = effectiveQueue[activeIndex];
+                setProgress({
+                  position: savedState.progressPosition,
+                  duration: activeTrackItem ? (activeTrackItem.duration || 0) : 0,
+                });
+              }
             }
           }
         } else if (initialTracks.length > 0) {

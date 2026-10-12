@@ -65,12 +65,19 @@
   - [x] Filtrado de sonidos del sistema, tonos de notificación/alarma (< 15s) y cachés privadas de aplicaciones.
   - [x] Depuración y saneamiento automático de pistas ya almacenadas en caché (`vulpis_local_tracks`).
 
+- [x] **Organización por Pestañas:** Vistas divididas por Canciones, Árbol de Artistas, Álbumes y Listas de Reproducción.
+  - [x] Selector interactivo de 4 pestañas superiores con iconos y diseño responsivo (`LIBRARY_TABS`).
+  - [x] Módulo modular de organización de biblioteca libraryOrganizer.js.
+  - [x] Vista de Árbol de Artistas con agrupación jerárquica (Artista -> Álbumes -> Canciones), avatares circulares y botón para reproducir la discografía completa del artista.
+  - [x] Vista de Álbumes con carátulas cuadradas grandes, información del artista, pistas ordenadas y botón para reproducir el álbum completo.
+  - [x] Integración transparente de Mis Playlists (con lista de reproducción activa, favoritos automáticos y creación).
+  - [x] Buscador adaptativo con filtrado en tiempo real según la pestaña activa (Canciones, Artistas, Álbumes o Playlists).
+
 ---
 
 # Mejoras por hacer
 
 - [ ] **Ecualizador de Audio (EQ):** Ecualizador con presets integrados (Rock, Pop, Jazz, Bass Boost, etc.).
-- [ ] **Organización por Pestañas:** Vistas divididas por Canciones, Árbol de Artistas, Álbumes y Listas de Reproducción.
 - [ ] **Ordenamiento Multicriterio:** Opción para ordenar listas por Nombre, Artista, Duración, Fecha de adición o Número de reproducciones.
 - [ ] **Exportación e Importación de Playlists:** Respaldar y compartir listas de reproducción en formato `.m3u` o `.json`.
 - [ ] **Historial de Reproducción:** Sección para consultar las canciones escuchadas recientemente.

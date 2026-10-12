@@ -107,6 +107,7 @@ function MainApp() {
         playQueue={playQueue}
         isLoading={isSourceChanging}
         currentSource={currentSource}
+        onSelectSource={handleSourceChange}
         onDeleteLocalTrack={handleDeleteLocalTrack}
         hasCustomLocalTracks={hasCustomLocalTracks}
         onAddToQueue={handleAddToQueue}

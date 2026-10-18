@@ -1,17 +1,17 @@
 import React from 'react';
-import useQueueList from '../hooks/useQueueList';
-import TrackOptionsModal from './TrackOptionsModal';
-import PlaylistPickerModal from './PlaylistPickerModal';
+import useQueueList from '../../hooks/useQueueList';
+import TrackOptionsModal from '../modals/TrackOptionsModal';
+import PlaylistPickerModal from '../modals/PlaylistPickerModal';
 
 // Subcomponentes modulares de la biblioteca
-import TrackItem from './library/TrackItem';
-import LibraryTabs from './library/LibraryTabs';
-import LibrarySearchBar from './library/LibrarySearchBar';
-import GoogleDrivePanel from './library/GoogleDrivePanel';
-import ArtistsTab from './library/ArtistsTab';
-import AlbumsTab from './library/AlbumsTab';
-import PlaylistsTab from './library/PlaylistsTab';
-import SongsTab from './library/SongsTab';
+import TrackItem from './TrackItem';
+import LibraryTabs from './LibraryTabs';
+import LibrarySearchBar from './LibrarySearchBar';
+import GoogleDrivePanel from './GoogleDrivePanel';
+import ArtistsTab from './ArtistsTab';
+import AlbumsTab from './AlbumsTab';
+import PlaylistsTab from './PlaylistsTab';
+import SongsTab from './SongsTab';
 
 /**
  * QueueList — Orquestador principal de la biblioteca musical y sus pestañas.

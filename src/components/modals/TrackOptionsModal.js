@@ -1,8 +1,11 @@
 import React from 'react';
 import { Text, View, TouchableOpacity, Modal, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import styles from '../styles/QueueList.styles';
+import styles from '../../styles/QueueList.styles';
 
+/**
+ * Modal contextual con opciones avanzadas de pista (añadir a cola/playlist, favoritos, Drive, eliminar).
+ */
 export default function TrackOptionsModal({
   visible,
   track,
@@ -36,25 +39,36 @@ export default function TrackOptionsModal({
           </Text>
           <Text style={styles.modalSubtitle} numberOfLines={1}>
             {track.artist}
-            {track.album && track.album !== 'Álbum Desconocido' && track.album !== 'Desconocido' ? ` • ${track.album}` : ''}
+            {track.album && track.album !== 'Álbum Desconocido' && track.album !== 'Desconocido'
+              ? ` • ${track.album}`
+              : ''}
           </Text>
 
           {track.genre && (
             <View style={styles.modalGenreBadge}>
-              <MaterialCommunityIcons name="guitar-acoustic" size={12} color="#A78BFA" style={{ marginRight: 4 }} />
+              <MaterialCommunityIcons
+                name="guitar-acoustic"
+                size={12}
+                color="#A78BFA"
+                style={{ marginRight: 4 }}
+              />
               <Text style={styles.modalGenreText}>{track.genre}</Text>
             </View>
           )}
 
-          {track.replayGain && (track.replayGain.trackGain !== null || track.replayGain.albumGain !== null) && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 }}>
-              <MaterialCommunityIcons name="volume-medium" size={14} color="#8B5CF6" />
-              <Text style={{ color: '#A78BFA', fontSize: 12, fontWeight: '500' }}>
-                ReplayGain: {track.replayGain.trackGain !== null ? `${track.replayGain.trackGain > 0 ? '+' : ''}${track.replayGain.trackGain.toFixed(2)} dB` : `${track.replayGain.albumGain > 0 ? '+' : ''}${track.replayGain.albumGain.toFixed(2)} dB (Álbum)`}
-              </Text>
-            </View>
-          )}
-          
+          {track.replayGain &&
+            (track.replayGain.trackGain !== null || track.replayGain.albumGain !== null) && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 }}>
+                <MaterialCommunityIcons name="volume-medium" size={14} color="#8B5CF6" />
+                <Text style={{ color: '#A78BFA', fontSize: 12, fontWeight: '500' }}>
+                  ReplayGain:{' '}
+                  {track.replayGain.trackGain !== null
+                    ? `${track.replayGain.trackGain > 0 ? '+' : ''}${track.replayGain.trackGain.toFixed(2)} dB`
+                    : `${track.replayGain.albumGain > 0 ? '+' : ''}${track.replayGain.albumGain.toFixed(2)} dB (Álbum)`}
+                </Text>
+              </View>
+            )}
+
           <View style={styles.modalDivider} />
 
           <TouchableOpacity

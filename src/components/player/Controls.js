@@ -1,10 +1,13 @@
 import React from 'react';
 import { View, TouchableOpacity } from 'react-native';
-import styles from '../styles/Controls.styles';
+import styles from '../../styles/Controls.styles';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { RepeatMode } from '@rntp/player';
-import useControls from '../hooks/useControls';
+import useControls from '../../hooks/useControls';
 
+/**
+ * Controles de reproducción principales: Anterior, Play/Pausa, Siguiente, Aleatorio y Repetición.
+ */
 export default function Controls({
   isPlaying,
   repeatMode,
@@ -36,7 +39,7 @@ export default function Controls({
 
   return (
     <View style={[styles.controlsRow, isProcessing && styles.controlsDisabled]}>
-      {/* BOTÓN DE REPRODUCCIÓN ALEATORIA */}
+      {/* Botón de reproducción aleatoria */}
       <TouchableOpacity
         onPress={toggleShuffle}
         style={[styles.secondaryButton, isShuffleActive && styles.activeSecondaryButton]}
@@ -49,12 +52,12 @@ export default function Controls({
         />
       </TouchableOpacity>
 
-      {/* BOTÓN ANTERIOR */}
+      {/* Botón anterior */}
       <TouchableOpacity onPress={playPrevious} style={styles.controlButton} disabled={isProcessing}>
         <MaterialCommunityIcons name="skip-previous" size={26} color="#FFFFFF" />
       </TouchableOpacity>
 
-      {/* BOTÓN REPRODUCIR / PAUSAR */}
+      {/* Botón reproducir / pausar */}
       <TouchableOpacity onPress={togglePlayback} style={styles.playButton} disabled={isProcessing}>
         <MaterialCommunityIcons
           name={isPlaying ? 'pause' : 'play'}
@@ -64,12 +67,12 @@ export default function Controls({
         />
       </TouchableOpacity>
 
-      {/* BOTÓN SIGUIENTE */}
+      {/* Botón siguiente */}
       <TouchableOpacity onPress={playNext} style={styles.controlButton} disabled={isProcessing}>
         <MaterialCommunityIcons name="skip-next" size={26} color="#FFFFFF" />
       </TouchableOpacity>
 
-      {/* BOTÓN DE REPETICIÓN */}
+      {/* Botón de repetición */}
       <TouchableOpacity
         onPress={cycleRepeatMode}
         style={[styles.secondaryButton, isRepeatActive && styles.activeSecondaryButton]}

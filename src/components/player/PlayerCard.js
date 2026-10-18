@@ -1,18 +1,18 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Text, View, Image, TouchableOpacity, FlatList, Animated, StyleSheet, Modal, TouchableWithoutFeedback, Dimensions, ScrollView, ActivityIndicator } from 'react-native';
-import styles from '../styles/PlayerCard.styles';
+import styles from '../../styles/PlayerCard.styles';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import ProgressBar from './ProgressBar';
 import Controls from './Controls';
-import usePlayerCard from '../hooks/usePlayerCard';
-import useSheetAnimation from '../hooks/useSheetAnimation';
-import { SPRING, DURATION } from '../constants/animations';
-import { parseLrcLyrics } from '../utils/metadata';
+import usePlayerCard from '../../hooks/usePlayerCard';
+import useSheetAnimation from '../../hooks/useSheetAnimation';
+import { SPRING, DURATION } from '../../constants/animations';
+import { parseLrcLyrics } from '../../utils/metadata';
 import TrackPlayer from '@rntp/player';
-import EditLyricsModal from './EditLyricsModal';
-import SleepTimerModal from './SleepTimerModal';
+import EditLyricsModal from '../modals/EditLyricsModal';
+import SleepTimerModal from '../modals/SleepTimerModal';
 import QueueSheet from './QueueSheet';
 
 export default function PlayerCard({

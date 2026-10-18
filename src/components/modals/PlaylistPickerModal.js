@@ -1,8 +1,11 @@
 import React from 'react';
 import { Text, View, TouchableOpacity, Modal, FlatList, TextInput } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import styles from '../styles/QueueList.styles';
+import styles from '../../styles/QueueList.styles';
 
+/**
+ * Modal para seleccionar o crear una lista de reproducción y añadir una pista.
+ */
 export default function PlaylistPickerModal({
   visible,
   playlists,
@@ -35,7 +38,7 @@ export default function PlaylistPickerModal({
 
           <View style={styles.modalDivider} />
 
-          {/* List of playlists */}
+          {/* Lista de playlists */}
           <FlatList
             data={playlists}
             keyExtractor={(item) => item.id}
@@ -72,7 +75,7 @@ export default function PlaylistPickerModal({
 
           <View style={styles.modalDivider} />
 
-          {/* Inline creation input inside picker */}
+          {/* Campo para crear playlist dentro del selector */}
           <View style={styles.inlineCreateWrapper}>
             <TextInput
               placeholder="Nueva playlist..."
@@ -84,7 +87,11 @@ export default function PlaylistPickerModal({
             <TouchableOpacity
               onPress={handleCreateAndAdd}
               disabled={!inlineNewPlaylistName || inlineNewPlaylistName.trim() === ''}
-              style={[styles.inlineCreateBtn, (!inlineNewPlaylistName || inlineNewPlaylistName.trim() === '') && styles.inlineCreateBtnDisabled]}
+              style={[
+                styles.inlineCreateBtn,
+                (!inlineNewPlaylistName || inlineNewPlaylistName.trim() === '') &&
+                  styles.inlineCreateBtnDisabled,
+              ]}
               activeOpacity={0.8}
             >
               <Text style={styles.inlineCreateBtnText}>Crear</Text>

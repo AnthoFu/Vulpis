@@ -12,8 +12,8 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import styles from '../styles/QueueSheet.styles';
-import useSheetAnimation from '../hooks/useSheetAnimation';
+import styles from '../../styles/QueueSheet.styles';
+import useSheetAnimation from '../../hooks/useSheetAnimation';
 
 const ITEM_ROW_HEIGHT = 70; // 64px item height + 6px marginBottom
 

@@ -8,12 +8,14 @@ import {
 } from 'react-native';
 import styles from './src/styles/App.styles';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import Header from './src/components/Header';
-import PlayerCard from './src/components/PlayerCard';
-import MiniPlayer from './src/components/MiniPlayer';
-import QueueList from './src/components/QueueList';
-import SidebarDrawer from './src/components/SidebarDrawer';
-import SettingsModal from './src/components/SettingsModal';
+import {
+  Header,
+  PlayerCard,
+  MiniPlayer,
+  QueueList,
+  SidebarDrawer,
+  SettingsModal,
+} from './src/components';
 import useAppController from './src/hooks/useAppController';
 
 function MainApp() {

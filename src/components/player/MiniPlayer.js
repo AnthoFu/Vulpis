@@ -1,10 +1,13 @@
 import React from 'react';
 import { Text, View, Image, TouchableOpacity } from 'react-native';
-import styles from '../styles/MiniPlayer.styles';
+import styles from '../../styles/MiniPlayer.styles';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import useMiniPlayer from '../hooks/useMiniPlayer';
+import useMiniPlayer from '../../hooks/useMiniPlayer';
 
+/**
+ * Mini reproductor flotante persistente en la parte inferior de la pantalla.
+ */
 export default function MiniPlayer({
   activeTrack,
   isPlaying,

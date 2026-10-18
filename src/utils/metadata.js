@@ -162,35 +162,79 @@ export function cleanGenreString(raw) {
 
 export function formatLyricsText(rawLyrics) {
   if (!rawLyrics || typeof rawLyrics !== 'string') return '';
-  return rawLyrics.replace(/\[\d{2}:\d{2}(?:\.\d{2,3})?\]/g, '').trim();
+  return rawLyrics
+    .split('\n')
+    .filter(line => !/^\[(ar|ti|al|by|offset|length|re|ve):.*\]$/i.test(line.trim()))
+    .map(line => line.replace(/\[\d{1,3}:\d{2}(?:\.\d{1,3})?\]/g, '').trim())
+    .filter((line, idx, arr) => line.length > 0 || (idx > 0 && arr[idx - 1].length > 0))
+    .join('\n')
+    .trim();
 }
 
 export function parseLrcLyrics(rawLyrics) {
   if (!rawLyrics || typeof rawLyrics !== 'string') return [];
   const lines = rawLyrics.split('\n');
   const result = [];
-  const timeRegex = /\[(\d{2}):(\d{2})(?:\.(\d{2,3}))?\]/g;
+  const timeRegex = /\[(\d{1,3}):(\d{2})(?:\.(\d{1,3}))?\]/g;
+  const metaRegex = /^\[(ar|ti|al|by|length|re|ve):.*\]$/i;
+
+  let globalOffset = 0;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const offsetMatch = trimmed.match(/^\[offset:\s*([+-]?\d+)\s*\]$/i);
+    if (offsetMatch) {
+      globalOffset = (parseInt(offsetMatch[1], 10) || 0) / 1000;
+      break;
+    }
+  }
 
   for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || metaRegex.test(trimmed) || /^\[offset:.*\]$/i.test(trimmed)) {
+      continue;
+    }
+
     const matches = [...line.matchAll(timeRegex)];
     const text = line.replace(timeRegex, '').trim();
+
     if (matches.length > 0) {
       for (const m of matches) {
         const min = parseInt(m[1], 10);
         const sec = parseInt(m[2], 10);
         const ms = m[3] ? parseInt(m[3].padEnd(3, '0'), 10) : 0;
-        const timeInSeconds = min * 60 + sec + ms / 1000;
+        let timeInSeconds = min * 60 + sec + ms / 1000;
+        if (globalOffset !== 0) {
+          timeInSeconds = Math.max(0, timeInSeconds + globalOffset);
+        }
         if (text) {
-          result.push({ time: timeInSeconds, text });
+          result.push({ time: timeInSeconds, text, isBreak: false });
+        } else {
+          result.push({ time: timeInSeconds, text: '♪  ♪  ♪', isBreak: true });
         }
       }
-    } else if (line.trim()) {
-      result.push({ time: null, text: line.trim() });
+    } else if (trimmed) {
+      result.push({ time: null, text: trimmed, isBreak: false });
     }
   }
 
-  result.sort((a, b) => (a.time ?? 0) - (b.time ?? 0));
-  return result;
+  result.sort((a, b) => {
+    if (a.time === null && b.time === null) return 0;
+    if (a.time === null) return 1;
+    if (b.time === null) return -1;
+    return a.time - b.time;
+  });
+
+  // Eliminar pausas/breaks redundantes consecutivos
+  const cleanResult = [];
+  for (let i = 0; i < result.length; i++) {
+    const curr = result[i];
+    const prev = cleanResult[cleanResult.length - 1];
+    if (curr.isBreak && prev && prev.isBreak) {
+      continue;
+    }
+    cleanResult.push(curr);
+  }
+  return cleanResult;
 }
 
 function decodeText(bytes, encoding) {

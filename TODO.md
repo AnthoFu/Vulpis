@@ -73,6 +73,14 @@
   - [x] Integración transparente de Mis Playlists (con lista de reproducción activa, favoritos automáticos y creación).
   - [x] Buscador adaptativo con filtrado en tiempo real según la pestaña activa (Canciones, Artistas, Álbumes o Playlists).
 
+- [x] **Auto-scroll y Resaltado en Letras Sincronizadas (.lrc):**
+  - [x] Parser mejorado de archivos y cadenas `.lrc` con soporte para marcas de tiempo flexibles, exclusión de etiquetas de metadatos (`[ar:]`, `[ti:]`, etc.), compensación por `[offset:]` y detección de silencios/pausas instrumentales (`♪ ♪ ♪`).
+  - [x] Resaltado dinámico con contraste mejorado: estrofas ya reproducidas atenuadas, línea activa vibrante con sombra de texto y barra lateral violeta, y líneas por cantar en tono suave.
+  - [x] Desplazamiento automático interactivo y centrado suave en la línea activa conforme avanza la reproducción de la canción.
+  - [x] Interactividad táctil (Tap-to-Seek): toque sobre cualquier línea con marca de tiempo para saltar la reproducción (`TrackPlayer.seekTo`) a ese segundo exacto.
+  - [x] Detección inteligente de scroll manual: pausa temporal del auto-scroll al deslizar manualmente y botón flotante "Sincronizar" para regresar al compás actual o reanudación automática tras inactividad.
+  - [x] Insignia visual "Sincronizadas" en el encabezado de la hoja de letras.
+
 ---
 
 # Mejoras por hacer
@@ -81,7 +89,6 @@
 - [ ] **Ordenamiento Multicriterio:** Opción para ordenar listas por Nombre, Artista, Duración, Fecha de adición o Número de reproducciones.
 - [ ] **Exportación e Importación de Playlists:** Respaldar y compartir listas de reproducción en formato `.m3u` o `.json`.
 - [ ] **Historial de Reproducción:** Sección para consultar las canciones escuchadas recientemente.
-- [ ] **Auto-scroll y Resaltado en Letras Sincronizadas (.lrc):** Desplazamiento automático interactivo conforme avanza la canción con resaltado de la línea actual.
 - [ ] **Búsqueda Manual Interactiva de Letras:** Permitir al usuario buscar y seleccionar manualmente la letra en LRCLIB si la búsqueda automática no coincide.
 - [ ] **Editor de Etiquetas ID3 (Tag Editor):** Editar título, artista, álbum y género directamente sobre los archivos MP3 locales.
 - [ ] **Descargador de Carátulas (Album Art Fetcher):** Búsqueda y descarga automática de portadas en alta resolución desde servicios abiertos (Cover Art Archive / MusicBrainz).

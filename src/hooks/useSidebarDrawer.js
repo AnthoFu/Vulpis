@@ -14,7 +14,7 @@ export default function useSidebarDrawer({ isOpen }) {
   const isFirstRender = useRef(true);
 
   useEffect(() => {
-    // Avoid running the animation on the initial render if the drawer is closed
+    // Evitar ejecutar la animación en el render inicial si el menú lateral está cerrado
     if (isFirstRender.current) {
       isFirstRender.current = false;
       if (!isOpen) {

@@ -269,7 +269,7 @@ export default function SettingsModal({
                         </View>
                       </View>
 
-                      {/* Pre-amplificación sin ReplayGain (Fallback) */}
+                      {/* Pre-amplificación sin ReplayGain (Respaldo) */}
                       <View style={{ marginTop: 12 }}>
                         <Text style={styles.subSectionTitle}>Canciones sin ReplayGain (Atenuación)</Text>
                         <Text style={styles.settingDescription}>

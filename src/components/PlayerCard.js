@@ -10,6 +10,7 @@ import usePlayerCard from '../hooks/usePlayerCard';
 import useSheetAnimation from '../hooks/useSheetAnimation';
 import { SPRING, DURATION } from '../constants/animations';
 import { parseLrcLyrics } from '../utils/metadata';
+import TrackPlayer from '@rntp/player';
 import EditLyricsModal from './EditLyricsModal';
 import SleepTimerModal from './SleepTimerModal';
 import QueueSheet from './QueueSheet';
@@ -150,21 +151,137 @@ export default function PlayerCard({
     );
   };
 
+  const lyricsScrollRef = useRef(null);
+  const lineLayoutsRef = useRef({});
+  const containerHeightRef = useRef(0);
+  const isUserScrollingRef = useRef(false);
+  const userScrollTimeoutRef = useRef(null);
+  const [isUserScrolled, setIsUserScrolled] = useState(false);
+
   const parsedLines = useMemo(() => parseLrcLyrics(rawLyrics), [rawLyrics]);
-  let activeLyricLine = null;
-  if (parsedLines && parsedLines.length > 0) {
-    const hasTimestamps = parsedLines.some(l => l.time !== null);
-    if (hasTimestamps) {
-      for (let i = 0; i < parsedLines.length; i++) {
-        const item = parsedLines[i];
-        if (item.time !== null && position >= item.time) {
-          activeLyricLine = item.text;
-        }
+  const hasTimestamps = useMemo(() => parsedLines.some(l => l.time !== null), [parsedLines]);
+
+  const activeIndex = useMemo(() => {
+    if (!hasTimestamps || parsedLines.length === 0) return -1;
+    let idx = -1;
+    for (let i = 0; i < parsedLines.length; i++) {
+      const item = parsedLines[i];
+      if (item.time !== null && position >= item.time) {
+        idx = i;
       }
-    } else if (lyricsText) {
-      activeLyricLine = lyricsText.split('\n').find(line => line.trim().length > 0) || null;
     }
-  }
+    return idx;
+  }, [hasTimestamps, parsedLines, position]);
+
+  const activeLyricLine = useMemo(() => {
+    if (activeIndex >= 0 && activeIndex < parsedLines.length) {
+      return parsedLines[activeIndex].text;
+    }
+    if (lyricsText) {
+      return lyricsText.split('\n').find(line => line.trim().length > 0) || null;
+    }
+    return null;
+  }, [activeIndex, parsedLines, lyricsText]);
+
+  const scrollToActiveLine = useCallback((indexToScroll = activeIndex, animated = true) => {
+    if (indexToScroll < 0 || !lyricsScrollRef.current) return;
+    const layout = lineLayoutsRef.current[indexToScroll];
+    if (!layout) {
+      setTimeout(() => {
+        const retryLayout = lineLayoutsRef.current[indexToScroll];
+        if (retryLayout && lyricsScrollRef.current && !isUserScrollingRef.current) {
+          const containerH = containerHeightRef.current || 400;
+          const targetY = Math.max(0, retryLayout.y - containerH * 0.32 + retryLayout.height / 2);
+          lyricsScrollRef.current?.scrollTo({ y: targetY, animated });
+        }
+      }, 100);
+      return;
+    }
+
+    const containerH = containerHeightRef.current || 400;
+    const targetY = Math.max(0, layout.y - containerH * 0.32 + layout.height / 2);
+    lyricsScrollRef.current.scrollTo({ y: targetY, animated });
+  }, [activeIndex]);
+
+  // Auto-scroll conforme avanza la reproducción de la pista
+  useEffect(() => {
+    if (isLyricsVisible && hasTimestamps && activeIndex >= 0 && !isUserScrollingRef.current) {
+      scrollToActiveLine(activeIndex, true);
+    }
+  }, [activeIndex, isLyricsVisible, hasTimestamps, scrollToActiveLine]);
+
+  // Centrar en la línea actual al abrir la hoja de letras
+  useEffect(() => {
+    if (isLyricsVisible && hasTimestamps && activeIndex >= 0) {
+      const timer = setTimeout(() => {
+        if (!isUserScrollingRef.current) {
+          scrollToActiveLine(activeIndex, false);
+        }
+      }, 180);
+      return () => clearTimeout(timer);
+    }
+  }, [isLyricsVisible, hasTimestamps, activeIndex, scrollToActiveLine]);
+
+  // Reiniciar estado de layouts al cambiar de canción
+  useEffect(() => {
+    lineLayoutsRef.current = {};
+    isUserScrollingRef.current = false;
+    setIsUserScrolled(false);
+    if (userScrollTimeoutRef.current) {
+      clearTimeout(userScrollTimeoutRef.current);
+    }
+    lyricsScrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, [activeTrack?.mediaId, activeTrack?.url, rawLyrics]);
+
+  useEffect(() => {
+    return () => {
+      if (userScrollTimeoutRef.current) {
+        clearTimeout(userScrollTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleScrollBeginDrag = useCallback(() => {
+    isUserScrollingRef.current = true;
+    setIsUserScrolled(true);
+    if (userScrollTimeoutRef.current) {
+      clearTimeout(userScrollTimeoutRef.current);
+    }
+  }, []);
+
+  const handleScrollEndDrag = useCallback(() => {
+    if (userScrollTimeoutRef.current) {
+      clearTimeout(userScrollTimeoutRef.current);
+    }
+    userScrollTimeoutRef.current = setTimeout(() => {
+      isUserScrollingRef.current = false;
+      setIsUserScrolled(false);
+      scrollToActiveLine(activeIndex, true);
+    }, 4000);
+  }, [activeIndex, scrollToActiveLine]);
+
+  const handleManualSyncPress = useCallback(() => {
+    if (userScrollTimeoutRef.current) {
+      clearTimeout(userScrollTimeoutRef.current);
+    }
+    isUserScrollingRef.current = false;
+    setIsUserScrolled(false);
+    scrollToActiveLine(activeIndex, true);
+  }, [activeIndex, scrollToActiveLine]);
+
+  const handleLyricLinePress = useCallback(async (lineTime) => {
+    if (lineTime === null || lineTime === undefined) return;
+    try {
+      if (userScrollTimeoutRef.current) {
+        clearTimeout(userScrollTimeoutRef.current);
+      }
+      isUserScrollingRef.current = false;
+      setIsUserScrolled(false);
+      await TrackPlayer.seekTo(lineTime);
+    } catch (e) {
+      console.error('[PlayerCard] Error al buscar tiempo de letra:', e);
+    }
+  }, []);
 
   const lyricFadeAnim = useRef(new Animated.Value(1)).current;
   const prevLyricRef = useRef(activeLyricLine);
@@ -343,7 +460,15 @@ export default function PlayerCard({
 
             <View style={styles.lyricsHeader}>
               <View style={{ flex: 1, paddingRight: 8 }}>
-                <Text style={styles.lyricsTitle} numberOfLines={1}>Letras</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={styles.lyricsTitle} numberOfLines={1}>Letras</Text>
+                  {hasTimestamps && (
+                    <View style={styles.syncedBadge}>
+                      <MaterialCommunityIcons name="lightning-bolt" size={12} color="#A78BFA" />
+                      <Text style={styles.syncedBadgeText}>Sincronizadas</Text>
+                    </View>
+                  )}
+                </View>
                 <Text style={styles.lyricsTrackSub} numberOfLines={1}>
                   {currentTrackTitle} • {currentTrackArtist}
                 </Text>
@@ -367,9 +492,16 @@ export default function PlayerCard({
             </View>
 
             <ScrollView
+              ref={lyricsScrollRef}
               style={styles.lyricsScrollView}
               contentContainerStyle={styles.lyricsScrollContent}
               showsVerticalScrollIndicator={false}
+              onLayout={(e) => {
+                containerHeightRef.current = e.nativeEvent.layout.height;
+              }}
+              onScrollBeginDrag={handleScrollBeginDrag}
+              onScrollEndDrag={handleScrollEndDrag}
+              onMomentumScrollEnd={handleScrollEndDrag}
             >
               {isLoadingLyrics ? (
                 <View style={styles.lyricsLoadingContainer}>
@@ -377,45 +509,45 @@ export default function PlayerCard({
                   <Text style={styles.lyricsLoadingText}>Cargando letra de la canción...</Text>
                 </View>
               ) : lyricsText ? (
-                (() => {
-                  const parsedLines = parseLrcLyrics(rawLyrics);
-                  const hasTimestamps = parsedLines.some(l => l.time !== null);
-
-                  if (hasTimestamps) {
-                    let activeIndex = -1;
-                    for (let i = 0; i < parsedLines.length; i++) {
-                      const item = parsedLines[i];
-                      if (item.time !== null && position >= item.time) {
-                        activeIndex = i;
-                      }
-                    }
-
-                    return (
-                      <View>
-                        {parsedLines.map((line, idx) => {
-                          const isActive = idx === activeIndex;
-                          return (
-                            <Text
-                              key={idx}
-                              style={[
-                                styles.lyricLineText,
-                                isActive && styles.lyricLineActiveText,
-                              ]}
-                            >
-                              {line.text}
-                            </Text>
-                          );
-                        })}
-                      </View>
-                    );
-                  }
-
-                  return (
-                    <Text style={styles.lyricsBodyText}>
-                      {lyricsText}
-                    </Text>
-                  );
-                })()
+                hasTimestamps ? (
+                  <View>
+                    {parsedLines.map((line, idx) => {
+                      const isActive = idx === activeIndex;
+                      const isPassed = hasTimestamps && activeIndex >= 0 && idx < activeIndex;
+                      return (
+                        <TouchableOpacity
+                          key={idx}
+                          onLayout={(e) => {
+                            lineLayoutsRef.current[idx] = e.nativeEvent.layout;
+                          }}
+                          onPress={() => handleLyricLinePress(line.time)}
+                          disabled={line.time === null}
+                          activeOpacity={0.7}
+                          style={[
+                            styles.lyricLineRow,
+                            isActive && styles.lyricLineRowActive,
+                            line.isBreak && styles.lyricLineRowBreak,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.lyricLineText,
+                              isPassed && styles.lyricLinePassedText,
+                              isActive && styles.lyricLineActiveText,
+                              line.isBreak && styles.lyricLineBreakText,
+                            ]}
+                          >
+                            {line.text}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                ) : (
+                  <Text style={styles.lyricsBodyText}>
+                    {lyricsText}
+                  </Text>
+                )
               ) : (
                 <View style={styles.emptyLyricsContainer}>
                   <View style={styles.emptyLyricsIconCircle}>
@@ -436,6 +568,18 @@ export default function PlayerCard({
                 </View>
               )}
             </ScrollView>
+
+            {/* Botón flotante para sincronizar si el usuario scrolleó manualmente */}
+            {isUserScrolled && hasTimestamps && activeIndex >= 0 && (
+              <TouchableOpacity
+                style={styles.syncButton}
+                onPress={handleManualSyncPress}
+                activeOpacity={0.85}
+              >
+                <MaterialCommunityIcons name="crosshairs-gps" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                <Text style={styles.syncButtonText}>Sincronizar</Text>
+              </TouchableOpacity>
+            )}
           </Animated.View>
         </View>
       )}

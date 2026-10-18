@@ -81,10 +81,10 @@ export default function SidebarDrawer({ isOpen, onClose, currentSource, onSelect
               </View>
             </View>
 
-            {/* Separation Line */}
+            {/* Línea de separación */}
             <View style={styles.divider} />
 
-            {/* Navigation Options */}
+            {/* Opciones de navegación */}
             <View style={styles.menuList}>
               <Text style={styles.sectionHeader}>FUENTES DE AUDIO</Text>
               {menuItems.map((item) => {

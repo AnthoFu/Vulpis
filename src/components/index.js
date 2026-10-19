@@ -8,6 +8,8 @@ export { default as MiniPlayer } from './player/MiniPlayer';
 export { default as Controls } from './player/Controls';
 export { default as ProgressBar } from './player/ProgressBar';
 export { default as QueueSheet } from './player/QueueSheet';
+export { default as QueueItemRow } from './player/QueueItemRow';
+export { default as LyricsSheet } from './player/LyricsSheet';
 
 // Modales
 export { default as SettingsModal } from './modals/SettingsModal';

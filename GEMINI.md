@@ -88,9 +88,16 @@ Vulpis/
 │       ├── QueueList.styles.js
 │       ├── library/           # Estilos específicos de las pestañas de biblioteca
 │       └── ...
+├── src/web/                   # Versión Web independiente (Cero impacto en móvil)
+│   ├── App.js                 # Contenedor principal de la versión Web
+│   ├── components/            # WebNavbar, WebSidebar, WebTrackList, WebPlayerBottomBar, etc.
+│   ├── hooks/                 # useWebPlayer, useWebDrive, useWebLyrics
+│   ├── services/              # webAudioPlayer (HTML5), webDrive (OAuth/Stream), webCache, webLyrics
+│   └── styles/                # web.styles.js (layout de escritorio, flexbox, tema oscuro)
 ├── app.config.js              # Configuración dinámica de Expo (Permissions, Schemes, IDs)
-├── App.js                     # Punto de entrada de la interfaz de usuario
-├── index.js                   # Punto de entrada nativo de React Native (registro de service)
+├── App.js                     # Punto de entrada de la interfaz de usuario móvil
+├── index.js                   # Punto de entrada nativo de Android/iOS (TrackPlayer service)
+├── index.web.js               # Punto de entrada web de Expo (Metro Web bundler)
 ├── service.js                 # Servicio de reproducción en segundo plano para TrackPlayer
 ├── package.json               # Dependencias y scripts
 ├── README.md                  # Documentación principal en español para desarrolladores
@@ -141,6 +148,15 @@ Al realizar cambios en Vulpis, se **deben** respetar las siguientes decisiones a
   5. **Fallback:** Mensaje "Letra no encontrada" y opción de agregar/editar letra manualmente.
 - Para letras sincronizadas (`.lrc`), `useSyncedLyrics.js` implementa auto-scroll con detección de desplazamiento manual del usuario y la funcionalidad **Tap-to-Seek** para saltar la reproducción al compás seleccionado.
 
+### 4.7. Arquitectura de la Versión Web (`src/web/`)
+- **Cero Impacto en Móvil:** Se utiliza `index.web.js` como punto de entrada exclusivo para Metro en Web. En Android e iOS, el empaquetador continúa resolviendo `index.js` y `@rntp/player` sin alteraciones ni sobrecarga.
+- **Motor de Audio Web:** La clase `WebAudioPlayer` (`src/web/services/webAudioPlayer.js`) envuelve el elemento HTML5 `<audio>` soportando reproducción, pausas, seeking, shuffle, repeat y cola dinámica sin depender de ExoPlayer ni C++.
+- **Streaming y CORS de Google Drive:** Para reproducir archivos protegidos con token Bearer en el navegador sin problemas de headers en `<audio>`, se utiliza `getWebAudioBlobUrl`:
+  1. Consulta la caché local del navegador con la **Cache Storage API** (`vulpis-web-audio-v1`).
+  2. Si no está en caché, realiza `fetch` con cabecera `Authorization: Bearer <token>`, guarda el `Blob` en caché y devuelve un `URL.createObjectURL(blob)`.
+- **Metadatos y Carátulas ID3 en Web:** Se utiliza `jsmediatags/dist/jsmediatags.min.js` para leer etiquetas ID3 y portadas directamente sobre los Blobs descargados.
+- **Letras Sincronizadas Web:** `webLyrics.js` parsea formatos `.lrc` y consulta LRCLIB directamente en el navegador con soporte de auto-scroll y salto temporal interactivo.
+
 ---
 
 ## 🚀 5. Flujos de Trabajo y Comandos de Desarrollo
@@ -148,13 +164,18 @@ Al realizar cambios en Vulpis, se **deben** respetar las siguientes decisiones a
 ### 5.1. Variables de Entorno (`.env`)
 Crear un archivo `.env` en la raíz (ignorado por `.gitignore`):
 ```env
+# Cliente OAuth para la App Móvil (iOS / Android)
 EXPO_PUBLIC_GOOGLE_CLIENT_ID=tu_cliente_oauth_de_google.apps.googleusercontent.com
+
+# Cliente OAuth para la App Web (Aplicación web con origen http://localhost:8081)
+EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=tu_cliente_web_oauth.apps.googleusercontent.com
 ```
 
 ### 5.2. Comandos de Terminal Más Usados
 
 | Tarea | Comando | Notas |
 | :--- | :--- | :--- |
+| **Iniciar Versión Web** | `npm run web` | Servidor web en `http://localhost:8081` |
 | **Iniciar Metro Bundler** | `npm start` o `npx expo start` | Servidor de desarrollo |
 | **Ejecutar en Android Físico** | `npm run android` o `npx expo run:android` | Requiere dispositivo con depuración USB y Java 21 |
 | **Ejecutar en iOS** | `npm run ios` | Requiere macOS y CocoaPods configurados |

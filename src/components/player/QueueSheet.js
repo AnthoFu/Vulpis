@@ -32,7 +32,7 @@ function QueueSheet({
   onDragActive,
 }) {
   const insets = useSafeAreaInsets();
-  const defaultArtwork = Image.resolveAssetSource(require('../../assets/default-cover.jpg')).uri;
+  const defaultArtwork = Image.resolveAssetSource(require('../../../assets/default-cover.jpg')).uri;
 
   const {
     visible: sheetVisible,

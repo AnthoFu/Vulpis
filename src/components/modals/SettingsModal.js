@@ -10,9 +10,9 @@ import {
   ScrollView,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import styles from '../styles/SettingsModal.styles';
-import { getSettings, saveSettings, clearLyricsCache } from '../utils/onlineLyrics';
-import { DEFAULT_REPLAYGAIN_SETTINGS } from '../utils/replayGain';
+import styles from '../../styles/SettingsModal.styles';
+import { getSettings, saveSettings, clearLyricsCache } from '../../utils/onlineLyrics';
+import { DEFAULT_REPLAYGAIN_SETTINGS } from '../../utils/replayGain';
 import SleepTimerModal from './SleepTimerModal';
 
 export default function SettingsModal({
@@ -269,7 +269,7 @@ export default function SettingsModal({
                         </View>
                       </View>
 
-                      {/* Pre-amplificación sin ReplayGain (Fallback) */}
+                      {/* Pre-amplificación sin ReplayGain (Respaldo) */}
                       <View style={{ marginTop: 12 }}>
                         <Text style={styles.subSectionTitle}>Canciones sin ReplayGain (Atenuación)</Text>
                         <Text style={styles.settingDescription}>

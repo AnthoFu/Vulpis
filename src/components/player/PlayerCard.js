@@ -1,18 +1,26 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Text, View, Image, TouchableOpacity, FlatList, Animated, StyleSheet, Modal, TouchableWithoutFeedback, Dimensions, ScrollView, ActivityIndicator } from 'react-native';
-import styles from '../styles/PlayerCard.styles';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import {
+  Text,
+  View,
+  Image,
+  TouchableOpacity,
+  Animated,
+  StyleSheet,
+  Dimensions,
+} from 'react-native';
+import styles from '../../styles/PlayerCard.styles';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import ProgressBar from './ProgressBar';
 import Controls from './Controls';
-import usePlayerCard from '../hooks/usePlayerCard';
-import useSheetAnimation from '../hooks/useSheetAnimation';
-import { SPRING, DURATION } from '../constants/animations';
-import { parseLrcLyrics } from '../utils/metadata';
-import EditLyricsModal from './EditLyricsModal';
-import SleepTimerModal from './SleepTimerModal';
 import QueueSheet from './QueueSheet';
+import LyricsSheet from './LyricsSheet';
+import usePlayerCard from '../../hooks/usePlayerCard';
+import useSyncedLyrics from '../../hooks/useSyncedLyrics';
+import { SPRING, DURATION } from '../../constants/animations';
+import EditLyricsModal from '../modals/EditLyricsModal';
+import SleepTimerModal from '../modals/SleepTimerModal';
 
 export default function PlayerCard({
   activeTrack,
@@ -45,7 +53,7 @@ export default function PlayerCard({
   const [isEditLyricsVisible, setIsEditLyricsVisible] = useState(false);
   const [isSleepTimerVisible, setIsSleepTimerVisible] = useState(false);
   const heartScaleAnim = useRef(new Animated.Value(1)).current;
-  
+
   const {
     isQueueVisible,
     setIsQueueVisible,
@@ -57,7 +65,6 @@ export default function PlayerCard({
     colorA,
     colorB,
     fadeAnim,
-    defaultTrack,
     currentTrackTitle,
     currentTrackArtist,
     currentTrackArtwork,
@@ -72,11 +79,27 @@ export default function PlayerCard({
     initialQueueVisible,
   });
 
+  // Hook modular para sincronización, auto-scroll y salto en letras (.lrc)
   const {
-    visible: lyricsSheetVisible,
-    translateY: lyricsTranslateY,
-    backdropOpacity: lyricsBackdropOpacity,
-  } = useSheetAnimation({ isOpen: isLyricsVisible });
+    parsedLines,
+    hasTimestamps,
+    activeIndex,
+    activeLyricLine,
+    isUserScrolled,
+    lyricsScrollRef,
+    lineLayoutsRef,
+    containerHeightRef,
+    handleScrollBeginDrag,
+    handleScrollEndDrag,
+    handleManualSyncPress,
+    handleLyricLinePress,
+  } = useSyncedLyrics({
+    rawLyrics,
+    lyricsText,
+    position,
+    activeTrackId: activeTrack?.mediaId,
+    isVisible: isLyricsVisible,
+  });
 
   const SCREEN_HEIGHT = Dimensions.get('window').height;
   const playerSlideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
@@ -128,44 +151,6 @@ export default function PlayerCard({
     }
   }, [onToggleFavorite, heartScaleAnim]);
 
-  const renderBackground = () => {
-    return (
-      <View style={StyleSheet.absoluteFill}>
-        <LinearGradient
-          colors={[colorA, '#090A0F']}
-          style={StyleSheet.absoluteFill}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-        />
-        <Animated.View style={[StyleSheet.absoluteFill, { opacity: fadeAnim }]}>
-          <LinearGradient
-            colors={[colorB, '#090A0F']}
-            style={StyleSheet.absoluteFill}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-          />
-        </Animated.View>
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(9, 10, 15, 0.4)' }]} />
-      </View>
-    );
-  };
-
-  const parsedLines = useMemo(() => parseLrcLyrics(rawLyrics), [rawLyrics]);
-  let activeLyricLine = null;
-  if (parsedLines && parsedLines.length > 0) {
-    const hasTimestamps = parsedLines.some(l => l.time !== null);
-    if (hasTimestamps) {
-      for (let i = 0; i < parsedLines.length; i++) {
-        const item = parsedLines[i];
-        if (item.time !== null && position >= item.time) {
-          activeLyricLine = item.text;
-        }
-      }
-    } else if (lyricsText) {
-      activeLyricLine = lyricsText.split('\n').find(line => line.trim().length > 0) || null;
-    }
-  }
-
   const lyricFadeAnim = useRef(new Animated.Value(1)).current;
   const prevLyricRef = useRef(activeLyricLine);
 
@@ -181,6 +166,26 @@ export default function PlayerCard({
     }
   }, [activeLyricLine]);
 
+  const renderBackground = () => (
+    <View style={StyleSheet.absoluteFill}>
+      <LinearGradient
+        colors={[colorA, '#090A0F']}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+      />
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: fadeAnim }]}>
+        <LinearGradient
+          colors={[colorB, '#090A0F']}
+          style={StyleSheet.absoluteFill}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+        />
+      </Animated.View>
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(9, 10, 15, 0.4)' }]} />
+    </View>
+  );
+
   return (
     <Animated.View
       style={[
@@ -193,6 +198,7 @@ export default function PlayerCard({
       ]}
     >
       {renderBackground()}
+
       {/* Fila de encabezado */}
       <View style={styles.headerRow}>
         <TouchableOpacity onPress={handleClose} style={styles.closeButton} activeOpacity={0.7}>
@@ -201,7 +207,7 @@ export default function PlayerCard({
         <Text style={styles.headerTitle}>SONANDO AHORA</Text>
         <View style={styles.headerPlaceholder} />
       </View>
-      
+
       {/* Sección de portada con contenedor de sombra */}
       <View style={styles.artworkContainer}>
         <View style={styles.artworkShadowWrapper}>
@@ -212,7 +218,7 @@ export default function PlayerCard({
           />
         </View>
       </View>
-      
+
       {/* Detalles de la pista, progreso y controles */}
       <View style={styles.bottomSection}>
         <View style={styles.trackDetails}>
@@ -242,6 +248,7 @@ export default function PlayerCard({
             </TouchableOpacity>
           </View>
 
+          {/* Banner con animación de fade para previsualización de la línea activa de la letra */}
           {activeLyricLine && (
             <Animated.View
               style={{
@@ -257,12 +264,17 @@ export default function PlayerCard({
                 width: '100%',
               }}
             >
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => setIsLyricsVisible(true)}
                 activeOpacity={0.8}
                 style={styles.liveLyricContainer}
               >
-                <MaterialCommunityIcons name="microphone-variant" size={14} color="rgba(167, 139, 250, 0.7)" style={{ marginRight: 6 }} />
+                <MaterialCommunityIcons
+                  name="microphone-variant"
+                  size={14}
+                  color="rgba(167, 139, 250, 0.7)"
+                  style={{ marginRight: 6 }}
+                />
                 <Text style={styles.liveLyricText} numberOfLines={1}>
                   {activeLyricLine}
                 </Text>
@@ -272,7 +284,7 @@ export default function PlayerCard({
         </View>
 
         <ProgressBar position={position} duration={duration} />
-        
+
         <Controls
           isPlaying={isPlaying}
           repeatMode={repeatMode}
@@ -291,7 +303,12 @@ export default function PlayerCard({
             style={[styles.footerButton, { marginRight: 8 }]}
             activeOpacity={0.7}
           >
-            <MaterialCommunityIcons name="microphone-variant" size={18} color="#A78BFA" style={{ marginRight: 6 }} />
+            <MaterialCommunityIcons
+              name="microphone-variant"
+              size={18}
+              color="#A78BFA"
+              style={{ marginRight: 6 }}
+            />
             <Text style={styles.footerButtonText}>Letras</Text>
           </TouchableOpacity>
 
@@ -300,7 +317,12 @@ export default function PlayerCard({
             style={[styles.footerButton, { marginRight: 8 }]}
             activeOpacity={0.7}
           >
-            <MaterialCommunityIcons name="playlist-play" size={20} color="#8E8F9E" style={{ marginRight: 6 }} />
+            <MaterialCommunityIcons
+              name="playlist-play"
+              size={20}
+              color="#8E8F9E"
+              style={{ marginRight: 6 }}
+            />
             <Text style={styles.footerButtonText}>Cola</Text>
           </TouchableOpacity>
 
@@ -310,136 +332,42 @@ export default function PlayerCard({
             activeOpacity={0.7}
           >
             <MaterialCommunityIcons
-              name={isTimerActive ? "bed-clock" : "timer-outline"}
+              name={isTimerActive ? 'bed-clock' : 'timer-outline'}
               size={18}
-              color={isTimerActive ? "#A78BFA" : "#8E8F9E"}
+              color={isTimerActive ? '#A78BFA' : '#8E8F9E'}
               style={{ marginRight: 6 }}
             />
             <Text style={[styles.footerButtonText, isTimerActive && styles.footerButtonTextActive]}>
-              {isTimerActive ? (timeRemainingFormatted || 'Activo') : 'Apagado'}
+              {isTimerActive ? timeRemainingFormatted || 'Activo' : 'Apagado'}
             </Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      {lyricsSheetVisible && (
-        <View style={styles.bottomSheetOverlay}>
-          <TouchableWithoutFeedback onPress={() => setIsLyricsVisible(false)}>
-            <Animated.View style={[styles.bottomSheetBackdrop, { opacity: lyricsBackdropOpacity }]} />
-          </TouchableWithoutFeedback>
-          
-          <Animated.View
-            style={[
-              styles.lyricsSheetContent,
-              {
-                paddingBottom: Math.max(insets.bottom, 20),
-                transform: [{ translateY: lyricsTranslateY }],
-              },
-            ]}
-          >
-            <View style={styles.bottomSheetHandleWrapper}>
-              <View style={styles.bottomSheetHandle} />
-            </View>
+      {/* HOJA MODAL INFERIOR DE LETRAS */}
+      <LyricsSheet
+        visible={isLyricsVisible}
+        onClose={() => setIsLyricsVisible(false)}
+        insets={insets}
+        currentTrackTitle={currentTrackTitle}
+        currentTrackArtist={currentTrackArtist}
+        lyricsText={lyricsText}
+        isLoadingLyrics={isLoadingLyrics}
+        parsedLines={parsedLines}
+        hasTimestamps={hasTimestamps}
+        activeIndex={activeIndex}
+        isUserScrolled={isUserScrolled}
+        lyricsScrollRef={lyricsScrollRef}
+        lineLayoutsRef={lineLayoutsRef}
+        containerHeightRef={containerHeightRef}
+        handleScrollBeginDrag={handleScrollBeginDrag}
+        handleScrollEndDrag={handleScrollEndDrag}
+        handleManualSyncPress={handleManualSyncPress}
+        handleLyricLinePress={handleLyricLinePress}
+        onOpenEditLyrics={() => setIsEditLyricsVisible(true)}
+      />
 
-            <View style={styles.lyricsHeader}>
-              <View style={{ flex: 1, paddingRight: 8 }}>
-                <Text style={styles.lyricsTitle} numberOfLines={1}>Letras</Text>
-                <Text style={styles.lyricsTrackSub} numberOfLines={1}>
-                  {currentTrackTitle} • {currentTrackArtist}
-                </Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <TouchableOpacity
-                  onPress={() => setIsEditLyricsVisible(true)}
-                  style={styles.lyricsCloseBtn}
-                  activeOpacity={0.7}
-                >
-                  <MaterialCommunityIcons name="pencil-outline" size={22} color="#A78BFA" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setIsLyricsVisible(false)}
-                  style={styles.lyricsCloseBtn}
-                  activeOpacity={0.7}
-                >
-                  <MaterialCommunityIcons name="close" size={24} color="#8E8F9E" />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <ScrollView
-              style={styles.lyricsScrollView}
-              contentContainerStyle={styles.lyricsScrollContent}
-              showsVerticalScrollIndicator={false}
-            >
-              {isLoadingLyrics ? (
-                <View style={styles.lyricsLoadingContainer}>
-                  <ActivityIndicator size="large" color="#8B5CF6" />
-                  <Text style={styles.lyricsLoadingText}>Cargando letra de la canción...</Text>
-                </View>
-              ) : lyricsText ? (
-                (() => {
-                  const parsedLines = parseLrcLyrics(rawLyrics);
-                  const hasTimestamps = parsedLines.some(l => l.time !== null);
-
-                  if (hasTimestamps) {
-                    let activeIndex = -1;
-                    for (let i = 0; i < parsedLines.length; i++) {
-                      const item = parsedLines[i];
-                      if (item.time !== null && position >= item.time) {
-                        activeIndex = i;
-                      }
-                    }
-
-                    return (
-                      <View>
-                        {parsedLines.map((line, idx) => {
-                          const isActive = idx === activeIndex;
-                          return (
-                            <Text
-                              key={idx}
-                              style={[
-                                styles.lyricLineText,
-                                isActive && styles.lyricLineActiveText,
-                              ]}
-                            >
-                              {line.text}
-                            </Text>
-                          );
-                        })}
-                      </View>
-                    );
-                  }
-
-                  return (
-                    <Text style={styles.lyricsBodyText}>
-                      {lyricsText}
-                    </Text>
-                  );
-                })()
-              ) : (
-                <View style={styles.emptyLyricsContainer}>
-                  <View style={styles.emptyLyricsIconCircle}>
-                    <MaterialCommunityIcons name="microphone-off" size={36} color="#A78BFA" />
-                  </View>
-                  <Text style={styles.emptyLyricsTitle}>Parece que no hay letras para esta canción</Text>
-                  <Text style={styles.emptyLyricsSub}>
-                    No se encontraron letras integradas en los metadatos de esta canción ni en línea.
-                  </Text>
-                  <TouchableOpacity
-                    style={styles.addLyricsBtn}
-                    onPress={() => setIsEditLyricsVisible(true)}
-                    activeOpacity={0.8}
-                  >
-                    <MaterialCommunityIcons name="pencil" size={18} color="#FFFFFF" />
-                    <Text style={styles.addLyricsBtnText}>Escribir o editar letra</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </ScrollView>
-          </Animated.View>
-        </View>
-      )}
-
+      {/* MODAL DE EDICIÓN DE LETRAS */}
       <EditLyricsModal
         visible={isEditLyricsVisible}
         onClose={() => setIsEditLyricsVisible(false)}
@@ -451,6 +379,7 @@ export default function PlayerCard({
         onFetchOnline={handleFetchOnlineLyricsForce}
       />
 
+      {/* MODAL DE TEMPORIZADOR DE APAGADO */}
       <SleepTimerModal
         visible={isSleepTimerVisible}
         onClose={() => setIsSleepTimerVisible(false)}
@@ -478,4 +407,3 @@ export default function PlayerCard({
     </Animated.View>
   );
 }
-

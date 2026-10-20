@@ -8,12 +8,15 @@ import {
   TouchableWithoutFeedback,
   Modal,
 } from 'react-native';
-import styles from '../styles/SidebarDrawer.styles';
+import styles from '../../styles/SidebarDrawer.styles';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import appConfig from '../../app.config';
-import useSidebarDrawer from '../hooks/useSidebarDrawer';
+import appConfig from '../../../app.config';
+import useSidebarDrawer from '../../hooks/useSidebarDrawer';
 
+/**
+ * Menú lateral deslizante para navegación entre fuentes de audio y acceso a ajustes.
+ */
 export default function SidebarDrawer({ isOpen, onClose, currentSource, onSelectSource, onOpenSettings }) {
   const insets = useSafeAreaInsets();
   const { visible, slideAnim, fadeAnim } = useSidebarDrawer({ isOpen });
@@ -70,7 +73,7 @@ export default function SidebarDrawer({ isOpen, onClose, currentSource, onSelect
             <View style={styles.header}>
               <View style={styles.logoContainer}>
                 <Image
-                  source={require('../../assets/AnthoFu-Icon-Purple.png')}
+                  source={require('../../../assets/AnthoFu-Icon-Purple.png')}
                   style={styles.logoImage}
                   resizeMode="contain"
                 />
@@ -81,10 +84,10 @@ export default function SidebarDrawer({ isOpen, onClose, currentSource, onSelect
               </View>
             </View>
 
-            {/* Separation Line */}
+            {/* Línea de separación */}
             <View style={styles.divider} />
 
-            {/* Navigation Options */}
+            {/* Opciones de navegación */}
             <View style={styles.menuList}>
               <Text style={styles.sectionHeader}>FUENTES DE AUDIO</Text>
               {menuItems.map((item) => {
@@ -132,7 +135,7 @@ export default function SidebarDrawer({ isOpen, onClose, currentSource, onSelect
               <MaterialCommunityIcons name="cog-outline" size={20} color="#8E8F9E" />
               <Text style={styles.settingsLabel}>Ajustes</Text>
             </TouchableOpacity>
-            <Text style={styles.versionText}>v{appConfig?.expo?.version }</Text>
+            <Text style={styles.versionText}>v{appConfig?.expo?.version}</Text>
           </View>
         </Animated.View>
       </View>

@@ -2,49 +2,27 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { Alert, Image } from 'react-native';
 import TrackPlayer, { PlayerCommand, Event, RepeatMode } from '@rntp/player';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system/legacy';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { localTracks } from '../constants/tracks';
 import { getStoredToken } from '../utils/drive';
 import { isExcludedAudio } from '../utils/audioFilter';
 
-// Custom Hooks for modular logic
+// Hooks personalizados para lógica modular
 import useToast from './useToast';
 import usePlaylists from './usePlaylists';
 import useLocalLibrary from './useLocalLibrary';
 import useGoogleDrive from './useGoogleDrive';
 import useSleepTimer from './useSleepTimer';
+import useAudioSettings from './useAudioSettings';
+import usePlayerPersistence from './usePlayerPersistence';
+import useQueueController from './useQueueController';
+import useDrivePrefetch from './useDrivePrefetch';
+
 import {
-  getCrossfadeSettings,
-  saveCrossfadeSettings,
   handleAutoCrossfadeProgress,
   smoothTrackTransition,
-  DEFAULT_CROSSFADE_SETTINGS,
 } from '../utils/crossfade';
-import {
-  getReplayGainSettings,
-  saveReplayGainSettings,
-  DEFAULT_REPLAYGAIN_SETTINGS,
-  applyReplayGainToPlayer,
-  calculateTrackVolumeMultiplier,
-} from '../utils/replayGain';
-
-// Sanitiza la cola para evitar que cadenas base64 gigantes excedan el límite de SQLite CursorWindow (2MB) en Android
-const sanitizeQueueForStorage = (queue) => {
-  if (!queue || !Array.isArray(queue)) return [];
-  return queue.map(t => ({
-    mediaId: t.mediaId,
-    url: t.url,
-    title: t.title,
-    artist: t.artist,
-    album: t.album || '',
-    genre: t.genre || '',
-    duration: t.duration || 0,
-    artworkUrl: (t.artworkUrl && t.artworkUrl.startsWith('data:')) ? null : t.artworkUrl,
-    gain: t.gain,
-    peak: t.peak,
-  }));
-};
+import { applyReplayGainToPlayer } from '../utils/replayGain';
 
 export default function useAppController() {
   const insets = useSafeAreaInsets();
@@ -67,15 +45,38 @@ export default function useAppController() {
   const [currentSource, setCurrentSource] = useState('local'); // 'local' | 'private'
   const [tracks, setTracks] = useState(localTracks);
   const [isSourceChanging, setIsSourceChanging] = useState(false);
+  const [isSleepTimerModalOpen, setIsSleepTimerModalOpen] = useState(false);
 
   // Flag para evitar que el polling sobreescriba la cola durante un reordenamiento nativo
   const isReorderingRef = useRef(false);
+  const currentSourceRef = useRef(currentSource);
+  const tracksRef = useRef(tracks);
 
-  // Hooks personalizados para logica estandarizada y modular
+  useEffect(() => {
+    currentSourceRef.current = currentSource;
+  }, [currentSource]);
+
+  useEffect(() => {
+    tracksRef.current = tracks;
+  }, [tracks]);
+
+  // Hook de notificaciones flotantes (Toast)
   const { toast, showToast } = useToast();
 
-  const [isSleepTimerModalOpen, setIsSleepTimerModalOpen] = useState(false);
+  // Hook de persistencia de datos (AsyncStorage / CursorWindow safe)
+  const { savePlayerState, loadPlayerState, loadStoredLocalTracks } = usePlayerPersistence();
 
+  // Hook de ajustes acústicos (Fundido cruzado y ReplayGain)
+  const {
+    crossfadeSettings,
+    crossfadeSettingsRef,
+    handleUpdateCrossfade,
+    replayGainSettings,
+    replayGainSettingsRef,
+    handleUpdateReplayGain,
+  } = useAudioSettings({ activeTrack, showToast });
+
+  // Hook de temporizador de apagado
   const {
     isTimerActive,
     timerMode,
@@ -89,52 +90,7 @@ export default function useAppController() {
     showToast,
   });
 
-  const [crossfadeSettings, setCrossfadeSettings] = useState(DEFAULT_CROSSFADE_SETTINGS);
-  const crossfadeSettingsRef = useRef(crossfadeSettings);
-
-  useEffect(() => {
-    crossfadeSettingsRef.current = crossfadeSettings;
-  }, [crossfadeSettings]);
-
-  useEffect(() => {
-    getCrossfadeSettings().then(setCrossfadeSettings);
-  }, []);
-
-  const handleUpdateCrossfade = async (newSettings) => {
-    setCrossfadeSettings(newSettings);
-    await saveCrossfadeSettings(newSettings);
-    showToast(newSettings.enabled ? `Fundido cruzado activado (${newSettings.duration}s)` : 'Fundido cruzado desactivado');
-  };
-
-  const [replayGainSettings, setReplayGainSettings] = useState(DEFAULT_REPLAYGAIN_SETTINGS);
-  const replayGainSettingsRef = useRef(replayGainSettings);
-
-  useEffect(() => {
-    replayGainSettingsRef.current = replayGainSettings;
-  }, [replayGainSettings]);
-
-  useEffect(() => {
-    getReplayGainSettings().then((loaded) => {
-      setReplayGainSettings(loaded);
-      if (activeTrack) {
-        applyReplayGainToPlayer(activeTrack, loaded);
-      }
-    });
-  }, []);
-
-  const handleUpdateReplayGain = async (newSettings) => {
-    setReplayGainSettings(newSettings);
-    await saveReplayGainSettings(newSettings);
-    if (activeTrack) {
-      applyReplayGainToPlayer(activeTrack, newSettings);
-    }
-    showToast(
-      newSettings.enabled
-        ? `ReplayGain activado (Modo: ${newSettings.mode === 'album' ? 'Álbum' : 'Pista'})`
-        : 'ReplayGain desactivado'
-    );
-  };
-
+  // Hook de listas de reproducción
   const {
     playlists,
     setPlaylists,
@@ -147,6 +103,7 @@ export default function useAppController() {
     handleRemoveTrackFromPlaylist,
   } = usePlaylists(showToast);
 
+  // Hook de biblioteca local
   const {
     localLibraryTracks,
     setLocalLibraryTracks,
@@ -169,6 +126,7 @@ export default function useAppController() {
     showToast,
   });
 
+  // Hook de integración con Google Drive
   const {
     isDriveConnected,
     setIsDriveConnected,
@@ -200,186 +158,37 @@ export default function useAppController() {
     saveLocalTracks,
   });
 
-  const handleAddToQueue = async (item) => {
-    try {
-      let activeIndex = TrackPlayer.getActiveMediaItemIndex();
-      if (activeIndex === null || activeIndex === -1) {
-        activeIndex = activeTrack ? playQueue.findIndex(t => t.mediaId === activeTrack.mediaId) : 0;
-        if (activeIndex === -1) activeIndex = 0;
-      }
-      
-      const uniqueQueueId = `${item.mediaId}-q-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-      const queuedItem = {
-        ...item,
-        mediaId: uniqueQueueId,
-        queueId: uniqueQueueId,
-      };
+  // Hook para manipular la cola de reproducción
+  const {
+    handleAddToQueue,
+    handleRemoveFromQueue,
+    handleMoveQueueItem,
+    handleClearUpcomingQueue,
+    handleSetDragActive,
+    handleReorderQueueState,
+    handleSyncReorderNative,
+  } = useQueueController({
+    playQueue,
+    setPlayQueue,
+    playQueueRef,
+    activeTrack,
+    progress,
+    showToast,
+    currentSourceRef,
+    savePlayerState,
+    isReorderingRef,
+  });
 
-      console.log(`[useAppController] Agregando pista ${item.title} a la cola después del índice ${activeIndex}`);
-      isReorderingRef.current = true;
-      await TrackPlayer.insertMediaItem(activeIndex + 1, queuedItem);
+  // Hook para precargar la siguiente pista de Drive en segundo plano
+  useDrivePrefetch({
+    activeTrack,
+    isPlayerInitialized,
+    setPlayQueue,
+    setTracks,
+    downloadDriveFile,
+  });
 
-      // Actualizar el estado de la cola de reproducción (playQueue)
-      let updatedQueue = [];
-      setPlayQueue(prev => {
-        const copy = [...prev];
-        copy.splice(activeIndex + 1, 0, queuedItem);
-        updatedQueue = copy;
-        return copy;
-      });
-
-      AsyncStorage.setItem('vulpis_player_state', JSON.stringify({
-        currentSource: currentSourceRef.current,
-        playQueue: sanitizeQueueForStorage(updatedQueue),
-        activeTrackId: activeTrack?.mediaId ?? null,
-        progressPosition: progress.position,
-      })).catch(err => console.error('[useAppController] Error guardando estado tras añadir a cola:', err));
-
-      setTimeout(() => {
-        isReorderingRef.current = false;
-      }, 500);
-
-      showToast(`Añadido a la cola: ${item.title}`);
-    } catch (e) {
-      isReorderingRef.current = false;
-      console.error('[useAppController] Error al agregar pista a la cola:', e);
-      Alert.alert('Error', 'No se pudo agregar la canción a la cola.');
-    }
-  };
-
-  const handleRemoveFromQueue = useCallback(async (item, index) => {
-    try {
-      console.log(`[useAppController] 🗑️ Eliminando pista de la cola en índice ${index}: "${item.title}"`);
-      isReorderingRef.current = true;
-      await TrackPlayer.removeMediaItem(index);
-      
-      let updatedQueue = [];
-      setPlayQueue(prev => {
-        const copy = [...prev];
-        copy.splice(index, 1);
-        updatedQueue = copy;
-        return copy;
-      });
-
-      AsyncStorage.setItem('vulpis_player_state', JSON.stringify({
-        currentSource: currentSourceRef.current,
-        playQueue: sanitizeQueueForStorage(updatedQueue),
-        activeTrackId: activeTrack?.mediaId ?? null,
-        progressPosition: progress.position,
-      })).catch(err => console.error('[useAppController] Error guardando estado tras eliminar de cola:', err));
-
-      setTimeout(() => {
-        isReorderingRef.current = false;
-      }, 500);
-
-      showToast(`Eliminado de la cola: ${item.title}`);
-    } catch (e) {
-      isReorderingRef.current = false;
-      console.error('[useAppController] ❌ Error al eliminar pista de la cola:', e);
-      Alert.alert('Error', 'No se pudo eliminar la canción de la cola.');
-    }
-  }, [activeTrack?.mediaId, progress.position, showToast]);
-
-  // Mueve una pista de un índice a otro en la cola usando TrackPlayer.moveMediaItem nativo sin cortar la música
-  const handleMoveQueueItem = useCallback(async (fromIndex, toIndex) => {
-    try {
-      if (fromIndex === toIndex) return;
-      if (fromIndex < 0 || toIndex < 0) return;
-      const currentQ = playQueueRef.current || [];
-      if (fromIndex >= currentQ.length || toIndex >= currentQ.length) {
-        console.warn(`[useAppController] ⚠️ Índices de movimiento fuera de rango: from=${fromIndex}, to=${toIndex}, total=${currentQ.length}`);
-        return;
-      }
-
-      console.log(`[useAppController] 🚀 [handleMoveQueueItem] Moviendo pista de índice ${fromIndex} a ${toIndex}: "${currentQ[fromIndex]?.title}"`);
-      isReorderingRef.current = true;
-
-      let updatedQueue = [];
-      setPlayQueue(prev => {
-        const copy = [...prev];
-        const [moved] = copy.splice(fromIndex, 1);
-        copy.splice(toIndex, 0, moved);
-        updatedQueue = copy;
-        return copy;
-      });
-
-      // Mover nativamente en TrackPlayer sin reiniciar la canción actual
-      console.log(`[useAppController] 🎵 Ejecutando TrackPlayer.moveMediaItem(${fromIndex}, ${toIndex})`);
-      await TrackPlayer.moveMediaItem(fromIndex, toIndex);
-      console.log(`[useAppController] ✅ TrackPlayer.moveMediaItem finalizado correctamente`);
-
-      AsyncStorage.setItem('vulpis_player_state', JSON.stringify({
-        currentSource: currentSourceRef.current,
-        playQueue: sanitizeQueueForStorage(updatedQueue),
-        activeTrackId: activeTrack?.mediaId ?? null,
-        progressPosition: progress.position,
-      })).catch(err => console.error('[useAppController] Error guardando estado tras mover pista:', err));
-
-      setTimeout(() => {
-        isReorderingRef.current = false;
-        console.log(`[useAppController] 🔓 Polling desbloqueado tras reordenar`);
-      }, 800);
-    } catch (e) {
-      isReorderingRef.current = false;
-      console.error('[useAppController] ❌ Error al mover pista en la cola:', e);
-    }
-  }, [activeTrack?.mediaId, progress.position]);
-
-  // Vacía todas las pistas siguientes de la cola manteniendo la canción que está sonando
-  const handleClearUpcomingQueue = useCallback(async () => {
-    try {
-      let activeIndex = TrackPlayer.getActiveMediaItemIndex();
-      const currentQ = playQueueRef.current || [];
-      if (activeIndex === null || activeIndex === -1) {
-        activeIndex = activeTrack ? currentQ.findIndex(t => t.mediaId === activeTrack.mediaId) : 0;
-      }
-
-      if (activeIndex === -1 || activeIndex >= currentQ.length - 1) {
-        showToast('No hay canciones siguientes en la cola');
-        return;
-      }
-
-      console.log(`[useAppController] 🧹 [handleClearUpcomingQueue] Vaciando pistas siguientes después de índice ${activeIndex} (${currentQ.length - 1 - activeIndex} pistas)`);
-      isReorderingRef.current = true;
-
-      await TrackPlayer.removeMediaItems(activeIndex + 1, currentQ.length);
-
-      const updatedQueue = currentQ.slice(0, activeIndex + 1);
-      setPlayQueue(updatedQueue);
-
-      AsyncStorage.setItem('vulpis_player_state', JSON.stringify({
-        currentSource: currentSourceRef.current,
-        playQueue: sanitizeQueueForStorage(updatedQueue),
-        activeTrackId: activeTrack?.mediaId ?? null,
-        progressPosition: progress.position,
-      })).catch(err => console.error('[useAppController] Error guardando estado tras vaciar cola:', err));
-
-      setTimeout(() => {
-        isReorderingRef.current = false;
-      }, 500);
-
-      showToast('Cola de reproducción vaciada');
-    } catch (e) {
-      isReorderingRef.current = false;
-      console.error('[useAppController] ❌ Error al vaciar cola:', e);
-      Alert.alert('Error', 'No se pudo vaciar la cola de reproducción.');
-    }
-  }, [activeTrack, progress.position, showToast]);
-
-  // Bloquea el polling mientras el usuario arrastra (evita que setPlayQueue del interval sobreescriba la cola en tiempo real)
-  const handleSetDragActive = useCallback((active) => {
-    console.log(`[useAppController] 🎛️ Drag activo cambiado a: ${active}`);
-    isReorderingRef.current = active;
-  }, []);
-
-  const handleReorderQueueState = useCallback((fromIndex, toIndex) => {
-    handleMoveQueueItem(fromIndex, toIndex);
-  }, [handleMoveQueueItem]);
-
-  const handleSyncReorderNative = useCallback(async (finalQueue) => {
-    // Ya no es necesario usar clear() destructivo; handleMoveQueueItem mueve nativamente en cada drop.
-  }, []);
-
+  // Inicialización de TrackPlayer y restauración de estado
   useEffect(() => {
     let isMounted = true;
     let sub1, sub2, sub3;
@@ -392,7 +201,7 @@ export default function useAppController() {
         } catch (e) {
           console.log('[useAppController] Player ya estaba configurado, ignorando error:', e.message);
         }
-        
+
         console.log('[useAppController] Configurando comandos/capacidades del reproductor...');
         TrackPlayer.setCommands({
           capabilities: [
@@ -403,43 +212,19 @@ export default function useAppController() {
             PlayerCommand.Seek,
           ],
         });
-        
+
         console.log('[useAppController] Configurando pistas en la cola del reproductor...');
-        
+
         // Cargar pistas locales personalizadas del almacenamiento si existen
-        let initialTracks = [];
-        try {
-          const stored = await AsyncStorage.getItem('vulpis_local_tracks');
-          if (stored) {
-            const parsed = JSON.parse(stored);
-            if (parsed && parsed.length > 0) {
-              const cleaned = parsed.filter(t => !isExcludedAudio(t));
-              if (cleaned.length !== parsed.length) {
-                AsyncStorage.setItem('vulpis_local_tracks', JSON.stringify(cleaned)).catch(() => {});
-              }
-              initialTracks = cleaned;
-              if (isMounted) {
-                setLocalLibraryTracks(cleaned);
-                setHasCustomLocalTracks(cleaned.length > 0);
-                setTracks(cleaned);
-              }
-            }
-          }
-        } catch (storageErr) {
-          console.error('[useAppController] Error al leer las pistas locales iniciales:', storageErr);
+        const initialTracks = await loadStoredLocalTracks();
+        if (isMounted && initialTracks.length > 0) {
+          setLocalLibraryTracks(initialTracks);
+          setHasCustomLocalTracks(true);
+          setTracks(initialTracks);
         }
 
         // Cargar el estado guardado del reproductor si existe
-        let savedState = null;
-        try {
-          const storedState = await AsyncStorage.getItem('vulpis_player_state');
-          if (storedState) {
-            savedState = JSON.parse(storedState);
-          }
-        } catch (stateErr) {
-          console.error('[useAppController] Error al leer el estado guardado del reproductor:', stateErr);
-          await AsyncStorage.removeItem('vulpis_player_state').catch(() => {});
-        }
+        const savedState = await loadPlayerState();
 
         // Verificar si tenemos un token guardado para Drive
         let hasDriveToken = false;
@@ -456,20 +241,22 @@ export default function useAppController() {
 
         if (savedState && savedState.playQueue && savedState.playQueue.length > 0) {
           console.log('[useAppController] Restaurando el estado guardado del reproductor...');
-          
+
           let sourceToRestore = savedState.currentSource || 'local';
           if (sourceToRestore === 'private' && !hasDriveToken) {
-            console.log('[useAppController] La fuente guardada es privada pero no se encontró ningún token, volviendo a local');
+            console.log(
+              '[useAppController] La fuente guardada es privada pero no se encontró ningún token, volviendo a local'
+            );
             sourceToRestore = 'local';
           }
 
           // Filtrar cualquier audio de WhatsApp o no deseado que hubiera quedado en la cola guardada
-          const restoredQueue = savedState.playQueue.filter(t => !isExcludedAudio(t));
+          const restoredQueue = savedState.playQueue.filter((t) => !isExcludedAudio(t));
           const effectiveQueue = restoredQueue.length > 0 ? restoredQueue : initialTracks;
 
           if (isMounted) {
             setCurrentSource(sourceToRestore);
-            
+
             if (sourceToRestore === 'private') {
               setPlayQueue(effectiveQueue);
               setTracks(savedState.tracksList || effectiveQueue);
@@ -481,11 +268,11 @@ export default function useAppController() {
 
           if (effectiveQueue.length > 0) {
             await TrackPlayer.setMediaItems(effectiveQueue);
-            
+
             // Buscar el índice de la pista activa
             let activeIndex = 0;
             if (savedState.activeTrackId) {
-              const idx = effectiveQueue.findIndex(t => t.mediaId === savedState.activeTrackId);
+              const idx = effectiveQueue.findIndex((t) => t.mediaId === savedState.activeTrackId);
               if (idx !== -1) {
                 activeIndex = idx;
               }
@@ -499,7 +286,7 @@ export default function useAppController() {
                 const activeTrackItem = effectiveQueue[activeIndex];
                 setProgress({
                   position: savedState.progressPosition,
-                  duration: activeTrackItem ? (activeTrackItem.duration || 0) : 0,
+                  duration: activeTrackItem ? activeTrackItem.duration || 0 : 0,
                 });
               }
             }
@@ -516,22 +303,16 @@ export default function useAppController() {
         // Ejecución de escaneo automático en segundo plano al entrar a la aplicación
         setTimeout(() => {
           console.log('[useAppController] Iniciando escaneo automático de canciones locales...');
-          handleScanLocal({ silent: true }).catch(err => {
+          handleScanLocal({ silent: true }).catch((err) => {
             console.log('[useAppController] Error en escaneo automático inicial:', err);
           });
         }, 300);
 
         console.log('[useAppController] ¡Configuración de TrackPlayer completada exitosamente!');
-        
-        sub1 = TrackPlayer.addEventListener(Event.MediaItemTransition, (event) => {
-          // console.log('[DEBUG] TransiciónElementoMultimedia:', event);
-        });
-        sub2 = TrackPlayer.addEventListener(Event.IsPlayingChanged, (event) => {
-          // console.log('[DEBUG] CambióReproduciendo:', event);
-        });
-        sub3 = TrackPlayer.addEventListener(Event.PlaybackStateChanged, (event) => {
-          // console.log('[DEBUG] EstadoReproducciónCambió:', event);
-        });
+
+        sub1 = TrackPlayer.addEventListener(Event.MediaItemTransition, (_event) => {});
+        sub2 = TrackPlayer.addEventListener(Event.IsPlayingChanged, (_event) => {});
+        sub3 = TrackPlayer.addEventListener(Event.PlaybackStateChanged, (_event) => {});
 
         if (isMounted) {
           setIsPlayerInitialized(true);
@@ -554,21 +335,10 @@ export default function useAppController() {
     };
   }, []);
 
-  const currentSourceRef = useRef(currentSource);
-  const tracksRef = useRef(tracks);
-
-  useEffect(() => {
-    currentSourceRef.current = currentSource;
-  }, [currentSource]);
-
-  useEffect(() => {
-    tracksRef.current = tracks;
-  }, [tracks]);
-
   // Polling JSI Getters para sincronizar el estado en Android
   useEffect(() => {
     if (!isPlayerInitialized) return;
-    
+
     let tick = 0;
     let lastSavedSec = -1;
     let lastSavedTrackId = null;
@@ -584,23 +354,29 @@ export default function useAppController() {
         const currentShuffle = TrackPlayer.isShuffleEnabled();
         tick++;
 
-        setActiveTrack(prev => {
+        setActiveTrack((prev) => {
           if (!prev && !currentActive) return prev;
-          if (prev && currentActive && prev.mediaId === currentActive.mediaId && prev.title === currentActive.title && prev.url === currentActive.url) {
+          if (
+            prev &&
+            currentActive &&
+            prev.mediaId === currentActive.mediaId &&
+            prev.title === currentActive.title &&
+            prev.url === currentActive.url
+          ) {
             return prev;
           }
           return currentActive;
         });
 
-        setIsPlaying(prev => (prev === currentPlaying ? prev : currentPlaying));
-        setRepeatMode(prev => (prev === currentRepeat ? prev : currentRepeat));
-        setIsShuffleActive(prev => (prev === currentShuffle ? prev : currentShuffle));
+        setIsPlaying((prev) => (prev === currentPlaying ? prev : currentPlaying));
+        setRepeatMode((prev) => (prev === currentRepeat ? prev : currentRepeat));
+        setIsShuffleActive((prev) => (prev === currentShuffle ? prev : currentShuffle));
 
         // Solo sincronizar la cola de TrackPlayer cada 1 segundo (tick % 4 === 0) y NUNCA durante un reordenamiento activo
         if (!isReorderingRef.current && (tick % 4 === 0 || !playQueueRef.current || playQueueRef.current.length === 0)) {
           const currentQueue = TrackPlayer.getQueue();
           if (currentQueue && currentQueue.length > 0) {
-            setPlayQueue(prev => {
+            setPlayQueue((prev) => {
               if (isReorderingRef.current) return prev;
               if (!prev || prev.length === 0) return currentQueue;
               if (prev.length === currentQueue.length) {
@@ -618,7 +394,7 @@ export default function useAppController() {
           }
         }
 
-        setProgress(prev => {
+        setProgress((prev) => {
           const newPos = currentProgress?.position ?? 0;
           const newDur = currentProgress?.duration ?? 0;
           if (Math.abs(prev.position - newPos) < 0.25 && prev.duration === newDur) {
@@ -652,25 +428,21 @@ export default function useAppController() {
         const trackId = currentActive?.mediaId ?? null;
         const currentQueueSnapshot = playQueueRef.current || [];
         const queueLen = currentQueueSnapshot.length;
-        
+
         // Guardar si cambió la pista, o si el progreso avanzó >= 5 segundos, o si la longitud de la cola cambió
         const timeDiff = Math.abs(pos - lastSavedSec);
         if (trackId !== lastSavedTrackId || timeDiff >= 5 || queueLen !== lastSavedQueueLen) {
           lastSavedSec = pos;
           lastSavedTrackId = trackId;
           lastSavedQueueLen = queueLen;
-          
-          const stateToSave = {
+
+          savePlayerState({
             currentSource: currentSourceRef.current,
-            playQueue: sanitizeQueueForStorage(currentQueueSnapshot),
+            playQueue: currentQueueSnapshot,
             activeTrackId: trackId,
             progressPosition: pos,
-          };
-          
-          AsyncStorage.setItem('vulpis_player_state', JSON.stringify(stateToSave))
-            .catch(err => console.error('[useAppController] Error al guardar el estado del reproductor:', err));
+          });
         }
-
       } catch (e) {
         console.log('[useAppController] Error actualizando estado de TrackPlayer:', e);
       }
@@ -680,12 +452,12 @@ export default function useAppController() {
     const interval = setInterval(updatePlayerState, 250);
 
     return () => clearInterval(interval);
-  }, [isPlayerInitialized]);
+  }, [isPlayerInitialized, savePlayerState]);
 
   // Restaurar automáticamente las pistas de la biblioteca si la cola de reproducción queda completamente vacía
   useEffect(() => {
     if (!isPlayerInitialized || isSourceChanging) return;
-    
+
     if (playQueue.length === 0 && tracks && tracks.length > 0) {
       console.log('[useAppController] La cola está vacía. Restaurando automáticamente las pistas de la biblioteca...');
       const restoreLibrary = async () => {
@@ -705,7 +477,7 @@ export default function useAppController() {
     if (source === currentSource || isSourceChanging) return;
     setIsSourceChanging(true);
     setCurrentSource(source);
-    
+
     if (source === 'local') {
       setTracks(localLibraryTracks);
       setIsSourceChanging(false);
@@ -724,107 +496,6 @@ export default function useAppController() {
     }
   };
 
-  // Almacenamiento en caché en segundo plano para archivos de Google Drive
-  useEffect(() => {
-    if (!isPlayerInitialized) return;
-    if (!activeTrack) return;
-
-    let isMounted = true;
-
-    async function prefetchNextTrack() {
-      try {
-        const activeIndex = TrackPlayer.getActiveMediaItemIndex();
-        if (activeIndex === null || activeIndex === -1) return;
-
-        const currentQueue = TrackPlayer.getQueue();
-        if (!currentQueue || currentQueue.length <= 1) return;
-
-        // Calcular el siguiente índice
-        let nextIndex = activeIndex + 1;
-        if (nextIndex >= currentQueue.length) {
-          // Si la repetición de cola está activada, volver a 0
-          const repeatMode = TrackPlayer.getRepeatMode();
-          if (repeatMode === RepeatMode.Queue) {
-            nextIndex = 0;
-          } else {
-            return; // No hay siguiente pista
-          }
-        }
-
-        const nextTrack = currentQueue[nextIndex];
-        if (!nextTrack) return;
-
-        // Verificar si la siguiente pista es de Drive y aún no está en caché
-        if (nextTrack.mediaId.startsWith('drive-') && !nextTrack.url.startsWith('file://')) {
-          const fileId = nextTrack.mediaId.replace('drive-', '');
-          
-          // Verificar si el archivo ya está en caché (para evitar solicitar token o iniciar la descarga si ya existe)
-          const localUri = FileSystem.cacheDirectory + `${fileId}.mp3`;
-          const fileInfo = await FileSystem.getInfoAsync(localUri);
-          
-          if (fileInfo.exists) {
-            console.log(`[Buffering] La siguiente pista ya está guardada en caché local en: ${localUri}. Actualizando cola...`);
-            const updatedTrack = { ...nextTrack, url: localUri };
-            
-            if (isMounted) {
-              // Actualizar la cola nativa
-              const latestQueue = TrackPlayer.getQueue();
-              if (latestQueue && nextIndex < latestQueue.length && latestQueue[nextIndex].mediaId === nextTrack.mediaId) {
-                await TrackPlayer.replaceMediaItem(nextIndex, updatedTrack);
-              }
-              // Actualizar el estado
-              setPlayQueue(prev => {
-                const newQueue = [...prev];
-                if (nextIndex < newQueue.length && newQueue[nextIndex].mediaId === nextTrack.mediaId) {
-                  newQueue[nextIndex] = updatedTrack;
-                }
-                return newQueue;
-              });
-              setTracks(prev => prev.map(t => t.mediaId === nextTrack.mediaId ? updatedTrack : t));
-            }
-            return;
-          }
-
-          // De lo contrario, necesitamos descargarlo
-          const token = await getStoredToken();
-          if (!token) return;
-
-          console.log(`[Buffering] Iniciando predescarga en segundo plano para: ${nextTrack.title}`);
-          const downloadedUri = await downloadDriveFile(fileId, nextTrack.title, token);
-          
-          if (downloadedUri && isMounted) {
-            console.log(`[Buffering] Predescarga en segundo plano finalizada: ${nextTrack.title}`);
-            const updatedTrack = { ...nextTrack, url: downloadedUri };
-            
-            // Actualizar la cola nativa
-            const latestQueue = TrackPlayer.getQueue();
-            if (latestQueue && nextIndex < latestQueue.length && latestQueue[nextIndex].mediaId === nextTrack.mediaId) {
-              await TrackPlayer.replaceMediaItem(nextIndex, updatedTrack);
-            }
-            
-            // Actualizar el estado
-            setPlayQueue(prev => {
-              const newQueue = [...prev];
-              if (nextIndex < newQueue.length && newQueue[nextIndex].mediaId === nextTrack.mediaId) {
-                newQueue[nextIndex] = updatedTrack;
-              }
-              return newQueue;
-            });
-            setTracks(prev => prev.map(t => t.mediaId === nextTrack.mediaId ? updatedTrack : t));
-          }
-        }
-      } catch (err) {
-        console.error('[Buffering] Error durante la predescarga:', err);
-      }
-    }
-
-    prefetchNextTrack();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [activeTrack, isPlayerInitialized]);
-
   const handleSelectTrack = async (item, index, playlistTracks) => {
     const trackListToLoad = playlistTracks || tracks;
 
@@ -832,13 +503,13 @@ export default function useAppController() {
       try {
         showToast(`Descargando canción: ${item.title}...`);
         setIsSourceChanging(true);
-        
+
         const token = await getStoredToken();
         const fileId = item.mediaId.replace('drive-', '');
         const localUri = await downloadDriveFile(fileId, item.title, token);
-        
+
         if (localUri) {
-          const updatedTracks = trackListToLoad.map(t => {
+          const updatedTracks = trackListToLoad.map((t) => {
             if (t.mediaId === item.mediaId) {
               return { ...t, url: localUri };
             }
@@ -850,24 +521,24 @@ export default function useAppController() {
           }
 
           // Actualizar las URLs de las pistas de las listas de reproducción
-          const updatedPlaylists = playlists.map(p => {
-            const hasTrack = p.tracks.some(t => t.mediaId === item.mediaId);
+          const updatedPlaylists = playlists.map((p) => {
+            const hasTrack = p.tracks.some((t) => t.mediaId === item.mediaId);
             if (hasTrack) {
               return {
                 ...p,
-                tracks: p.tracks.map(t => t.mediaId === item.mediaId ? { ...t, url: localUri } : t)
+                tracks: p.tracks.map((t) => (t.mediaId === item.mediaId ? { ...t, url: localUri } : t)),
               };
             }
             return p;
           });
           setPlaylists(updatedPlaylists);
           await AsyncStorage.setItem('vulpis_playlists', JSON.stringify(updatedPlaylists));
-          
+
           console.log('[useAppController] Cargando pista con archivo local guardado en caché:', localUri);
           await smoothTrackTransition(async () => {
             await TrackPlayer.clear();
             await TrackPlayer.setMediaItems(updatedTracks);
-            const newIdx = updatedTracks.findIndex(t => t.mediaId === item.mediaId);
+            const newIdx = updatedTracks.findIndex((t) => t.mediaId === item.mediaId);
             await TrackPlayer.skipToIndex(newIdx !== -1 ? newIdx : index);
             await TrackPlayer.play();
           }, crossfadeSettingsRef.current?.enabled);

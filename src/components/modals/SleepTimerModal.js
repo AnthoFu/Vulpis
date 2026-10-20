@@ -7,9 +7,12 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import styles from '../styles/SleepTimerModal.styles';
-import { SLEEP_TIMER_MODES } from '../hooks/useSleepTimer';
+import styles from '../../styles/SleepTimerModal.styles';
+import { SLEEP_TIMER_MODES } from '../../hooks/useSleepTimer';
 
+/**
+ * Modal interactivo para configurar el temporizador de apagado automático (Sleep Timer).
+ */
 export default function SleepTimerModal({
   visible,
   onClose,

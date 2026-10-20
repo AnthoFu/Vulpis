@@ -1,8 +1,11 @@
 import React from 'react';
 import { Text, View, TouchableOpacity, ActivityIndicator } from 'react-native';
-import styles from '../styles/Header.styles';
+import styles from '../../styles/Header.styles';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
+/**
+ * Encabezado superior de la aplicación con título dinámico e indicador de menú.
+ */
 export default function Header({ 
   onMenuPress, 
   currentSource,

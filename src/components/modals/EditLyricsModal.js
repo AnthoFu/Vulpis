@@ -11,8 +11,11 @@ import {
   Alert,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import styles from '../styles/EditLyricsModal.styles';
+import styles from '../../styles/EditLyricsModal.styles';
 
+/**
+ * Modal interactivo para edición, reemplazo manual o descarga de letras sincronizadas/planas.
+ */
 export default function EditLyricsModal({
   visible,
   onClose,

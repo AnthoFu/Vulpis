@@ -1,9 +1,12 @@
 import React from 'react';
 import { Text, View } from 'react-native';
-import styles from '../styles/ProgressBar.styles';
+import styles from '../../styles/ProgressBar.styles';
 import Slider from '@react-native-community/slider';
-import useProgressBar from '../hooks/useProgressBar';
+import useProgressBar from '../../hooks/useProgressBar';
 
+/**
+ * Barra deslizante de progreso y tiempos de la canción actual.
+ */
 export default function ProgressBar({ position, duration }) {
   const {
     displayPosition,

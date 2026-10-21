@@ -176,6 +176,8 @@ EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=tu_cliente_web_oauth.apps.googleusercontent.com
 | Tarea | Comando | Notas |
 | :--- | :--- | :--- |
 | **Iniciar Versión Web** | `npm run web` | Servidor web en `http://localhost:8081` |
+| **Compilar Versión Web** | `npm run build:web` | Genera estáticos en `dist/` |
+| **Desplegar a Firebase** | `npm run deploy:web` | Publica en `https://vulpis.web.app` |
 | **Iniciar Metro Bundler** | `npm start` o `npx expo start` | Servidor de desarrollo |
 | **Ejecutar en Android Físico** | `npm run android` o `npx expo run:android` | Requiere dispositivo con depuración USB y Java 21 |
 | **Ejecutar en iOS** | `npm run ios` | Requiere macOS y CocoaPods configurados |

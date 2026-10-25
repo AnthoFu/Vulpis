@@ -1,3 +1,5 @@
+import { Colors } from '../../constants/colors';
+
 /**
  * Estilos para la barra de búsqueda y el menú desplegable estilo Odoo en la biblioteca.
  */
@@ -10,10 +12,10 @@ export const searchBarStyles = {
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#12131A',
+    backgroundColor: Colors.bgInput,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#1F202E',
+    borderColor: Colors.borderSubtle,
     paddingHorizontal: 12,
     height: 48,
   },
@@ -22,7 +24,7 @@ export const searchBarStyles = {
   },
   searchInput: {
     flex: 1,
-    color: '#E2E3E9',
+    color: Colors.textSecondary,
     fontSize: 14,
     height: '100%',
   },
@@ -39,14 +41,14 @@ export const searchBarStyles = {
     marginLeft: 2,
   },
   odooDropdownContainer: {
-    backgroundColor: '#161722',
+    backgroundColor: Colors.bgCard,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#2A2B3D',
+    borderColor: Colors.bgElevated,
     marginTop: 8,
     marginBottom: 4,
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
@@ -58,12 +60,12 @@ export const searchBarStyles = {
     justifyContent: 'space-between',
     paddingHorizontal: 14,
     paddingVertical: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    backgroundColor: Colors.surfaceWhiteAlpha02,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.04)',
+    borderBottomColor: Colors.borderWhiteAlpha04,
   },
   odooDropdownHeaderText: {
-    color: '#8E8F9E',
+    color: Colors.textTertiary,
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.5,
@@ -76,10 +78,10 @@ export const searchBarStyles = {
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.03)',
+    borderBottomColor: Colors.borderWhiteAlpha03,
   },
   odooDropdownItemActive: {
-    backgroundColor: 'rgba(139, 92, 246, 0.12)',
+    backgroundColor: Colors.accentAlpha12,
   },
   odooDropdownItemLeft: {
     flexDirection: 'row',
@@ -89,16 +91,16 @@ export const searchBarStyles = {
     gap: 10,
   },
   odooDropdownItemText: {
-    color: '#C3C5D4',
+    color: Colors.textDropdown,
     fontSize: 13,
     flex: 1,
   },
   odooDropdownFieldText: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontWeight: '700',
   },
   odooDropdownQueryText: {
-    color: '#A78BFA',
+    color: Colors.accentLight,
     fontStyle: 'italic',
     fontWeight: '500',
   },
@@ -108,7 +110,7 @@ export const searchBarStyles = {
     gap: 6,
   },
   odooCountBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: Colors.surfaceWhiteAlpha06,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
@@ -117,15 +119,15 @@ export const searchBarStyles = {
     justifyContent: 'center',
   },
   odooCountBadgeActive: {
-    backgroundColor: '#8B5CF6',
+    backgroundColor: Colors.accent,
   },
   odooCountText: {
-    color: '#8E8F9E',
+    color: Colors.textTertiary,
     fontSize: 11,
     fontWeight: '700',
   },
   odooCountTextActive: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontWeight: '800',
   },
   activeFilterRow: {
@@ -138,16 +140,16 @@ export const searchBarStyles = {
   activeFilterPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(139, 92, 246, 0.14)',
+    backgroundColor: Colors.accentAlpha14,
     borderWidth: 1,
-    borderColor: '#8B5CF6',
+    borderColor: Colors.accent,
     borderRadius: 20,
     paddingVertical: 5,
     paddingHorizontal: 12,
     gap: 6,
   },
   activeFilterPillText: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -164,24 +166,24 @@ export const searchBarStyles = {
   filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#12131A',
+    backgroundColor: Colors.bgInput,
     borderWidth: 1,
-    borderColor: '#1F202E',
+    borderColor: Colors.borderSubtle,
     borderRadius: 20,
     paddingVertical: 6,
     paddingHorizontal: 12,
   },
   filterChipActive: {
-    backgroundColor: 'rgba(139, 92, 246, 0.16)',
-    borderColor: '#8B5CF6',
+    backgroundColor: Colors.accentAlpha16,
+    borderColor: Colors.accent,
   },
   filterChipText: {
-    color: '#8E8F9E',
+    color: Colors.textTertiary,
     fontSize: 12,
     fontWeight: '600',
   },
   filterChipTextActive: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontWeight: '700',
   },
   searchResultsInfoRow: {
@@ -192,12 +194,12 @@ export const searchBarStyles = {
     paddingHorizontal: 4,
   },
   searchResultsInfoText: {
-    color: '#8E8F9E',
+    color: Colors.textTertiary,
     fontSize: 12,
     fontWeight: '500',
   },
   searchResultsClearText: {
-    color: '#A78BFA',
+    color: Colors.accentLight,
     fontSize: 12,
     fontWeight: '700',
   },

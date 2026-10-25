@@ -1,3 +1,5 @@
+import { Colors } from '../../constants/colors';
+
 /**
  * Estilos para los botones y barra de pestañas de la biblioteca (Canciones, Artistas, Álbumes, Playlists).
  */
@@ -19,25 +21,25 @@ export const tabsStyles = {
     paddingHorizontal: 14,
     borderRadius: 20,
     gap: 6,
-    backgroundColor: '#12131A',
+    backgroundColor: Colors.bgInput,
     borderWidth: 1,
-    borderColor: '#1F202E',
+    borderColor: Colors.borderSubtle,
   },
   tabButtonActive: {
-    backgroundColor: 'rgba(139, 92, 246, 0.15)',
-    borderColor: '#8B5CF6',
+    backgroundColor: Colors.accentAlpha15,
+    borderColor: Colors.accent,
   },
   tabLabel: {
-    color: '#8E8F9E',
+    color: Colors.textTertiary,
     fontSize: 13,
     fontWeight: '600',
   },
   tabLabelActive: {
-    color: '#E2E3E9',
+    color: Colors.textSecondary,
     fontWeight: '700',
   },
   tabCountBadge: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: Colors.surfaceWhiteAlpha08,
     borderRadius: 10,
     paddingHorizontal: 6,
     paddingVertical: 1,
@@ -46,15 +48,15 @@ export const tabsStyles = {
     justifyContent: 'center',
   },
   tabCountBadgeActive: {
-    backgroundColor: '#8B5CF6',
+    backgroundColor: Colors.accent,
   },
   tabCountText: {
-    color: '#8E8F9E',
+    color: Colors.textTertiary,
     fontSize: 10,
     fontWeight: '700',
   },
   tabCountTextActive: {
-    color: '#FFFFFF',
+    color: Colors.white,
   },
 };
 

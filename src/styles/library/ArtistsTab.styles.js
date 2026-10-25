@@ -1,3 +1,5 @@
+import { Colors } from '../../constants/colors';
+
 /**
  * Estilos para la pestaña de Artistas, avatares, tarjetas de detalle y árbol de canciones por álbum.
  */
@@ -8,10 +10,10 @@ export const artistsTabStyles = {
     justifyContent: 'space-between',
     padding: 12,
     borderRadius: 16,
-    backgroundColor: '#161722',
+    backgroundColor: Colors.bgCard,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.04)',
+    borderColor: Colors.borderWhiteAlpha04,
   },
   artistRowMain: {
     flexDirection: 'row',
@@ -24,7 +26,7 @@ export const artistsTabStyles = {
     borderRadius: 24,
     marginRight: 14,
     overflow: 'hidden',
-    backgroundColor: '#1E1B2E',
+    backgroundColor: Colors.bgPlaceholder,
   },
   artistAvatarImage: {
     width: '100%',
@@ -35,30 +37,30 @@ export const artistsTabStyles = {
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1E1B2E',
+    backgroundColor: Colors.bgPlaceholder,
   },
   artistRowDetails: {
     flex: 1,
   },
   artistRowName: {
-    color: '#E2E3E9',
+    color: Colors.textSecondary,
     fontSize: 15,
     fontWeight: '700',
     marginBottom: 3,
   },
   artistRowSub: {
-    color: '#8E8F9E',
+    color: Colors.textTertiary,
     fontSize: 12,
   },
   artistHeroCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#161722',
+    backgroundColor: Colors.bgCard,
     borderRadius: 18,
     padding: 16,
     marginBottom: 18,
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.15)',
+    borderColor: Colors.accentAlpha15,
   },
   artistHeroAvatarContainer: {
     width: 68,
@@ -66,7 +68,7 @@ export const artistsTabStyles = {
     borderRadius: 34,
     marginRight: 16,
     overflow: 'hidden',
-    backgroundColor: '#1E1B2E',
+    backgroundColor: Colors.bgPlaceholder,
   },
   artistHeroAvatarImage: {
     width: '100%',
@@ -76,13 +78,13 @@ export const artistsTabStyles = {
     flex: 1,
   },
   artistHeroName: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontSize: 19,
     fontWeight: '800',
     marginBottom: 3,
   },
   artistHeroCount: {
-    color: '#8E8F9E',
+    color: Colors.textTertiary,
     fontSize: 12,
     marginBottom: 10,
   },
@@ -100,14 +102,14 @@ export const artistsTabStyles = {
     gap: 6,
   },
   artistTreeSectionTitle: {
-    color: '#A78BFA',
+    color: Colors.accentLight,
     fontSize: 13,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   artistTreeSectionCount: {
-    color: '#5F6070',
+    color: Colors.textMuted,
     fontSize: 12,
   },
 };

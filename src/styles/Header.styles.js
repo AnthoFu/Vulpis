@@ -1,4 +1,5 @@
 import { StyleSheet } from 'react-native';
+import { Colors } from '../constants/colors';
 
 const styles = StyleSheet.create({
   headerContainer: {
@@ -13,33 +14,33 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#161722',
+    backgroundColor: Colors.bgCard,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#2C2D3C',
+    borderColor: Colors.borderCard,
   },
   iconButtonPlaceholder: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#161722',
+    backgroundColor: Colors.bgCard,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.15)',
+    borderColor: Colors.accentAlpha15,
   },
   titleContainer: {
     alignItems: 'center',
   },
   headerSubtitle: {
-    color: '#8B5CF6',
+    color: Colors.accent,
     fontSize: 9,
     fontWeight: '700',
     letterSpacing: 2,
   },
   headerTitle: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontSize: 20,
     fontWeight: '800',
     letterSpacing: 3,

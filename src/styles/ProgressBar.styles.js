@@ -1,4 +1,5 @@
 import { StyleSheet } from 'react-native';
+import { Colors } from '../constants/colors';
 
 const styles = StyleSheet.create({
   progressContainer: {
@@ -16,7 +17,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   timeText: {
-    color: '#8E8F9E',
+    color: Colors.textTertiary,
     fontSize: 12,
     fontFamily: 'monospace',
   },

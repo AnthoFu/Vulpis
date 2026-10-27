@@ -81,6 +81,13 @@
   - [x] Detección inteligente de scroll manual: pausa temporal del auto-scroll al deslizar manualmente y botón flotante "Sincronizar" para regresar al compás actual o reanudación automática tras inactividad.
   - [x] Insignia visual "Sincronizadas" en el encabezado de la hoja de letras.
 
+- [x] **Modularización y Estandarización del Núcleo de Reproducción:**
+  - [x] Refactorización y desacoplamiento de responsabilidades en `useAppController.js` y `usePlayerStateSync.js`.
+  - [x] Documentación exhaustiva con JSDoc y tipado descriptivo en español para el orquestador principal y sincronizador JSI.
+  - [x] Creación del barrel export centralizado `src/hooks/index.js` para estandarizar el consumo de la capa de hooks.
+  - [x] Optimización de renderizado mediante `useCallback` en `handleSourceChange` y `handleSelectTrack`.
+  - [x] Incremento de versión del proyecto a `0.5.11` en `app.config.js`.
+
 ---
 
 # Mejoras por hacer

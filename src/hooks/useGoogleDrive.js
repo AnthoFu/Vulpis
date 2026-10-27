@@ -14,8 +14,9 @@ import {
   getDriveRedirectUrl,
   uploadTrackToDrive,
   deleteTrackFromDrive,
-} from '../utils/drive';
-import { downloadDriveFile, saveDriveTrackToDevice } from '../utils/driveDownload';
+  downloadDriveFile,
+  saveDriveTrackToDevice,
+} from '../services/drive';
 
 export default function useGoogleDrive({
   currentSource,

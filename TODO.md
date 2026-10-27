@@ -88,6 +88,13 @@
   - [x] Optimización de renderizado mediante `useCallback` en `handleSourceChange` y `handleSelectTrack`.
   - [x] Incremento de versión del proyecto a `0.5.11` en `app.config.js`.
 
+- [x] **Desacoplamiento de Capa de Servicios e Infraestructura (`src/services/`):**
+  - [x] Creación de `src/services/drive/` para aislar API REST, autenticación OAuth PKCE y descargas con FileSystem.
+  - [x] Creación de `src/services/lyrics/lyricsService.js` para clientes de letras en línea (LRCLIB, Lyrist) y caché de AsyncStorage.
+  - [x] Creación de `src/services/scanner/mediaScanner.js` para el escaneo nativo del sistema de archivos con MediaLibrary.
+  - [x] Creación de `src/services/index.js` como barrel export unificado de infraestructura.
+  - [x] Preservación de adaptadores retrocompatibles en `src/utils/` y migración de hooks y componentes a la nueva capa de servicios.
+
 ---
 
 # Mejoras por hacer

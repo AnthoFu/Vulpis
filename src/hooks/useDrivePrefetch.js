@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import TrackPlayer, { RepeatMode } from '@rntp/player';
 import * as FileSystem from 'expo-file-system/legacy';
-import { getStoredToken } from '../utils/drive';
+import { getStoredToken } from '../services/drive';
 
 /**
  * Hook para la precarga y almacenamiento en caché en segundo plano

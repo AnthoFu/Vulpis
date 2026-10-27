@@ -4,7 +4,7 @@ import TrackPlayer, { RepeatMode } from '@rntp/player';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { localTracks } from '../constants/tracks';
-import { getStoredToken } from '../utils/drive';
+import { getStoredToken } from '../services/drive';
 import { smoothTrackTransition } from '../utils/crossfade';
 
 // Hooks personalizados del ecosistema modular

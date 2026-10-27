@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import styles from '../../styles/SettingsModal.styles';
-import { getSettings, saveSettings, clearLyricsCache } from '../../utils/onlineLyrics';
+import { getSettings, saveSettings, clearLyricsCache } from '../../services/lyrics/lyricsService';
 import { DEFAULT_REPLAYGAIN_SETTINGS } from '../../utils/replayGain';
 import SleepTimerModal from './SleepTimerModal';
 import OnlineLyricsSection from './settings/OnlineLyricsSection';

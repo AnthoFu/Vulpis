@@ -4,16 +4,18 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Switch,
   Alert,
   TouchableWithoutFeedback,
   ScrollView,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import styles from '../../styles/SettingsModal.styles';
-import { getSettings, saveSettings, clearLyricsCache } from '../../utils/onlineLyrics';
+import { getSettings, saveSettings, clearLyricsCache } from '../../services/lyrics/lyricsService';
 import { DEFAULT_REPLAYGAIN_SETTINGS } from '../../utils/replayGain';
 import SleepTimerModal from './SleepTimerModal';
+import OnlineLyricsSection from './settings/OnlineLyricsSection';
+import ReplayGainSection from './settings/ReplayGainSection';
+import CrossfadeSection from './settings/CrossfadeSection';
 
 export default function SettingsModal({
   visible,
@@ -46,7 +48,11 @@ export default function SettingsModal({
     setSettingsState(updated);
     await saveSettings(updated);
     if (onShowToast) {
-      onShowToast(val ? 'Búsqueda de letras en línea activada' : 'Búsqueda de letras en línea desactivada');
+      onShowToast(
+        val
+          ? 'Búsqueda de letras en línea activada'
+          : 'Búsqueda de letras en línea desactivada'
+      );
     }
   };
 
@@ -81,35 +87,6 @@ export default function SettingsModal({
 
   if (!visible) return null;
 
-  const thresholds = [
-    { label: '70%', value: 0.7 },
-    { label: '75%', value: 0.75 },
-    { label: '80%', value: 0.8 },
-    { label: '90%', value: 0.9 },
-  ];
-
-  const rgModes = [
-    { label: 'Por Pista', value: 'track' },
-    { label: 'Por Álbum', value: 'album' },
-  ];
-
-  const preampOptions = [
-    { label: '-6 dB', value: -6 },
-    { label: '-3 dB', value: -3 },
-    { label: '0 dB', value: 0 },
-    { label: '+3 dB', value: 3 },
-    { label: '+6 dB', value: 6 },
-  ];
-
-  const fallbackPreampOptions = [
-    { label: '-9 dB', value: -9 },
-    { label: '-6 dB', value: -6 },
-    { label: '-3 dB', value: -3 },
-    { label: '0 dB', value: 0 },
-  ];
-
-  const rg = replayGainSettings || DEFAULT_REPLAYGAIN_SETTINGS;
-
   return (
     <Modal
       transparent={true}
@@ -139,243 +116,25 @@ export default function SettingsModal({
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
               >
-                {/* Ajuste: Búsqueda en línea */}
-                <View style={styles.settingSection}>
-                  <View style={styles.settingRow}>
-                    <View style={styles.settingTextCol}>
-                      <Text style={styles.settingLabel}>Buscar letras en línea</Text>
-                      <Text style={styles.settingDescription}>
-                        Consulta automáticamente en LRCLIB API si la canción no incluye letra local.
-                      </Text>
-                    </View>
-                    <Switch
-                      value={settings.onlineLyricsEnabled}
-                      onValueChange={toggleOnlineLyrics}
-                      trackColor={{ false: '#1E202E', true: 'rgba(139, 92, 246, 0.4)' }}
-                      thumbColor={settings.onlineLyricsEnabled ? '#8B5CF6' : '#64748B'}
-                    />
-                  </View>
+                {/* Sección modular: Letras en línea */}
+                <OnlineLyricsSection
+                  enabled={settings.onlineLyricsEnabled}
+                  onToggleEnabled={toggleOnlineLyrics}
+                  matchThreshold={settings.matchThreshold}
+                  onChangeThreshold={setThreshold}
+                />
 
-                  {settings.onlineLyricsEnabled && (
-                    <View style={styles.apiInfoBox}>
-                      <MaterialCommunityIcons name="cloud-search-outline" size={16} color="#A78BFA" />
-                      <Text style={styles.apiInfoText}>
-                        Usa la API pública LRCLIB (gratuita, sin API key).
-                      </Text>
-                    </View>
-                  )}
-                </View>
+                {/* Sección modular: ReplayGain */}
+                <ReplayGainSection
+                  settings={replayGainSettings}
+                  onUpdate={onUpdateReplayGain}
+                />
 
-                {/* Ajuste: Umbral de coincidencia */}
-                {settings.onlineLyricsEnabled && (
-                  <View style={styles.settingSection}>
-                    <Text style={styles.subSectionTitle}>Coincidencia Mínima (% Match)</Text>
-                    <Text style={styles.settingDescription}>
-                      Evita asociar letras incorrectas requiriendo un porcentaje de similitud mínimo entre los títulos.
-                    </Text>
-                    <View style={styles.pillContainer}>
-                      {thresholds.map((t) => {
-                        const isActive = settings.matchThreshold === t.value;
-                        return (
-                          <TouchableOpacity
-                            key={t.value}
-                            style={[styles.pill, isActive && styles.pillActive]}
-                            onPress={() => setThreshold(t.value)}
-                            activeOpacity={0.7}
-                          >
-                            <Text style={[styles.pillText, isActive && styles.pillTextActive]}>
-                              {t.label}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-                  </View>
-                )}
-
-                {/* Ajuste: Normalización de Volumen (ReplayGain) */}
-                <View style={styles.settingSection}>
-                  <View style={styles.settingRow}>
-                    <View style={styles.settingTextCol}>
-                      <Text style={styles.settingLabel}>Normalización de Volumen</Text>
-                      <Text style={styles.settingDescription}>
-                        Mantiene un nivel de volumen homogéneo (ReplayGain y Sound Check) entre canciones de distintos álbumes o fuentes.
-                      </Text>
-                    </View>
-                    <Switch
-                      value={rg.enabled ?? false}
-                      onValueChange={(val) => {
-                        if (onUpdateReplayGain) {
-                          onUpdateReplayGain({ ...rg, enabled: val });
-                        }
-                      }}
-                      trackColor={{ false: '#1E202E', true: 'rgba(139, 92, 246, 0.4)' }}
-                      thumbColor={rg.enabled ? '#8B5CF6' : '#64748B'}
-                    />
-                  </View>
-
-                  {rg.enabled && (
-                    <View style={{ marginTop: 12 }}>
-                      {/* Modo de ganancia */}
-                      <Text style={styles.subSectionTitle}>Modo de normalización</Text>
-                      <View style={styles.pillContainer}>
-                        {rgModes.map((m) => {
-                          const isActive = (rg.mode || 'track') === m.value;
-                          return (
-                            <TouchableOpacity
-                              key={m.value}
-                              style={[styles.pill, isActive && styles.pillActive]}
-                              onPress={() => {
-                                if (onUpdateReplayGain) {
-                                  onUpdateReplayGain({ ...rg, mode: m.value });
-                                }
-                              }}
-                              activeOpacity={0.7}
-                            >
-                              <Text style={[styles.pillText, isActive && styles.pillTextActive]}>
-                                {m.label}
-                              </Text>
-                            </TouchableOpacity>
-                          );
-                        })}
-                      </View>
-
-                      {/* Pre-amplificación con ReplayGain */}
-                      <View style={{ marginTop: 12 }}>
-                        <Text style={styles.subSectionTitle}>Pre-amplificación (Con ReplayGain)</Text>
-                        <Text style={styles.settingDescription}>
-                          Ajuste fino de volumen sobre el estándar acústico de 89 dB SPL.
-                        </Text>
-                        <View style={styles.pillContainer}>
-                          {preampOptions.map((opt) => {
-                            const isActive = (rg.preampWithRG ?? 0) === opt.value;
-                            return (
-                              <TouchableOpacity
-                                key={opt.value}
-                                style={[styles.pill, isActive && styles.pillActive, { minWidth: 46 }]}
-                                onPress={() => {
-                                  if (onUpdateReplayGain) {
-                                    onUpdateReplayGain({ ...rg, preampWithRG: opt.value });
-                                  }
-                                }}
-                                activeOpacity={0.7}
-                              >
-                                <Text style={[styles.pillText, isActive && styles.pillTextActive]}>
-                                  {opt.label}
-                                </Text>
-                              </TouchableOpacity>
-                            );
-                          })}
-                        </View>
-                      </View>
-
-                      {/* Pre-amplificación sin ReplayGain (Respaldo) */}
-                      <View style={{ marginTop: 12 }}>
-                        <Text style={styles.subSectionTitle}>Canciones sin ReplayGain (Atenuación)</Text>
-                        <Text style={styles.settingDescription}>
-                          Ganancia aplicada a pistas sin metadatos de volumen para igualar su sonoridad.
-                        </Text>
-                        <View style={styles.pillContainer}>
-                          {fallbackPreampOptions.map((opt) => {
-                            const isActive = (rg.preampWithoutRG ?? -6) === opt.value;
-                            return (
-                              <TouchableOpacity
-                                key={opt.value}
-                                style={[styles.pill, isActive && styles.pillActive, { minWidth: 46 }]}
-                                onPress={() => {
-                                  if (onUpdateReplayGain) {
-                                    onUpdateReplayGain({ ...rg, preampWithoutRG: opt.value });
-                                  }
-                                }}
-                                activeOpacity={0.7}
-                              >
-                                <Text style={[styles.pillText, isActive && styles.pillTextActive]}>
-                                  {opt.label}
-                                </Text>
-                              </TouchableOpacity>
-                            );
-                          })}
-                        </View>
-                      </View>
-
-                      {/* Evitar distorsión (Anti-Clipping) */}
-                      <View style={[styles.settingRow, { marginTop: 14 }]}>
-                        <View style={styles.settingTextCol}>
-                          <Text style={styles.settingLabel}>Prevenir distorsión (Anti-Clipping)</Text>
-                          <Text style={styles.settingDescription}>
-                            Limita la ganancia máxima para evitar saturación digital si el pico excede el límite.
-                          </Text>
-                        </View>
-                        <Switch
-                          value={rg.preventClipping !== false}
-                          onValueChange={(val) => {
-                            if (onUpdateReplayGain) {
-                              onUpdateReplayGain({ ...rg, preventClipping: val });
-                            }
-                          }}
-                          trackColor={{ false: '#1E202E', true: 'rgba(139, 92, 246, 0.4)' }}
-                          thumbColor={rg.preventClipping !== false ? '#8B5CF6' : '#64748B'}
-                        />
-                      </View>
-
-                      <View style={styles.apiInfoBox}>
-                        <MaterialCommunityIcons name="equalizer" size={16} color="#A78BFA" />
-                        <Text style={styles.apiInfoText}>
-                          Compatible con etiquetas ReplayGain (ID3v2, FLAC, Vorbis) y Apple Sound Check (iTunNORM).
-                        </Text>
-                      </View>
-                    </View>
-                  )}
-                </View>
-
-                {/* Ajuste: Fundido Cruzado (Crossfade) */}
-                <View style={styles.settingSection}>
-                  <View style={styles.settingRow}>
-                    <View style={styles.settingTextCol}>
-                      <Text style={styles.settingLabel}>Fundido Cruzado (Crossfade)</Text>
-                      <Text style={styles.settingDescription}>
-                        Transición suave de volumen entre canciones para evitar pausas o cortes bruscos al cambiar de pista.
-                      </Text>
-                    </View>
-                    <Switch
-                      value={crossfadeSettings?.enabled ?? false}
-                      onValueChange={(val) => {
-                        if (onUpdateCrossfade) {
-                          onUpdateCrossfade({ ...crossfadeSettings, enabled: val });
-                        }
-                      }}
-                      trackColor={{ false: '#1E202E', true: 'rgba(139, 92, 246, 0.4)' }}
-                      thumbColor={crossfadeSettings?.enabled ? '#8B5CF6' : '#64748B'}
-                    />
-                  </View>
-
-                  {crossfadeSettings?.enabled && (
-                    <View style={{ marginTop: 12 }}>
-                      <Text style={styles.subSectionTitle}>Duración del fundido</Text>
-                      <View style={styles.pillContainer}>
-                        {[2, 4, 6, 8, 10, 12].map((sec) => {
-                          const isActive = (crossfadeSettings?.duration ?? 4) === sec;
-                          return (
-                            <TouchableOpacity
-                              key={sec}
-                              style={[styles.pill, isActive && styles.pillActive, { minWidth: 46 }]}
-                              onPress={() => {
-                                if (onUpdateCrossfade) {
-                                  onUpdateCrossfade({ ...crossfadeSettings, duration: sec });
-                                }
-                              }}
-                              activeOpacity={0.7}
-                            >
-                              <Text style={[styles.pillText, isActive && styles.pillTextActive]}>
-                                {sec}s
-                              </Text>
-                            </TouchableOpacity>
-                          );
-                        })}
-                      </View>
-                    </View>
-                  )}
-                </View>
+                {/* Sección modular: Crossfade */}
+                <CrossfadeSection
+                  settings={crossfadeSettings}
+                  onUpdate={onUpdateCrossfade}
+                />
 
                 {/* Temporizador de apagado */}
                 <View style={styles.settingSection}>
@@ -394,12 +153,17 @@ export default function SettingsModal({
                       activeOpacity={0.7}
                     >
                       <MaterialCommunityIcons
-                        name={isTimerActive ? "bed-clock" : "timer-outline"}
+                        name={isTimerActive ? 'bed-clock' : 'timer-outline'}
                         size={18}
-                        color={isTimerActive ? "#A78BFA" : "#8B5CF6"}
+                        color={isTimerActive ? '#A78BFA' : '#8B5CF6'}
                       />
-                      <Text style={[styles.actionTimerBtnText, isTimerActive && styles.actionTimerBtnTextActive]}>
-                        {isTimerActive ? (timeRemainingFormatted || 'Activo') : 'Configurar'}
+                      <Text
+                        style={[
+                          styles.actionTimerBtnText,
+                          isTimerActive && styles.actionTimerBtnTextActive,
+                        ]}
+                      >
+                        {isTimerActive ? timeRemainingFormatted || 'Activo' : 'Configurar'}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -418,7 +182,6 @@ export default function SettingsModal({
                   </TouchableOpacity>
                 </View>
               </ScrollView>
-
             </View>
           </TouchableWithoutFeedback>
         </View>

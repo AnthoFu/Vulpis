@@ -1,4 +1,5 @@
 import { StyleSheet } from 'react-native';
+import { Colors } from '../constants/colors';
 
 const styles = StyleSheet.create({
   overlay: {
@@ -16,17 +17,17 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#000000',
+    backgroundColor: Colors.overlayBlack,
   },
   drawer: {
     width: 290,
     height: '100%',
-    backgroundColor: '#0C0D14',
+    backgroundColor: Colors.bgSecondary,
     borderRightWidth: 1,
-    borderRightColor: '#1F202E',
+    borderRightColor: Colors.borderSubtle,
     paddingHorizontal: 20,
     justifyContent: 'space-between',
-    shadowColor: '#000',
+    shadowColor: Colors.black,
     shadowOffset: { width: 4, height: 0 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
@@ -41,12 +42,12 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: 'rgba(139, 92, 246, 0.12)',
+    backgroundColor: Colors.accentAlpha12,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.2)',
+    borderColor: Colors.accentAlpha20,
   },
   logoImage: {
     width: 32,
@@ -56,24 +57,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontSize: 20,
     fontWeight: '800',
     letterSpacing: 2,
   },
   subtitle: {
-    color: '#5F6070',
+    color: Colors.textMuted,
     fontSize: 10,
     fontWeight: '600',
     marginTop: 2,
   },
   divider: {
     height: 1,
-    backgroundColor: '#1A1C29',
+    backgroundColor: Colors.bgSurface,
     marginBottom: 25,
   },
   sectionHeader: {
-    color: '#4B4D63',
+    color: Colors.textDisabled,
     fontSize: 9,
     fontWeight: '700',
     letterSpacing: 1.5,
@@ -95,9 +96,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   menuItemActive: {
-    backgroundColor: 'rgba(139, 92, 246, 0.08)',
+    backgroundColor: Colors.accentAlpha08,
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.15)',
+    borderColor: Colors.accentAlpha15,
   },
   menuItemContent: {
     flexDirection: 'row',
@@ -109,16 +110,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   menuItemLabel: {
-    color: '#8E8F9E',
+    color: Colors.textTertiary,
     fontSize: 14,
     fontWeight: '600',
   },
   menuItemLabelActive: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontWeight: '700',
   },
   menuItemDesc: {
-    color: '#5F6070',
+    color: Colors.textMuted,
     fontSize: 10,
     marginTop: 2,
   },
@@ -126,7 +127,7 @@ const styles = StyleSheet.create({
     width: 3,
     height: 16,
     borderRadius: 1.5,
-    backgroundColor: '#8B5CF6',
+    backgroundColor: Colors.accent,
     position: 'absolute',
     left: 0,
     top: '50%',
@@ -134,7 +135,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     borderTopWidth: 1,
-    borderTopColor: '#1A1C29',
+    borderTopColor: Colors.bgSurface,
     paddingTop: 15,
     gap: 12,
   },
@@ -145,13 +146,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   settingsLabel: {
-    color: '#8E8F9E',
+    color: Colors.textTertiary,
     fontSize: 14,
     fontWeight: '600',
     marginLeft: 10,
   },
   versionText: {
-    color: '#3F4052',
+    color: Colors.textVersion,
     fontSize: 10,
     fontFamily: 'monospace',
     paddingLeft: 8,

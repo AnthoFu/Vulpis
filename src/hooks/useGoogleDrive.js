@@ -1,11 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { Alert, Platform } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Alert } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as DocumentPicker from 'expo-document-picker';
 import TrackPlayer from '@rntp/player';
 import { GOOGLE_OAUTH_CONFIG } from '../constants/config';
-import { extractMetadata } from '../utils/metadata';
 import {
   getGoogleConfig,
   getStoredToken,
@@ -16,7 +14,9 @@ import {
   getDriveRedirectUrl,
   uploadTrackToDrive,
   deleteTrackFromDrive,
-} from '../utils/drive';
+  downloadDriveFile,
+  saveDriveTrackToDevice,
+} from '../services/drive';
 
 export default function useGoogleDrive({
   currentSource,
@@ -62,36 +62,6 @@ export default function useGoogleDrive({
     loadGoogleConfigData();
   }, []);
 
-  const downloadDriveFile = async (fileId, title, accessToken) => {
-    const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
-    const localUri = FileSystem.cacheDirectory + `${fileId}.mp3`;
-    
-    try {
-      const fileInfo = await FileSystem.getInfoAsync(localUri);
-      if (fileInfo.exists) {
-        console.log('[Drive] Archivo ya guardado en caché local:', localUri);
-        return localUri;
-      }
-      
-      console.log('[Drive] Descargando archivo a caché:', localUri);
-      const downloadResumable = FileSystem.createDownloadResumable(
-        url,
-        localUri,
-        {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-          },
-        }
-      );
-      
-      const { uri } = await downloadResumable.downloadAsync();
-      console.log('[Drive] Archivo descargado exitosamente:', uri);
-      return uri;
-    } catch (error) {
-      console.error('[Drive] Error al descargar archivo:', error);
-      return null;
-    }
-  };
 
   const loadDriveFiles = async (token, forceUpdatePlayer = false) => {
     setIsDriveLoading(true);
@@ -302,128 +272,18 @@ export default function useGoogleDrive({
       return;
     }
 
-    const startDownload = async (savedDirectoryUri = null) => {
-      setIsDriveLoading(true);
-      showToast(`Preparando descarga: ${track.title}...`);
-
-      try {
-        let persistentLocalUri = null;
-        const sanitizedTitle = track.title.replace(/[/\\?%*:|"<>]/g, '_');
-        const tempFilename = `${sanitizedTitle}.mp3`;
-
-        const fileId = track.mediaId.replace(/^drive-/, '');
-        const cachedUri = await downloadDriveFile(fileId, track.title, token);
-        if (!cachedUri) {
-          throw new Error('No se pudo descargar el archivo de Google Drive.');
-        }
-
-        persistentLocalUri = FileSystem.documentDirectory + tempFilename;
-        await FileSystem.copyAsync({
-          from: cachedUri,
-          to: persistentLocalUri,
-        });
-
-        if (Platform.OS === 'android') {
-          let directoryUri = savedDirectoryUri;
-
-          if (!directoryUri) {
-            const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
-            if (!permissions.granted) {
-              Alert.alert('Permiso cancelado', 'No se pudo guardar la canción en el almacenamiento público.');
-              setIsDriveLoading(false);
-              return;
-            }
-            directoryUri = permissions.directoryUri;
-            await AsyncStorage.setItem('vulpis_download_directory_uri', directoryUri);
-          }
-
-          showToast('Exportando al dispositivo...');
-          
-          const base64Data = await FileSystem.readAsStringAsync(cachedUri, {
-            encoding: FileSystem.EncodingType.Base64,
-          });
-
-          const publicFileUri = await FileSystem.StorageAccessFramework.createFileAsync(
-            directoryUri,
-            sanitizedTitle,
-            'audio/mpeg'
-          );
-
-          await FileSystem.writeAsStringAsync(publicFileUri, base64Data, {
-            encoding: FileSystem.EncodingType.Base64,
-          });
-        }
-
-        const meta = await extractMetadata(persistentLocalUri);
-        const newLocalTrack = {
-          mediaId: `local-drive-${Date.now()}`,
-          url: persistentLocalUri,
-          title: meta.title || track.title || tempFilename.replace(/\.mp3$/i, ''),
-          artist: meta.artist || track.artist || 'Descargado de Drive',
-          album: meta.album || track.album || 'Google Drive',
-          genre: meta.genre || track.genre || null,
-          artworkUrl: meta.artworkUrl || track.artworkUrl || defaultCover,
-          lyrics: meta.lyrics || null,
-          replayGain: meta.replayGain || null,
-        };
-
-        const existingCustom = hasCustomLocalTracks ? localLibraryTracks : [];
-        const updatedTracks = [...existingCustom, newLocalTrack];
-        
-        await saveLocalTracks(updatedTracks);
-        showToast('¡Guardado exitosamente!');
-        
-        Alert.alert(
-          'Descarga Completada',
-          Platform.OS === 'android' 
-            ? `La canción "${track.title}" se guardó en tu dispositivo y se agregó a tu biblioteca local de Vulpis.`
-            : `La canción "${track.title}" se ha descargado y guardado en tu biblioteca local.`
-        );
-
-      } catch (error) {
-        console.error('[useGoogleDrive] Error en handleDownloadDriveTrack:', error);
-        if (savedDirectoryUri) {
-          try {
-            await AsyncStorage.removeItem('vulpis_download_directory_uri');
-          } catch (e) {
-            console.warn('[useGoogleDrive] Error al limpiar directorio URI:', e);
-          }
-        }
-        Alert.alert(
-          'Error de Descarga',
-          'Ocurrió un problema al descargar o guardar la canción. Si cambiaste los permisos de tu carpeta, inténtalo de nuevo para volver a seleccionarla.'
-        );
-      } finally {
-        setIsDriveLoading(false);
-      }
-    };
-
-    if (Platform.OS === 'android') {
-      try {
-        const savedUri = await AsyncStorage.getItem('vulpis_download_directory_uri');
-        if (savedUri) {
-          await startDownload(savedUri);
-        } else {
-          Alert.alert(
-            'Activar Descargas Públicas',
-            'Para que otras aplicaciones de tu teléfono puedan acceder a tu música descargada, necesitamos que elijas una carpeta una sola vez.\n\n' +
-            '1. En la siguiente pantalla, selecciona o crea una carpeta en tu teléfono (te sugerimos "Música" o "Descargas").\n' +
-            '2. Presiona el botón grande azul abajo que dice "Usar esta carpeta" (o "Permitir acceso").\n\n' +
-            '¡Y listo! Las próximas descargas se realizarán automáticamente sin preguntarte nada.',
-            [
-              { text: 'Cancelar', style: 'cancel' },
-              { text: 'Elegir Carpeta', onPress: () => startDownload(null) }
-            ]
-          );
-        }
-      } catch (err) {
-        console.error('[useGoogleDrive] Error al leer directorio guardado:', err);
-        await startDownload(null);
-      }
-    } else {
-      await startDownload();
-    }
+    await saveDriveTrackToDevice({
+      track,
+      token,
+      defaultCover,
+      hasCustomLocalTracks,
+      localLibraryTracks,
+      saveLocalTracks,
+      showToast,
+      setIsLoading: setIsDriveLoading,
+    });
   };
+
 
   const handleRefreshDrive = async () => {
     const token = await getStoredToken();

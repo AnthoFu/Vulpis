@@ -1,0 +1,151 @@
+import { Colors } from '../../constants/colors';
+
+/**
+ * Estilos para los modales de la biblioteca (Opciones de pista y Selector de lista de reproducción).
+ */
+export const libraryModalsStyles = {
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: Colors.overlayAlpha70,
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: Colors.bgSecondary,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderWidth: 1,
+    borderColor: Colors.borderSubtle,
+    padding: 24,
+    paddingBottom: 40,
+    alignItems: 'center',
+    width: '100%',
+  },
+  modalTitle: {
+    color: Colors.white,
+    fontSize: 18,
+    fontWeight: '800',
+    textAlign: 'center',
+    width: '100%',
+  },
+  modalSubtitle: {
+    color: Colors.textTertiary,
+    fontSize: 14,
+    marginTop: 4,
+    textAlign: 'center',
+    width: '100%',
+  },
+  modalDivider: {
+    height: 1,
+    backgroundColor: Colors.borderSubtle,
+    width: '100%',
+    marginVertical: 16,
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.bgInput,
+    borderWidth: 1,
+    borderColor: Colors.borderSubtle,
+    borderRadius: 14,
+    width: '100%',
+    paddingVertical: 14,
+    marginBottom: 10,
+    gap: 8,
+  },
+  modalOptionText: {
+    color: Colors.white,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  modalCancelOption: {
+    backgroundColor: Colors.dangerAlpha08,
+    borderColor: Colors.dangerAlpha20,
+    marginTop: 6,
+  },
+  modalCancelText: {
+    color: Colors.danger,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  emptyPlaylistsModalText: {
+    color: Colors.textMuted,
+    fontSize: 13,
+    textAlign: 'center',
+    marginVertical: 16,
+  },
+  playlistPickerOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.bgInput,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.overlayModalAlpha80,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 8,
+    width: '100%',
+    gap: 8,
+  },
+  playlistPickerName: {
+    flex: 1,
+    color: Colors.textSecondary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  playlistPickerCount: {
+    color: Colors.textMuted,
+    fontSize: 12,
+  },
+  inlineCreateWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.bgInput,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.borderSubtle,
+    paddingLeft: 12,
+    paddingRight: 4,
+    height: 44,
+    width: '100%',
+    marginTop: 4,
+  },
+  inlineCreateInput: {
+    flex: 1,
+    color: Colors.textSecondary,
+    fontSize: 13,
+    height: '100%',
+  },
+  inlineCreateBtn: {
+    backgroundColor: Colors.accent,
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  inlineCreateBtnDisabled: {
+    backgroundColor: Colors.bgElevated,
+  },
+  inlineCreateBtnText: {
+    color: Colors.white,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  modalGenreBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.accentAlpha12,
+    borderWidth: 1,
+    borderColor: Colors.accentAlpha25,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginTop: 6,
+  },
+  modalGenreText: {
+    color: Colors.accentLight,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+};
+
+export default libraryModalsStyles;

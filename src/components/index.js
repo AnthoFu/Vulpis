@@ -27,4 +27,6 @@ export { default as GoogleDrivePanel } from './library/GoogleDrivePanel';
 export { default as ArtistsTab } from './library/ArtistsTab';
 export { default as AlbumsTab } from './library/AlbumsTab';
 export { default as PlaylistsTab } from './library/PlaylistsTab';
+export { default as PlaylistDetailView } from './library/PlaylistDetailView';
+export { default as PlaylistArtwork } from './library/PlaylistArtwork';
 export { default as SongsTab } from './library/SongsTab';

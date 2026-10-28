@@ -9,62 +9,20 @@ import {
   filterAlbums,
 } from '../utils/libraryOrganizer';
 
-export const SEARCH_FILTERS = [
-  { id: 'all', label: 'Todos', icon: 'tag-multiple-outline' },
-  { id: 'title', label: 'Título', icon: 'music-note-outline' },
-  { id: 'artist', label: 'Artista', icon: 'account-outline' },
-  { id: 'album', label: 'Álbum', icon: 'album' },
-  { id: 'genre', label: 'Género', icon: 'guitar-acoustic' },
-];
+import {
+  SEARCH_FILTERS,
+  normalizeSearchString,
+  filterTrackList,
+  calculateOdooFilterCounts,
+} from '../utils/trackFilter';
 
-/**
- * Normaliza cadenas para comparaciones de búsqueda insensibles a mayúsculas y acentos.
- */
-export function normalizeSearchString(str) {
-  if (!str || typeof str !== 'string') return '';
-  return str
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .trim();
-}
-
-/**
- * Filtra una lista de canciones según el criterio y el texto de búsqueda.
- */
-export function filterTrackList(list, rawQuery, filterMode = 'all') {
-  if (!list || list.length === 0) return [];
-  if (!rawQuery || rawQuery.trim() === '') return list;
-
-  const query = normalizeSearchString(rawQuery);
-  if (!query) return list;
-
-  return list.filter((track) => {
-    const title = normalizeSearchString(track.title);
-    const artist = normalizeSearchString(track.artist);
-    const album = normalizeSearchString(track.album);
-    const genre = normalizeSearchString(track.genre);
-
-    switch (filterMode) {
-      case 'title':
-        return title.includes(query);
-      case 'artist':
-        return artist.includes(query);
-      case 'album':
-        return album.includes(query);
-      case 'genre':
-        return genre.includes(query);
-      case 'all':
-      default:
-        return (
-          title.includes(query) ||
-          artist.includes(query) ||
-          album.includes(query) ||
-          genre.includes(query)
-        );
-    }
-  });
-}
+// Re-exportar utilidades para compatibilidad hacia atrás
+export {
+  SEARCH_FILTERS,
+  normalizeSearchString,
+  filterTrackList,
+  calculateOdooFilterCounts,
+};
 
 export default function useQueueList({
   tracks,
@@ -269,41 +227,7 @@ export default function useQueueList({
 
   // Conteo reactivo por categoría estilo Odoo para las sugerencias del buscador
   const filterCounts = useMemo(() => {
-    if (!searchQuery || searchQuery.trim() === '' || !activeContextTracks || activeContextTracks.length === 0) {
-      return { all: 0, title: 0, artist: 0, album: 0, genre: 0 };
-    }
-    const q = normalizeSearchString(searchQuery);
-    let allCount = 0;
-    let titleCount = 0;
-    let artistCount = 0;
-    let albumCount = 0;
-    let genreCount = 0;
-
-    for (const track of activeContextTracks) {
-      const t = normalizeSearchString(track.title);
-      const a = normalizeSearchString(track.artist);
-      const al = normalizeSearchString(track.album);
-      const g = normalizeSearchString(track.genre);
-
-      const matchesTitle = t.includes(q);
-      const matchesArtist = a.includes(q);
-      const matchesAlbum = al.includes(q);
-      const matchesGenre = g.includes(q);
-
-      if (matchesTitle) titleCount++;
-      if (matchesArtist) artistCount++;
-      if (matchesAlbum) albumCount++;
-      if (matchesGenre) genreCount++;
-      if (matchesTitle || matchesArtist || matchesAlbum || matchesGenre) allCount++;
-    }
-
-    return {
-      all: allCount,
-      title: titleCount,
-      artist: artistCount,
-      album: albumCount,
-      genre: genreCount,
-    };
+    return calculateOdooFilterCounts(activeContextTracks, searchQuery);
   }, [activeContextTracks, searchQuery]);
 
   // Filtrado reactivo de canciones con memoización

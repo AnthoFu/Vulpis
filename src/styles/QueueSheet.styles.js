@@ -1,4 +1,5 @@
 import { StyleSheet, Dimensions } from 'react-native';
+import { Colors } from '../constants/colors';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -10,14 +11,14 @@ const styles = StyleSheet.create({
   },
   bottomSheetBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(9, 10, 15, 0.75)',
+    backgroundColor: Colors.overlayBgAlpha75,
   },
   bottomSheetContent: {
-    backgroundColor: '#10111A',
+    backgroundColor: Colors.bgDeep,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     borderWidth: 1,
-    borderColor: '#26273B',
+    borderColor: Colors.borderList,
     borderBottomWidth: 0,
     maxHeight: SCREEN_HEIGHT * 0.88,
     minHeight: SCREEN_HEIGHT * 0.45,
@@ -32,7 +33,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#3E4059',
+    backgroundColor: Colors.borderMuted,
   },
   headerRow: {
     flexDirection: 'row',
@@ -44,14 +45,14 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: Colors.white,
     letterSpacing: 0.3,
   },
   headerCloseBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: Colors.surfaceWhiteAlpha06,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -60,9 +61,9 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     padding: 12,
     borderRadius: 14,
-    backgroundColor: 'rgba(139, 92, 246, 0.08)',
+    backgroundColor: Colors.accentAlpha08,
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.25)',
+    borderColor: Colors.accentAlpha25,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
@@ -73,7 +74,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#A78BFA',
+    color: Colors.accentLight,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
@@ -94,11 +95,11 @@ const styles = StyleSheet.create({
   nowPlayingTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.white,
   },
   nowPlayingArtist: {
     fontSize: 13,
-    color: '#8E8F9E',
+    color: Colors.textTertiary,
     marginTop: 2,
   },
   nowPlayingActions: {
@@ -110,7 +111,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#8B5CF6',
+    backgroundColor: Colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -128,14 +129,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
-    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    backgroundColor: Colors.dangerAlpha12,
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.25)',
+    borderColor: Colors.dangerAlpha25,
   },
   clearQueueText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#EF4444',
+    color: Colors.danger,
   },
   listContent: {
     paddingHorizontal: 16,
@@ -148,15 +149,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     marginBottom: 6,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: Colors.surfaceWhiteAlpha03,
     height: 64,
     borderWidth: 1,
     borderColor: 'transparent',
   },
   queueItemDragging: {
-    backgroundColor: '#201D33',
-    borderColor: '#8B5CF6',
-    shadowColor: '#8B5CF6',
+    backgroundColor: Colors.bgDragging,
+    borderColor: Colors.accent,
+    shadowColor: Colors.accent,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.45,
     shadowRadius: 10,
@@ -184,11 +185,11 @@ const styles = StyleSheet.create({
   queueItemTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#E2E3E9',
+    color: Colors.textSecondary,
   },
   queueItemArtist: {
     fontSize: 12,
-    color: '#8E8F9E',
+    color: Colors.textTertiary,
     marginTop: 2,
   },
   actionsRow: {
@@ -229,22 +230,22 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: 'rgba(139, 92, 246, 0.08)',
+    backgroundColor: Colors.accentAlpha08,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.2)',
+    borderColor: Colors.accentAlpha20,
   },
   emptyTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#E2E3E9',
+    color: Colors.textSecondary,
     textAlign: 'center',
   },
   emptySub: {
     fontSize: 12,
-    color: '#8E8F9E',
+    color: Colors.textTertiary,
     marginTop: 6,
     textAlign: 'center',
     lineHeight: 18,
@@ -258,12 +259,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     marginTop: 10,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.06)',
+    borderTopColor: Colors.borderWhiteAlpha06,
   },
   previousTitle: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#6B6C80',
+    color: Colors.textPrevLabel,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
@@ -278,7 +279,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     marginBottom: 4,
     borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.015)',
+    backgroundColor: Colors.surfaceWhiteAlpha02,
     height: 52,
     opacity: 0.65,
   },
@@ -291,11 +292,11 @@ const styles = StyleSheet.create({
   previousItemTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#A0A1B0',
+    color: Colors.textPrev,
   },
   previousItemArtist: {
     fontSize: 11,
-    color: '#6B6C80',
+    color: Colors.textPrevLabel,
     marginTop: 1,
   },
 });

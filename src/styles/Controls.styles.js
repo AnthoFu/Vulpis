@@ -1,4 +1,5 @@
 import { StyleSheet } from 'react-native';
+import { Colors } from '../constants/colors';
 
 const styles = StyleSheet.create({
   controlsRow: {
@@ -17,7 +18,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 24,
-    backgroundColor: '#232433',
+    backgroundColor: Colors.bgMid,
   },
   secondaryButton: {
     width: 40,
@@ -28,9 +29,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   activeSecondaryButton: {
-    backgroundColor: 'rgba(139, 92, 246, 0.12)',
+    backgroundColor: Colors.accentAlpha12,
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.25)',
+    borderColor: Colors.accentAlpha25,
   },
   playButton: {
     width: 68,
@@ -38,8 +39,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 34,
-    backgroundColor: '#8B5CF6',
-    shadowColor: '#8B5CF6',
+    backgroundColor: Colors.accent,
+    shadowColor: Colors.accent,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 10,

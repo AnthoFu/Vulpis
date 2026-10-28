@@ -9,7 +9,7 @@ import {
   getCustomLyrics,
   saveCustomLyrics,
   removeCustomLyrics,
-} from '../utils/onlineLyrics';
+} from '../services/lyrics/lyricsService';
 import { smoothTrackTransition, getCrossfadeSettings } from '../utils/crossfade';
 
 export default function usePlayerCard({

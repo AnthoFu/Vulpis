@@ -6,7 +6,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import TrackPlayer from '@rntp/player';
 import { extractMetadata } from '../utils/metadata';
-import { scanDeviceAudio } from '../utils/localScanner';
+import { scanDeviceAudio } from '../services/scanner/mediaScanner';
 import { localTracks } from '../constants/tracks';
 
 export default function useLocalLibrary({

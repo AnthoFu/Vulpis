@@ -95,6 +95,13 @@
   - [x] Creación de `src/services/index.js` como barrel export unificado de infraestructura.
   - [x] Preservación de adaptadores retrocompatibles en `src/utils/` y migración de hooks y componentes a la nueva capa de servicios.
 
+- [x] **Arquitectura de Contexto Global y Erradicación de Prop Drilling (`src/context/`):**
+  - [x] Creación de `PlayerContext` y `PlayerProvider` en `src/context/PlayerContext.js`.
+  - [x] Hook de consumo `usePlayer()` con validación estricta de alcance (Provider boundary check).
+  - [x] Barrel export `src/context/index.js` para simplificar la integración de contextos.
+  - [x] Adaptación híbrida de componentes (`Header`, `SidebarDrawer`, `SettingsModal`, `MiniPlayer`, `PlayerCard`, `QueueList`) para consumir directamente del contexto o aceptar props opcionales.
+  - [x] Limpieza radical de `App.js`: reducción de ~244 líneas con más de 70 props manuales a ~80 líneas declarativas y desacopladas.
+
 ---
 
 # Mejoras por hacer

@@ -12,46 +12,49 @@ import ArtistsTab from './ArtistsTab';
 import AlbumsTab from './AlbumsTab';
 import PlaylistsTab from './PlaylistsTab';
 import SongsTab from './SongsTab';
+import { PlayerContext } from '../../context/PlayerContext';
 
 /**
  * QueueList — Orquestador principal de la biblioteca musical y sus pestañas.
+ * Puede recibir propiedades explícitas o consumir automáticamente el `PlayerContext`.
  */
-export default function QueueList({
-  activeTrack,
-  tracks,
-  playQueue,
-  ListHeaderComponent,
-  contentContainerStyle,
-  isLoading,
-  currentSource,
-  onSelectSource,
-  onScanLocal,
-  onImportMp3,
-  onResetLocal,
-  hasCustomLocalTracks,
-  onAddToQueue,
-  onRemoveFromQueue,
-  isDriveConnected,
-  onConnectDrive,
-  onDisconnectDrive,
-  onRefreshDrive,
-  isDriveLoading,
-  googleClientId,
-  googleRedirectUri,
-  onSelectTrack,
-  playlists = [],
-  isFavoriteTrack,
-  onToggleFavorite,
-  onCreatePlaylist,
-  onDeletePlaylist,
-  onAddTrackToPlaylist,
-  onRemoveTrackFromPlaylist,
-  onUploadTrackToDrive,
-  onUploadLocalTrackToDrive,
-  onDeleteDriveTrack,
-  onDownloadDriveTrack,
-  onDeleteLocalTrack,
-}) {
+export default function QueueList(props) {
+  const player = React.useContext(PlayerContext) || {};
+
+  const activeTrack = props.activeTrack !== undefined ? props.activeTrack : player.activeTrack;
+  const tracks = props.tracks !== undefined ? props.tracks : player.tracks;
+  const playQueue = props.playQueue !== undefined ? props.playQueue : player.playQueue;
+  const ListHeaderComponent = props.ListHeaderComponent;
+  const contentContainerStyle = props.contentContainerStyle;
+  const isLoading = props.isLoading !== undefined ? props.isLoading : (player.isSourceChanging || false);
+  const currentSource = props.currentSource !== undefined ? props.currentSource : (player.currentSource || 'local');
+  const onSelectSource = props.onSelectSource || player.handleSourceChange;
+  const onScanLocal = props.onScanLocal || player.handleScanLocal;
+  const onImportMp3 = props.onImportMp3 || player.handleImportMp3;
+  const onResetLocal = props.onResetLocal || player.handleResetLocal;
+  const hasCustomLocalTracks = props.hasCustomLocalTracks !== undefined ? props.hasCustomLocalTracks : player.hasCustomLocalTracks;
+  const onAddToQueue = props.onAddToQueue || player.handleAddToQueue;
+  const onRemoveFromQueue = props.onRemoveFromQueue || player.handleRemoveFromQueue;
+  const isDriveConnected = props.isDriveConnected !== undefined ? props.isDriveConnected : player.isDriveConnected;
+  const onConnectDrive = props.onConnectDrive || player.handleConnectDrive;
+  const onDisconnectDrive = props.onDisconnectDrive || player.handleDisconnectDrive;
+  const onRefreshDrive = props.onRefreshDrive || player.handleRefreshDrive;
+  const isDriveLoading = props.isDriveLoading !== undefined ? props.isDriveLoading : (player.isDriveLoading || false);
+  const googleClientId = props.googleClientId !== undefined ? props.googleClientId : player.googleClientId;
+  const googleRedirectUri = props.googleRedirectUri !== undefined ? props.googleRedirectUri : player.googleRedirectUri;
+  const onSelectTrack = props.onSelectTrack || player.handleSelectTrack;
+  const playlists = props.playlists !== undefined ? props.playlists : (player.playlists || []);
+  const isFavoriteTrack = props.isFavoriteTrack || player.isFavoriteTrack;
+  const onToggleFavorite = props.onToggleFavorite || player.handleToggleFavorite;
+  const onCreatePlaylist = props.onCreatePlaylist || player.handleCreatePlaylist;
+  const onDeletePlaylist = props.onDeletePlaylist || player.handleDeletePlaylist;
+  const onAddTrackToPlaylist = props.onAddTrackToPlaylist || player.handleAddTrackToPlaylist;
+  const onRemoveTrackFromPlaylist = props.onRemoveTrackFromPlaylist || player.handleRemoveTrackFromPlaylist;
+  const onUploadTrackToDrive = props.onUploadTrackToDrive || player.handleUploadTrackToDrive;
+  const onUploadLocalTrackToDrive = props.onUploadLocalTrackToDrive || player.handleUploadLocalTrackToDrive;
+  const onDeleteDriveTrack = props.onDeleteDriveTrack || player.handleDeleteDriveTrack;
+  const onDownloadDriveTrack = props.onDownloadDriveTrack || player.handleDownloadDriveTrack;
+  const onDeleteLocalTrack = props.onDeleteLocalTrack || player.handleDeleteLocalTrack;
   const {
     activeTab,
     handleTabChange,

@@ -21,34 +21,39 @@ import useSyncedLyrics from '../../hooks/useSyncedLyrics';
 import { SPRING, DURATION } from '../../constants/animations';
 import EditLyricsModal from '../modals/EditLyricsModal';
 import SleepTimerModal from '../modals/SleepTimerModal';
+import { PlayerContext } from '../../context/PlayerContext';
 
-export default function PlayerCard({
-  activeTrack,
-  isPlaying,
-  position,
-  duration,
-  repeatMode,
-  isShuffleActive,
-  tracks,
-  playQueue,
-  isFavorite = false,
-  onToggleFavorite,
-  onRemoveFromQueue,
-  onMoveQueueItem,
-  onClearUpcomingQueue,
-  onReorderQueueState,
-  onSyncReorderNative,
-  onDragActive,
-  onClose,
-  onSelectTrack,
-  initialQueueVisible = false,
-  isTimerActive = false,
-  timerMode = null,
-  timeRemainingFormatted = null,
-  onSelectTimer,
-  onCancelTimer,
-  crossfadeSettings,
-}) {
+export default function PlayerCard(props) {
+  const player = React.useContext(PlayerContext) || {};
+
+  const activeTrack = props.activeTrack !== undefined ? props.activeTrack : player.activeTrack;
+  const isPlaying = props.isPlaying !== undefined ? props.isPlaying : player.isPlaying;
+  const position = props.position !== undefined ? props.position : player.progress?.position;
+  const duration = props.duration !== undefined ? props.duration : player.progress?.duration;
+  const repeatMode = props.repeatMode !== undefined ? props.repeatMode : player.repeatMode;
+  const isShuffleActive = props.isShuffleActive !== undefined ? props.isShuffleActive : player.isShuffleActive;
+  const tracks = props.tracks || player.tracks;
+  const playQueue = props.playQueue || player.playQueue;
+  const isFavorite = props.isFavorite !== undefined 
+    ? props.isFavorite 
+    : (activeTrack && player.isFavoriteTrack ? player.isFavoriteTrack(activeTrack.mediaId) : false);
+  const onToggleFavorite = props.onToggleFavorite || (() => activeTrack && player.handleToggleFavorite?.(activeTrack));
+  const onRemoveFromQueue = props.onRemoveFromQueue || player.handleRemoveFromQueue;
+  const onMoveQueueItem = props.onMoveQueueItem || player.handleMoveQueueItem;
+  const onClearUpcomingQueue = props.onClearUpcomingQueue || player.handleClearUpcomingQueue;
+  const onReorderQueueState = props.onReorderQueueState || player.handleReorderQueueState;
+  const onSyncReorderNative = props.onSyncReorderNative || player.handleSyncReorderNative;
+  const onDragActive = props.onDragActive || player.handleSetDragActive;
+  const onClose = props.onClose || (() => player.setIsFullPlayerVisible?.(false));
+  const onSelectTrack = props.onSelectTrack || player.handleSelectTrack;
+  const initialQueueVisible = props.initialQueueVisible !== undefined ? props.initialQueueVisible : (player.startWithQueueVisible || false);
+  const isTimerActive = props.isTimerActive !== undefined ? props.isTimerActive : (player.isTimerActive || false);
+  const timerMode = props.timerMode !== undefined ? props.timerMode : player.timerMode;
+  const timeRemainingFormatted = props.timeRemainingFormatted !== undefined ? props.timeRemainingFormatted : player.timeRemainingFormatted;
+  const onSelectTimer = props.onSelectTimer || player.startSleepTimer;
+  const onCancelTimer = props.onCancelTimer || player.cancelSleepTimer;
+  const crossfadeSettings = props.crossfadeSettings || player.crossfadeSettings;
+
   const insets = useSafeAreaInsets();
   const [isEditLyricsVisible, setIsEditLyricsVisible] = useState(false);
   const [isSleepTimerVisible, setIsSleepTimerVisible] = useState(false);

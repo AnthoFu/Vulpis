@@ -16,73 +16,21 @@ import {
   SidebarDrawer,
   SettingsModal,
 } from './src/components';
-import useAppController from './src/hooks/useAppController';
+import { PlayerProvider, usePlayer } from './src/context';
 
+/**
+ * Contenedor visual principal de Vulpis.
+ * Consume directamente el estado de `PlayerContext`, eliminando el prop-drilling en cascada.
+ */
 function MainApp() {
   const {
     insets,
     isPlayerInitialized,
     activeTrack,
-    isPlaying,
-    progress,
-    repeatMode,
-    isShuffleActive,
     isFullPlayerVisible,
     setIsFullPlayerVisible,
-    startWithQueueVisible,
-    setStartWithQueueVisible,
-    playQueue,
-    isDrawerOpen,
-    setIsDrawerOpen,
-    isSettingsOpen,
-    setIsSettingsOpen,
-    currentSource,
-    tracks,
-    isSourceChanging,
     toast,
-    showToast,
-    playlists,
-    isFavoriteTrack,
-    handleToggleFavorite,
-    handleCreatePlaylist,
-    handleDeletePlaylist,
-    handleAddTrackToPlaylist,
-    handleRemoveTrackFromPlaylist,
-    hasCustomLocalTracks,
-    handleScanLocal,
-    handleImportMp3,
-    handleResetLocal,
-    handleDeleteLocalTrack,
-    isDriveConnected,
-    googleClientId,
-    googleRedirectUri,
-    isDriveLoading,
-    handleConnectDrive,
-    handleDisconnectDrive,
-    handleRefreshDrive,
-    handleUploadTrackToDrive,
-    handleUploadLocalTrackToDrive,
-    handleDeleteDriveTrack,
-    handleDownloadDriveTrack,
-    handleAddToQueue,
-    handleRemoveFromQueue,
-    handleMoveQueueItem,
-    handleClearUpcomingQueue,
-    handleReorderQueueState,
-    handleSyncReorderNative,
-    handleSetDragActive,
-    handleSourceChange,
-    handleSelectTrack,
-    isTimerActive,
-    timerMode,
-    timeRemainingFormatted,
-    startSleepTimer,
-    cancelSleepTimer,
-    crossfadeSettings,
-    handleUpdateCrossfade,
-    replayGainSettings,
-    handleUpdateReplayGain,
-  } = useAppController();
+  } = usePlayer();
 
   if (!isPlayerInitialized) {
     return (
@@ -97,79 +45,26 @@ function MainApp() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#090A0F" />
       
+      {/* Notificación flotante Toast */}
       {toast && (
         <View style={[styles.toastContainer, { top: Math.max(insets.top + 10, 40) }]}>
           <Text style={styles.toastText}>{toast}</Text>
         </View>
       )}
       
+      {/* Lista y pestañas de la biblioteca musical */}
       <QueueList
-        activeTrack={activeTrack}
-        tracks={tracks}
-        playQueue={playQueue}
-        isLoading={isSourceChanging}
-        currentSource={currentSource}
-        onSelectSource={handleSourceChange}
-        onDeleteLocalTrack={handleDeleteLocalTrack}
-        hasCustomLocalTracks={hasCustomLocalTracks}
-        onAddToQueue={handleAddToQueue}
-        onRemoveFromQueue={handleRemoveFromQueue}
-        isDriveConnected={isDriveConnected}
-        onConnectDrive={handleConnectDrive}
-        onDisconnectDrive={handleDisconnectDrive}
-        onRefreshDrive={handleRefreshDrive}
-        onUploadTrackToDrive={handleUploadTrackToDrive}
-        onUploadLocalTrackToDrive={handleUploadLocalTrackToDrive}
-        onDeleteDriveTrack={handleDeleteDriveTrack}
-        onDownloadDriveTrack={handleDownloadDriveTrack}
-        isDriveLoading={isDriveLoading}
-        googleClientId={googleClientId}
-        googleRedirectUri={googleRedirectUri}
-        onSelectTrack={handleSelectTrack}
-        playlists={playlists}
-        isFavoriteTrack={isFavoriteTrack}
-        onToggleFavorite={handleToggleFavorite}
-        onCreatePlaylist={handleCreatePlaylist}
-        onDeletePlaylist={handleDeletePlaylist}
-        onAddTrackToPlaylist={handleAddTrackToPlaylist}
-        onRemoveTrackFromPlaylist={handleRemoveTrackFromPlaylist}
         contentContainerStyle={{
           paddingTop: Math.max(insets.top, 20),
           paddingBottom: Math.max(insets.bottom, 20) + (activeTrack ? 80 : 0),
           paddingLeft: Math.max(insets.left, 20),
           paddingRight: Math.max(insets.right, 20),
         }}
-        ListHeaderComponent={
-          <Header 
-            onMenuPress={() => setIsDrawerOpen(true)} 
-            currentSource={currentSource} 
-            tracksCount={tracks ? tracks.length : 0}
-            playlistsCount={playlists ? playlists.length : 0}
-            isDriveConnected={isDriveConnected}
-            isLoading={isSourceChanging || isDriveLoading}
-          />
-        }
+        ListHeaderComponent={<Header />}
       />
 
-      {/* Mini reproductor flotante */}
-      <MiniPlayer
-        activeTrack={activeTrack}
-        isPlaying={isPlaying}
-        position={progress.position}
-        duration={progress.duration}
-        onPress={() => {
-          setStartWithQueueVisible(false);
-          setIsFullPlayerVisible(true);
-        }}
-        onQueuePress={() => {
-          setStartWithQueueVisible(true);
-          setIsFullPlayerVisible(true);
-        }}
-        tracks={tracks}
-        playQueue={playQueue}
-        onSelectTrack={handleSelectTrack}
-        isShuffleActive={isShuffleActive}
-      />
+      {/* Mini reproductor flotante persistente */}
+      <MiniPlayer />
 
       {/* Modal del reproductor a pantalla completa */}
       <Modal
@@ -178,67 +73,28 @@ function MainApp() {
         animationType="none"
         onRequestClose={() => setIsFullPlayerVisible(false)}
       >
-        <PlayerCard
-          activeTrack={activeTrack}
-          isPlaying={isPlaying}
-          position={progress.position}
-          duration={progress.duration}
-          repeatMode={repeatMode}
-          isShuffleActive={isShuffleActive}
-          tracks={tracks}
-          playQueue={playQueue}
-          isFavorite={activeTrack ? isFavoriteTrack(activeTrack.mediaId) : false}
-          onToggleFavorite={() => activeTrack && handleToggleFavorite(activeTrack)}
-          onRemoveFromQueue={handleRemoveFromQueue}
-          onMoveQueueItem={handleMoveQueueItem}
-          onClearUpcomingQueue={handleClearUpcomingQueue}
-          onReorderQueueState={handleReorderQueueState}
-          onSyncReorderNative={handleSyncReorderNative}
-          onDragActive={handleSetDragActive}
-          onClose={() => setIsFullPlayerVisible(false)}
-          onSelectTrack={handleSelectTrack}
-          initialQueueVisible={startWithQueueVisible}
-          isTimerActive={isTimerActive}
-          timerMode={timerMode}
-          timeRemainingFormatted={timeRemainingFormatted}
-          onSelectTimer={startSleepTimer}
-          onCancelTimer={cancelSleepTimer}
-          crossfadeSettings={crossfadeSettings}
-        />
+        <PlayerCard />
       </Modal>
 
       {/* Menú lateral de navegación */}
-      <SidebarDrawer
-        isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-        currentSource={currentSource}
-        onSelectSource={handleSourceChange}
-        onOpenSettings={() => setIsSettingsOpen(true)}
-      />
+      <SidebarDrawer />
 
-      {/* Modal de Ajustes */}
-      <SettingsModal
-        visible={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        onShowToast={showToast}
-        isTimerActive={isTimerActive}
-        timerMode={timerMode}
-        timeRemainingFormatted={timeRemainingFormatted}
-        onSelectTimer={startSleepTimer}
-        onCancelTimer={cancelSleepTimer}
-        crossfadeSettings={crossfadeSettings}
-        onUpdateCrossfade={handleUpdateCrossfade}
-        replayGainSettings={replayGainSettings}
-        onUpdateReplayGain={handleUpdateReplayGain}
-      />
+      {/* Modal de Ajustes generales */}
+      <SettingsModal />
     </View>
   );
 }
 
+/**
+ * Punto de entrada de la aplicación móvil.
+ * Configura los proveedores de contexto de SafeArea y de Reproducción (`PlayerProvider`).
+ */
 export default function App() {
   return (
     <SafeAreaProvider>
-      <MainApp />
+      <PlayerProvider>
+        <MainApp />
+      </PlayerProvider>
     </SafeAreaProvider>
   );
 }

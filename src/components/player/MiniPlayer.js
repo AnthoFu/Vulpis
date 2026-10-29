@@ -4,22 +4,32 @@ import styles from '../../styles/MiniPlayer.styles';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import useMiniPlayer from '../../hooks/useMiniPlayer';
+import { PlayerContext } from '../../context/PlayerContext';
 
 /**
  * Mini reproductor flotante persistente en la parte inferior de la pantalla.
+ * Puede recibir propiedades explícitas o consumir automáticamente el `PlayerContext`.
  */
-export default function MiniPlayer({
-  activeTrack,
-  isPlaying,
-  position,
-  duration,
-  onPress,
-  onQueuePress,
-  tracks = [],
-  playQueue = [],
-  onSelectTrack,
-  isShuffleActive,
-}) {
+export default function MiniPlayer(props) {
+  const player = React.useContext(PlayerContext) || {};
+
+  const activeTrack = props.activeTrack !== undefined ? props.activeTrack : player.activeTrack;
+  const isPlaying = props.isPlaying !== undefined ? props.isPlaying : player.isPlaying;
+  const position = props.position !== undefined ? props.position : player.progress?.position;
+  const duration = props.duration !== undefined ? props.duration : player.progress?.duration;
+  const onPress = props.onPress || (() => {
+    player.setStartWithQueueVisible?.(false);
+    player.setIsFullPlayerVisible?.(true);
+  });
+  const onQueuePress = props.onQueuePress || (() => {
+    player.setStartWithQueueVisible?.(true);
+    player.setIsFullPlayerVisible?.(true);
+  });
+  const tracks = props.tracks || player.tracks || [];
+  const playQueue = props.playQueue || player.playQueue || [];
+  const onSelectTrack = props.onSelectTrack || player.handleSelectTrack;
+  const isShuffleActive = props.isShuffleActive !== undefined ? props.isShuffleActive : player.isShuffleActive;
+
   const insets = useSafeAreaInsets();
   
   const {

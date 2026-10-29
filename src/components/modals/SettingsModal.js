@@ -16,21 +16,24 @@ import SleepTimerModal from './SleepTimerModal';
 import OnlineLyricsSection from './settings/OnlineLyricsSection';
 import ReplayGainSection from './settings/ReplayGainSection';
 import CrossfadeSection from './settings/CrossfadeSection';
+import { PlayerContext } from '../../context/PlayerContext';
 
-export default function SettingsModal({
-  visible,
-  onClose,
-  onShowToast,
-  isTimerActive = false,
-  timerMode = null,
-  timeRemainingFormatted = null,
-  onSelectTimer,
-  onCancelTimer,
-  crossfadeSettings = { enabled: false, duration: 4 },
-  onUpdateCrossfade,
-  replayGainSettings = DEFAULT_REPLAYGAIN_SETTINGS,
-  onUpdateReplayGain,
-}) {
+export default function SettingsModal(props) {
+  const player = React.useContext(PlayerContext) || {};
+
+  const visible = props.visible !== undefined ? props.visible : (player.isSettingsOpen || false);
+  const onClose = props.onClose || (() => player.setIsSettingsOpen?.(false));
+  const onShowToast = props.onShowToast || player.showToast;
+  const isTimerActive = props.isTimerActive !== undefined ? props.isTimerActive : (player.isTimerActive || false);
+  const timerMode = props.timerMode !== undefined ? props.timerMode : player.timerMode;
+  const timeRemainingFormatted = props.timeRemainingFormatted !== undefined ? props.timeRemainingFormatted : player.timeRemainingFormatted;
+  const onSelectTimer = props.onSelectTimer || player.startSleepTimer;
+  const onCancelTimer = props.onCancelTimer || player.cancelSleepTimer;
+  const crossfadeSettings = props.crossfadeSettings || player.crossfadeSettings || { enabled: false, duration: 4 };
+  const onUpdateCrossfade = props.onUpdateCrossfade || player.handleUpdateCrossfade;
+  const replayGainSettings = props.replayGainSettings || player.replayGainSettings || DEFAULT_REPLAYGAIN_SETTINGS;
+  const onUpdateReplayGain = props.onUpdateReplayGain || player.handleUpdateReplayGain;
+
   const [isSleepTimerVisible, setIsSleepTimerVisible] = useState(false);
   const [settings, setSettingsState] = useState({
     onlineLyricsEnabled: false,

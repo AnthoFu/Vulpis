@@ -13,11 +13,21 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import appConfig from '../../../app.config';
 import useSidebarDrawer from '../../hooks/useSidebarDrawer';
+import { PlayerContext } from '../../context/PlayerContext';
 
 /**
  * Menú lateral deslizante para navegación entre fuentes de audio y acceso a ajustes.
+ * Puede recibir propiedades explícitas o consumir automáticamente el `PlayerContext`.
  */
-export default function SidebarDrawer({ isOpen, onClose, currentSource, onSelectSource, onOpenSettings }) {
+export default function SidebarDrawer(props) {
+  const player = React.useContext(PlayerContext) || {};
+
+  const isOpen = props.isOpen !== undefined ? props.isOpen : (player.isDrawerOpen || false);
+  const onClose = props.onClose || (() => player.setIsDrawerOpen?.(false));
+  const currentSource = props.currentSource || player.currentSource || 'local';
+  const onSelectSource = props.onSelectSource || player.handleSourceChange;
+  const onOpenSettings = props.onOpenSettings || (() => player.setIsSettingsOpen?.(true));
+
   const insets = useSafeAreaInsets();
   const { visible, slideAnim, fadeAnim } = useSidebarDrawer({ isOpen });
 

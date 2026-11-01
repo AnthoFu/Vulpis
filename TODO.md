@@ -102,6 +102,14 @@
   - [x] Adaptación híbrida de componentes (`Header`, `SidebarDrawer`, `SettingsModal`, `MiniPlayer`, `PlayerCard`, `QueueList`) para consumir directamente del contexto o aceptar props opcionales.
   - [x] Limpieza radical de `App.js`: reducción de ~244 líneas con más de 70 props manuales a ~80 líneas declarativas y desacopladas.
 
+- [x] **Fase 1 de Migración Progresiva a TypeScript y Modelos de Dominio (`src/models/`):**
+  - [x] Configuración del compilador TypeScript (`tsconfig.json`) extendiendo `expo/tsconfig.base` con verificación estricta.
+  - [x] Creación de `src/models/Track.ts`: interfaz `Track`, `ReplayGainData`, fábrica `createTrack` y sanitización contra `CursorWindow`.
+  - [x] Creación de `src/models/Playlist.ts`: interfaz `Playlist`, constantes de Favoritos, fábrica `createPlaylist` y utilidades de ordenamiento.
+  - [x] Creación de `src/models/AudioSettings.ts`: interfaces y valores predeterminados para `ReplayGainSettings`, `CrossfadeSettings` y `LyricsSettings`.
+  - [x] Barrel export `src/models/index.ts` para tipado y acceso unificado.
+  - [x] Verificación estricta de tipos con `tsc --noEmit` y validación de bundling híbrido sin minificar en Expo.
+
 ---
 
 # Mejoras por hacer

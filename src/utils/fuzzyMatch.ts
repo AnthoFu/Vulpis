@@ -1,7 +1,16 @@
 /**
- * Limpia el título quitando etiquetas de descargas, colaboraciones (feat/ft) y extensiones.
+ * Utilidades para cálculo de similitud difusa (Fuzzy Matching) de títulos y artistas.
+ * Emplea el algoritmo del Coeficiente de Sørensen-Dice sobre bigramas de caracteres.
  */
-export function cleanTitleOnly(str) {
+
+/**
+ * Limpia el título quitando extensiones de archivo, etiquetas de descargas,
+ * colaboraciones (feat/ft) y corchetes de metadatos no musicales.
+ *
+ * @param str Cadena de texto de entrada
+ * @returns Cadena limpia y normalizada en minúsculas
+ */
+export function cleanTitleOnly(str?: string | null): string {
   if (!str || typeof str !== 'string') return '';
   return str
     .toLowerCase()
@@ -28,15 +37,22 @@ export function cleanTitleOnly(str) {
     .trim();
 }
 
-export function cleanString(str) {
+/**
+ * Alias de cleanTitleOnly para compatibilidad con módulos consumidores.
+ */
+export function cleanString(str?: string | null): string {
   return cleanTitleOnly(str);
 }
 
 /**
- * Algoritmo de Coeficiente de Sørensen-Dice para calcular similitud entre 2 cadenas.
+ * Algoritmo de Coeficiente de Sørensen-Dice para calcular la similitud entre 2 cadenas.
  * Retorna un número flotante entre 0.0 (0%) y 1.0 (100%).
+ *
+ * @param str1 Primera cadena
+ * @param str2 Segunda cadena
+ * @returns Coeficiente de Sørensen-Dice de 0.0 a 1.0
  */
-export function calculateSimilarity(str1, str2) {
+export function calculateSimilarity(str1?: string | null, str2?: string | null): number {
   const s1 = cleanTitleOnly(str1);
   const s2 = cleanTitleOnly(str2);
 
@@ -46,8 +62,8 @@ export function calculateSimilarity(str1, str2) {
     return s1.includes(s2) || s2.includes(s1) ? 0.8 : 0.0;
   }
 
-  const getBigrams = (text) => {
-    const bigrams = new Map();
+  const getBigrams = (text: string): Map<string, number> => {
+    const bigrams = new Map<string, number>();
     for (let i = 0; i < text.length - 1; i++) {
       const bigram = text.substring(i, i + 2);
       const count = bigrams.get(bigram) || 0;
@@ -70,9 +86,13 @@ export function calculateSimilarity(str1, str2) {
 }
 
 /**
- * Calcula similitud avanzada de títulos permitiendo coincidencia por subcadenas o títulos truncados.
+ * Calcula similitud avanzada de títulos considerando subcadenas y títulos truncados.
+ *
+ * @param str1 Primer título
+ * @param str2 Segundo título
+ * @returns Coeficiente de similitud ajustado (0.0 a 1.0)
  */
-export function calculateTitleSimilarity(str1, str2) {
+export function calculateTitleSimilarity(str1?: string | null, str2?: string | null): number {
   const s1 = cleanTitleOnly(str1);
   const s2 = cleanTitleOnly(str2);
 
@@ -86,7 +106,7 @@ export function calculateTitleSimilarity(str1, str2) {
     const minLen = Math.min(s1.length, s2.length);
     const maxLen = Math.max(s1.length, s2.length);
     const ratio = minLen / maxLen;
-    // Otorgar un valor mínimo de 0.85 a títulos truncados/parciales
+    // Otorgar un valor mínimo de 0.88 a títulos truncados/parciales relevantes
     if (ratio >= 0.4) {
       return Math.max(bigramSim, 0.88);
     }

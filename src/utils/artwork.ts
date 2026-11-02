@@ -1,11 +1,20 @@
+/**
+ * Utilidades para manejo seguro de carátulas (Artwork) en caché del dispositivo.
+ * Previene desbordamiento de memoria SQLite CursorWindow (2MB) convirtiendo
+ * imágenes binarias a archivos locales físicos en lugar de cadenas base64.
+ */
+
 import * as FileSystem from 'expo-file-system/legacy';
 
 let isCoversDirReady = false;
 
 /**
- * Calcula un hash numérico simple a partir de una cadena (usado para nombres de carátulas en caché).
+ * Calcula un hash numérico simple a partir de una cadena (usado para nombres únicos de carátula en caché).
+ *
+ * @param str Cadena base (usualmente la URI de la canción o ID)
+ * @returns Cadena alfanumérica corta en base 36
  */
-export function simpleHash(str) {
+export function simpleHash(str?: string | null): string {
   if (!str) return '0';
   let hash = 5381;
   for (let i = 0; i < str.length; i++) {
@@ -18,7 +27,7 @@ export function simpleHash(str) {
 /**
  * Asegura que el directorio de carátulas en caché exista en el sistema de archivos.
  */
-export async function ensureCoversDirExists() {
+export async function ensureCoversDirExists(): Promise<void> {
   if (isCoversDirReady) return;
   try {
     const coversDir = `${FileSystem.cacheDirectory}covers/`;
@@ -34,8 +43,11 @@ export async function ensureCoversDirExists() {
 
 /**
  * Convierte un arreglo de bytes o ArrayBuffer a una cadena Base64 pura.
+ *
+ * @param bytes Secuencia de bytes en arreglo o Uint8Array
+ * @returns Cadena codificada en Base64
  */
-export function arrayBufferToBase64(bytes) {
+export function arrayBufferToBase64(bytes?: Uint8Array | number[] | null): string {
   if (!bytes || typeof bytes.length !== 'number' || bytes.length === 0) return '';
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   let base64 = '';
@@ -57,8 +69,11 @@ export function arrayBufferToBase64(bytes) {
 
 /**
  * Convierte una cadena Base64 a un Uint8Array para lectura directa de bytes.
+ *
+ * @param base64 Cadena en Base64
+ * @returns Búfer de bytes en Uint8Array
  */
-export function base64ToUint8Array(base64) {
+export function base64ToUint8Array(base64?: string | null): Uint8Array {
   if (!base64) return new Uint8Array(0);
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   const lookup = new Uint8Array(256);
@@ -96,8 +111,17 @@ export function base64ToUint8Array(base64) {
 
 /**
  * Guarda los datos de imagen extraídos de las etiquetas en el almacenamiento en caché del dispositivo.
+ *
+ * @param imageData Búfer de imagen en Base64, Uint8Array o array de números
+ * @param format Formato de imagen (ej: 'image/jpeg', 'image/png')
+ * @param fileUri URI del archivo de audio para calcular el hash del nombre
+ * @returns Ruta local al archivo de carátula ('file:///...') o null si falló
  */
-export async function saveArtworkToCache(imageData, format, fileUri) {
+export async function saveArtworkToCache(
+  imageData: string | Uint8Array | number[],
+  format?: string | null,
+  fileUri?: string | null
+): Promise<string | null> {
   try {
     await ensureCoversDirExists();
     let base64 = '';

@@ -1,7 +1,14 @@
+/**
+ * Parser nativo ultra-rápido en memoria para etiquetas ID3v2 (v2.2, v2.3, v2.4).
+ * Extrae metadatos, letras embebidas (USLT/ULT), portadas y etiquetas de volumen ReplayGain
+ * sin dependencias externas pesadas en un tiempo medio de ~0.2ms.
+ */
+
 import { saveArtworkToCache } from './artwork';
 import { parseGainDb, parsePeak, parseITunNorm } from './replayGain';
+import { ReplayGainData } from '../models/Track';
 
-export const ID3_GENRES = [
+export const ID3_GENRES: string[] = [
   'Blues', 'Classic Rock', 'Country', 'Dance', 'Disco', 'Funk', 'Grunge', 'Hip-Hop',
   'Jazz', 'Metal', 'New Age', 'Oldies', 'Other', 'Pop', 'R&B', 'Rap', 'Reggae', 'Rock',
   'Techno', 'Industrial', 'Alternative', 'Ska', 'Death Metal', 'Pranks', 'Soundtrack',
@@ -23,8 +30,11 @@ export const ID3_GENRES = [
 
 /**
  * Normaliza y decodifica géneros musicales a partir de códigos ID3 numéricos o texto libre.
+ *
+ * @param raw Cadena cruda leída de la etiqueta ID3
+ * @returns Nombre del género normalizado o null
  */
-export function cleanGenreString(raw) {
+export function cleanGenreString(raw?: string | null): string | null {
   if (!raw || typeof raw !== 'string') return null;
   const trimmed = raw.trim();
   if (!trimmed) return null;
@@ -51,8 +61,12 @@ export function cleanGenreString(raw) {
 
 /**
  * Decodifica una secuencia de bytes en string de acuerdo con el encoding ID3 (ISO-8859-1, UTF-16, UTF-8).
+ *
+ * @param bytes Búfer de bytes
+ * @param encoding Byte descriptor del estándar de codificación
+ * @returns Cadena de texto decodificada
  */
-export function decodeText(bytes, encoding) {
+export function decodeText(bytes: Uint8Array, encoding: number): string {
   if (!bytes || bytes.length === 0) return '';
   try {
     // 0: ISO-8859-1 (Latin1)
@@ -138,10 +152,30 @@ export function decodeText(bytes, encoding) {
 }
 
 /**
+ * Estructura de metadatos extraídos de una cabecera ID3v2.
+ */
+export interface ID3ParsedMetadata {
+  title: string | null;
+  artist: string | null;
+  album: string | null;
+  genre: string | null;
+  artworkUrl: string | null;
+  lyrics: string | null;
+  replayGain: ReplayGainData | null;
+}
+
+/**
  * Parser nativo ultra-rápido para ID3v2 (v2.2, v2.3, v2.4).
  * Ejecuta en ~0.2ms sin carga de librerías ni clones pesados de memoria.
+ *
+ * @param bytes Búfer de bytes que contiene el inicio del archivo
+ * @param fileUri URI del archivo local para nombrar la carátula guardada
+ * @returns Metadatos parseados o null si no contiene cabecera ID3
  */
-export async function parseFastID3(bytes, fileUri) {
+export async function parseFastID3(
+  bytes: Uint8Array,
+  fileUri?: string | null
+): Promise<ID3ParsedMetadata | null> {
   if (!bytes || bytes.length < 10) return null;
 
   // Comprobar cabecera 'ID3'
@@ -181,7 +215,7 @@ export async function parseFastID3(bytes, fileUri) {
   }
 
   const tagLimit = Math.min(bytes.length, 10 + tagSize);
-  const result = {
+  const result: ID3ParsedMetadata = {
     title: null,
     artist: null,
     album: null,
@@ -376,7 +410,7 @@ export async function parseFastID3(bytes, fileUri) {
           val = decodeText(bytes.subarray(valStart, dataStart + frameSize), encoding).trim();
         }
 
-        if (desc && val) {
+        if (desc && val && result.replayGain) {
           const descLower = desc.toLowerCase();
           if (descLower === 'replaygain_track_gain' || descLower === 'replaygain_gain' || descLower === 'rg_track_gain') {
             const g = parseGainDb(val);
@@ -431,7 +465,7 @@ export async function parseFastID3(bytes, fileUri) {
 
         if ((desc && desc.toLowerCase().includes('itunnorm')) || (val && val.includes(' 00000'))) {
           const norm = parseITunNorm(val);
-          if (norm) {
+          if (norm && result.replayGain) {
             if (result.replayGain.trackGain === null) result.replayGain.trackGain = norm.gain;
             if (result.replayGain.trackPeak === null && norm.peak !== null) result.replayGain.trackPeak = norm.peak;
           }
@@ -452,7 +486,7 @@ export async function parseFastID3(bytes, fileUri) {
           const rawGain = (bytes[pos + 1] << 8) | bytes[pos + 2];
           const signedGain = (rawGain & 0x8000) ? (rawGain - 0x10000) : rawGain;
           const gainDb = signedGain / 512.0;
-          if (result.replayGain.trackGain === null) {
+          if (result.replayGain && result.replayGain.trackGain === null) {
             result.replayGain.trackGain = gainDb;
           }
         }
@@ -465,10 +499,12 @@ export async function parseFastID3(bytes, fileUri) {
   }
 
   const hasReplayGain =
-    result.replayGain.trackGain !== null ||
-    result.replayGain.trackPeak !== null ||
-    result.replayGain.albumGain !== null ||
-    result.replayGain.albumPeak !== null;
+    result.replayGain !== null &&
+    (result.replayGain.trackGain !== null ||
+      result.replayGain.trackPeak !== null ||
+      result.replayGain.albumGain !== null ||
+      result.replayGain.albumPeak !== null);
+
   if (!hasReplayGain) {
     result.replayGain = null;
   }

@@ -1,8 +1,14 @@
+/**
+ * Interfaz unificada de extracción de metadatos de audio para Vulpis Player.
+ * Implementa lectura de chunks binarios (256KB) para optimizar memoria RAM
+ * y combina el parser nativo ultra-rápido de ID3 con el motor fallback de jsmediatags.
+ */
+
 import jsmediatags from 'jsmediatags/dist/jsmediatags.min.js';
 import * as FileSystem from 'expo-file-system/legacy';
 import { extractReplayGainFromJsMediaTags } from './replayGain';
 import { base64ToUint8Array, saveArtworkToCache } from './artwork';
-import { cleanGenreString, parseFastID3 } from './id3Parser';
+import { cleanGenreString, parseFastID3, ID3ParsedMetadata } from './id3Parser';
 import { formatLyricsText, parseLrcLyrics, getLyricsFromTags, checkSidecarLyrics } from './lyrics';
 
 // Re-exportar utilidades para compatibilidad absoluta con todos los módulos existentes
@@ -15,8 +21,11 @@ const MAX_TAG_SIZE = 2 * 1024 * 1024; // 2 MB límite de seguridad para etiqueta
 /**
  * Lee metadatos de audio de manera ultra-optimizada.
  * En lugar de cargar archivos completos de 20-50MB en RAM, lee únicamente el bloque de cabecera (128-256KB).
+ *
+ * @param fileUri URI local ('file:///...') del archivo de audio a inspeccionar
+ * @returns Estructura con título, artista, álbum, género, carátula en caché, letras y ReplayGain
  */
-export const extractMetadata = async (fileUri) => {
+export const extractMetadata = async (fileUri?: string | null): Promise<ID3ParsedMetadata> => {
   if (!fileUri) {
     return {
       title: null,
@@ -108,17 +117,17 @@ export const extractMetadata = async (fileUri) => {
     }
 
     // 3. Fallback para formatos M4A/FLAC/OGG con jsmediatags usando el buffer reducido
-    return new Promise((resolve) => {
+    return new Promise<ID3ParsedMetadata>((resolve) => {
       // Usar Array.from solo sobre el fragmento de 256KB (pesa < 1MB en RAM contra 200MB del archivo completo)
       const smallArray = Array.from(byteArray);
       jsmediatags.read(smallArray, {
-        onSuccess: async (tag) => {
+        onSuccess: async (tag: any) => {
           const tags = tag.tags || {};
           const title = tags.title || null;
           const artist = tags.artist || null;
           const album = tags.album || null;
           const genre = cleanGenreString(tags.genre) || null;
-          let artworkUrl = null;
+          let artworkUrl: string | null = null;
 
           if (tags.picture && tags.picture.data) {
             const { data, format } = tags.picture;

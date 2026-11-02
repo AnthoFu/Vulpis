@@ -2,7 +2,17 @@
  * Utilidades para el filtrado y normalización de búsqueda en listas de canciones.
  */
 
-export const SEARCH_FILTERS = [
+import { Track } from '../models/Track';
+
+export type SearchFilterId = 'all' | 'title' | 'artist' | 'album' | 'genre';
+
+export interface SearchFilterOption {
+  id: SearchFilterId;
+  label: string;
+  icon: string;
+}
+
+export const SEARCH_FILTERS: SearchFilterOption[] = [
   { id: 'all', label: 'Todos', icon: 'tag-multiple-outline' },
   { id: 'title', label: 'Título', icon: 'music-note-outline' },
   { id: 'artist', label: 'Artista', icon: 'account-outline' },
@@ -11,11 +21,23 @@ export const SEARCH_FILTERS = [
 ];
 
 /**
- * Normaliza cadenas para comparaciones de búsqueda insensibles a mayúsculas y acentos.
- * @param {string} str - Cadena de texto de entrada.
- * @returns {string} Cadena normalizada sin acentos y en minúsculas.
+ * Conteo reactivo de coincidencias por categoría de filtro.
  */
-export function normalizeSearchString(str) {
+export interface OdooFilterCounts {
+  all: number;
+  title: number;
+  artist: number;
+  album: number;
+  genre: number;
+}
+
+/**
+ * Normaliza cadenas para comparaciones de búsqueda insensibles a mayúsculas y acentos.
+ *
+ * @param str Cadena de texto de entrada
+ * @returns Cadena normalizada sin acentos y en minúsculas
+ */
+export function normalizeSearchString(str?: string | null): string {
   if (!str || typeof str !== 'string') return '';
   return str
     .toLowerCase()
@@ -26,12 +48,17 @@ export function normalizeSearchString(str) {
 
 /**
  * Filtra una lista de canciones según el criterio y el texto de búsqueda.
- * @param {Array} list - Lista de canciones.
- * @param {string} rawQuery - Consulta de búsqueda introducida por el usuario.
- * @param {string} filterMode - Campo específico ('all', 'title', 'artist', 'album', 'genre').
- * @returns {Array} Lista filtrada de canciones.
+ *
+ * @param list Lista de canciones
+ * @param rawQuery Consulta de búsqueda introducida por el usuario
+ * @param filterMode Campo específico ('all', 'title', 'artist', 'album', 'genre')
+ * @returns Lista filtrada de canciones
  */
-export function filterTrackList(list, rawQuery, filterMode = 'all') {
+export function filterTrackList<T extends Partial<Track>>(
+  list?: T[] | null,
+  rawQuery?: string | null,
+  filterMode: SearchFilterId | string = 'all'
+): T[] {
   if (!list || list.length === 0) return [];
   if (!rawQuery || rawQuery.trim() === '') return list;
 
@@ -66,12 +93,16 @@ export function filterTrackList(list, rawQuery, filterMode = 'all') {
 }
 
 /**
- * Calcula conteos reactivos por categoría (estilo Odoo) para las sugerencias del buscador.
- * @param {Array} activeContextTracks - Pistas activas en el contexto actual.
- * @param {string} searchQuery - Texto de búsqueda.
- * @returns {{all: number, title: number, artist: number, album: number, genre: number}} Conteo por categoría.
+ * Calcula conteos reactivos por categoría para las sugerencias del buscador.
+ *
+ * @param activeContextTracks Pistas activas en el contexto actual
+ * @param searchQuery Texto de búsqueda
+ * @returns Conteo por categoría
  */
-export function calculateOdooFilterCounts(activeContextTracks, searchQuery) {
+export function calculateOdooFilterCounts<T extends Partial<Track>>(
+  activeContextTracks?: T[] | null,
+  searchQuery?: string | null
+): OdooFilterCounts {
   if (!searchQuery || searchQuery.trim() === '' || !activeContextTracks || activeContextTracks.length === 0) {
     return { all: 0, title: 0, artist: 0, album: 0, genre: 0 };
   }

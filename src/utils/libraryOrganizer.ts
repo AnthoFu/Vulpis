@@ -3,7 +3,17 @@
  * Canciones, Árbol de Artistas, Álbumes y Playlists.
  */
 
-export const LIBRARY_TABS = [
+import { Track } from '../models/Track';
+
+export type LibraryTabId = 'songs' | 'artists' | 'albums' | 'playlists';
+
+export interface LibraryTabItem {
+  id: LibraryTabId;
+  label: string;
+  icon: string;
+}
+
+export const LIBRARY_TABS: LibraryTabItem[] = [
   { id: 'songs', label: 'Canciones', icon: 'music-note' },
   { id: 'artists', label: 'Artistas', icon: 'account-outline' },
   { id: 'albums', label: 'Álbumes', icon: 'album' },
@@ -13,7 +23,7 @@ export const LIBRARY_TABS = [
 /**
  * Normaliza cadenas para comparaciones sin distinción de mayúsculas ni acentos.
  */
-function normalizeString(str) {
+function normalizeString(str?: string | null): string {
   if (!str || typeof str !== 'string') return '';
   return str
     .toLowerCase()
@@ -23,15 +33,58 @@ function normalizeString(str) {
 }
 
 /**
+ * Estructura de un álbum dentro del árbol de un artista.
+ */
+export interface ArtistAlbumNode {
+  id: string;
+  title: string;
+  artworkUrl: string | null;
+  tracks: Track[];
+}
+
+/**
+ * Estructura de un nodo de artista con sus álbumes y canciones agrupadas.
+ */
+export interface ArtistNode {
+  id: string;
+  name: string;
+  artworkUrl: string | null;
+  trackCount: number;
+  albumCount: number;
+  albums: ArtistAlbumNode[];
+  tracks: Track[];
+}
+
+/**
+ * Estructura de un álbum agrupado de forma global en la biblioteca.
+ */
+export interface AlbumNode {
+  id: string;
+  title: string;
+  artist: string;
+  artworkUrl: string | null;
+  tracks: Track[];
+  trackCount: number;
+}
+
+interface InternalArtistData {
+  id: string;
+  name: string;
+  artworkUrl: string | null;
+  tracksCount: number;
+  albumsMap: Map<string, ArtistAlbumNode>;
+}
+
+/**
  * Construye el Árbol de Artistas jerárquico a partir de la lista de canciones:
  * Artista -> Álbumes del artista -> Pistas de cada álbum.
  *
- * @param {Array} tracks - Lista completa de canciones.
- * @returns {Array} Lista de artistas ordenados alfabéticamente con su árbol de álbumes y pistas.
+ * @param tracks Lista completa de canciones.
+ * @returns Lista de artistas ordenados alfabéticamente con su árbol de álbumes y pistas.
  */
-export function buildArtistTree(tracks) {
+export function buildArtistTree(tracks?: Track[] | null): ArtistNode[] {
   if (!tracks || !Array.isArray(tracks) || tracks.length === 0) return [];
-  const artistMap = new Map();
+  const artistMap = new Map<string, InternalArtistData>();
 
   for (const track of tracks) {
     const rawArtist =
@@ -46,11 +99,11 @@ export function buildArtistTree(tracks) {
         name: rawArtist,
         artworkUrl: null,
         tracksCount: 0,
-        albumsMap: new Map(),
+        albumsMap: new Map<string, ArtistAlbumNode>(),
       });
     }
 
-    const artistObj = artistMap.get(artistKey);
+    const artistObj = artistMap.get(artistKey)!;
     artistObj.tracksCount++;
     if (!artistObj.artworkUrl && track.artworkUrl) {
       artistObj.artworkUrl = track.artworkUrl;
@@ -74,7 +127,7 @@ export function buildArtistTree(tracks) {
       });
     }
 
-    const albumObj = artistObj.albumsMap.get(albumKey);
+    const albumObj = artistObj.albumsMap.get(albumKey)!;
     albumObj.tracks.push(track);
     if (!albumObj.artworkUrl && track.artworkUrl) {
       albumObj.artworkUrl = track.artworkUrl;
@@ -109,12 +162,12 @@ export function buildArtistTree(tracks) {
 /**
  * Agrupa la lista de canciones en colecciones por Álbum.
  *
- * @param {Array} tracks - Lista completa de canciones.
- * @returns {Array} Lista de álbumes ordenados alfabéticamente con carátula y pistas.
+ * @param tracks Lista completa de canciones.
+ * @returns Lista de álbumes ordenados alfabéticamente con carátula y pistas.
  */
-export function buildAlbumList(tracks) {
+export function buildAlbumList(tracks?: Track[] | null): AlbumNode[] {
   if (!tracks || !Array.isArray(tracks) || tracks.length === 0) return [];
-  const albumMap = new Map();
+  const albumMap = new Map<string, { id: string; title: string; artist: string; artworkUrl: string | null; tracks: Track[] }>();
 
   for (const track of tracks) {
     const rawAlbum =
@@ -141,7 +194,7 @@ export function buildAlbumList(tracks) {
       });
     }
 
-    const albumObj = albumMap.get(albumKey);
+    const albumObj = albumMap.get(albumKey)!;
     albumObj.tracks.push(track);
     if (!albumObj.artworkUrl && track.artworkUrl) {
       albumObj.artworkUrl = track.artworkUrl;
@@ -162,8 +215,12 @@ export function buildAlbumList(tracks) {
 
 /**
  * Filtra la lista de artistas según el texto de búsqueda.
+ *
+ * @param artistList Lista de nodos de artista
+ * @param rawQuery Consulta de búsqueda
+ * @returns Artistas que coinciden con la búsqueda
  */
-export function filterArtists(artistList, rawQuery) {
+export function filterArtists(artistList?: ArtistNode[] | null, rawQuery?: string | null): ArtistNode[] {
   if (!artistList || artistList.length === 0) return [];
   if (!rawQuery || rawQuery.trim() === '') return artistList;
 
@@ -177,8 +234,12 @@ export function filterArtists(artistList, rawQuery) {
 
 /**
  * Filtra la lista de álbumes según el texto de búsqueda (por título o artista).
+ *
+ * @param albumList Lista de nodos de álbum
+ * @param rawQuery Consulta de búsqueda
+ * @returns Álbumes coincidentes
  */
-export function filterAlbums(albumList, rawQuery) {
+export function filterAlbums(albumList?: AlbumNode[] | null, rawQuery?: string | null): AlbumNode[] {
   if (!albumList || albumList.length === 0) return [];
   if (!rawQuery || rawQuery.trim() === '') return albumList;
 

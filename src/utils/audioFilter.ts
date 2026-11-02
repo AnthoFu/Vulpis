@@ -4,6 +4,8 @@
  * grabadoras de llamadas/voz, tonos de notificación y sonidos del sistema.
  */
 
+import { Track } from '../models/Track';
+
 // Extensiones válidas para archivos de música
 const VALID_AUDIO_EXTENSIONS = /\.(mp3|m4a|wav|flac|aac|ogg|opus)$/i;
 
@@ -11,7 +13,7 @@ const VALID_AUDIO_EXTENSIONS = /\.(mp3|m4a|wav|flac|aac|ogg|opus)$/i;
 const MIN_TRACK_DURATION_SECONDS = 15;
 
 // Patrones de nombres de archivo típicos de mensajería, grabadoras y notas de voz
-const EXCLUDED_FILENAME_PATTERNS = [
+const EXCLUDED_FILENAME_PATTERNS: RegExp[] = [
   // WhatsApp: AUD-20240101-WA0001, PTT-20240101-WA0001, WA0001...
   /^(aud|ptt)-\d{8}-wa\d+/i,
   /^wa\d{4,}/i,
@@ -27,7 +29,7 @@ const EXCLUDED_FILENAME_PATTERNS = [
 ];
 
 // Palabras clave estrictas en rutas de aplicaciones de mensajería y redes sociales
-const STRICT_APP_FOLDER_KEYWORDS = [
+const STRICT_APP_FOLDER_KEYWORDS: string[] = [
   'whatsapp',
   'com.whatsapp',
   'w4b', // WhatsApp Business
@@ -48,7 +50,7 @@ const STRICT_APP_FOLDER_KEYWORDS = [
 ];
 
 // Rutas de grabadoras, sistema, tonos y cachés
-const GENERAL_EXCLUDED_PATH_KEYWORDS = [
+const GENERAL_EXCLUDED_PATH_KEYWORDS: string[] = [
   // Grabadoras y llamadas
   'sound_recorder',
   'voicenote',
@@ -78,12 +80,20 @@ const GENERAL_EXCLUDED_PATH_KEYWORDS = [
 ];
 
 /**
+ * Forma mínima requerida de un elemento evaluable por el filtro de audio.
+ */
+export type FilterableAudioItem = Partial<Track> & {
+  uri?: string;
+  filename?: string;
+};
+
+/**
  * Determina si un recurso o pista de audio debe ser excluido de la biblioteca musical.
  *
- * @param {object} item - Asset de MediaLibrary o Track del reproductor.
- * @returns {boolean} true si el audio debe ser excluido, false si es una canción válida.
+ * @param item Asset de MediaLibrary o Track del reproductor.
+ * @returns true si el audio debe ser excluido, false si es una canción válida.
  */
-export function isExcludedAudio(item) {
+export function isExcludedAudio(item?: FilterableAudioItem | null): boolean {
   if (!item) return true;
 
   // 1. Conservar siempre pistas importadas explícitamente por el usuario o descargadas de Drive
@@ -165,10 +175,10 @@ export function isExcludedAudio(item) {
 /**
  * Filtra una lista de assets o canciones conservando únicamente las pistas musicales válidas.
  *
- * @param {Array} list - Lista de assets o pistas.
- * @returns {Array} Lista filtrada sin audios de mensajería ni grabaciones.
+ * @param list Lista de assets o pistas.
+ * @returns Lista filtrada sin audios de mensajería ni grabaciones.
  */
-export function filterMusicAssets(list) {
+export function filterMusicAssets<T extends FilterableAudioItem>(list?: T[] | null): T[] {
   if (!Array.isArray(list) || list.length === 0) return [];
   return list.filter((item) => !isExcludedAudio(item));
 }

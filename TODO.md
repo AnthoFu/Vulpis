@@ -127,6 +127,15 @@
   - [x] Barrel exports actualizados en `src/services/drive/index.ts` y `src/services/index.ts`.
   - [x] Verificación de tipos estricta con `tsc --noEmit` y empaquetado Expo sin errores.
 
+- [x] **Fase 3 de Migración a TypeScript — Capa de Utilidades Puras y Dominio (`src/utils/`):**
+  - [x] Migración de utilidades matemáticas y de texto: `fuzzyMatch.ts`, `trackFilter.ts`, `audioFilter.ts`.
+  - [x] Migración de motores acústicos y transiciones: `crossfade.ts` y `replayGain.ts` fuertemente tipados con `AudioSettings` y `Track`.
+  - [x] Migración de organización de datos y caché: `artwork.ts`, `lyrics.ts` (con interfaz `LrcLine`) y `libraryOrganizer.ts` (árboles `ArtistNode` y `AlbumNode`).
+  - [x] Migración del parser nativo ID3 y metadatos: `id3Parser.ts` y `metadata.ts` tipando `ID3ParsedMetadata`.
+  - [x] Migración de adaptadores retrocompatibles (`drive.ts`, `driveAuth.ts`, `driveDownload.ts`, `localScanner.ts`, `onlineLyrics.ts`).
+  - [x] Creación de `src/types/modules.d.ts` y barrel export centralizado `src/utils/index.ts`.
+  - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores) y bundle exitoso con `npx expo export`.
+
 ---
 
 # Mejoras por hacer

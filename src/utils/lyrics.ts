@@ -1,9 +1,28 @@
+/**
+ * Utilidades para procesamiento, análisis y parseo de letras sincronizadas (.lrc) y texto plano.
+ */
+
 import * as FileSystem from 'expo-file-system/legacy';
 
 /**
- * Limpia y normaliza el texto de las letras eliminando marcas de tiempo LRC y etiquetas de metadatos.
+ * Representación de una línea individual de letra sincronizada.
  */
-export function formatLyricsText(rawLyrics) {
+export interface LrcLine {
+  /** Marca temporal en segundos o null si es texto estático sin marca */
+  time: number | null;
+  /** Texto lírico de la línea */
+  text: string;
+  /** Indica si corresponde a una pausa o compás instrumental */
+  isBreak: boolean;
+}
+
+/**
+ * Limpia y normaliza el texto de las letras eliminando marcas de tiempo LRC y etiquetas de metadatos.
+ *
+ * @param rawLyrics Letra en bruto con posibles marcas LRC
+ * @returns Texto plano limpio formateado por saltos de línea
+ */
+export function formatLyricsText(rawLyrics?: string | null): string {
   if (!rawLyrics || typeof rawLyrics !== 'string') return '';
   return rawLyrics
     .split('\n')
@@ -15,13 +34,16 @@ export function formatLyricsText(rawLyrics) {
 }
 
 /**
- * Parsea letras sincrónicas en formato .lrc devolviendo un arreglo de objetos { time, text, isBreak }.
+ * Parsea letras sincrónicas en formato .lrc devolviendo un arreglo ordenado de objetos LrcLine.
  * Soporta etiquetas [offset: +/-ms], descarta metadatos y detecta pausas instrumentales.
+ *
+ * @param rawLyrics Contenido .lrc crudo
+ * @returns Lista cronológica de líneas de letra
  */
-export function parseLrcLyrics(rawLyrics) {
+export function parseLrcLyrics(rawLyrics?: string | null): LrcLine[] {
   if (!rawLyrics || typeof rawLyrics !== 'string') return [];
   const lines = rawLyrics.split('\n');
-  const result = [];
+  const result: LrcLine[] = [];
   const timeRegex = /\[(\d{1,3}):(\d{2})(?:\.(\d{1,3}))?\]/g;
   const metaRegex = /^\[(ar|ti|al|by|length|re|ve):.*\]$/i;
 
@@ -72,7 +94,7 @@ export function parseLrcLyrics(rawLyrics) {
   });
 
   // Eliminar pausas/breaks redundantes consecutivos
-  const cleanResult = [];
+  const cleanResult: LrcLine[] = [];
   for (let i = 0; i < result.length; i++) {
     const curr = result[i];
     const prev = cleanResult[cleanResult.length - 1];
@@ -86,8 +108,11 @@ export function parseLrcLyrics(rawLyrics) {
 
 /**
  * Extrae las letras embebidas en las etiquetas leídas por jsmediatags (USLT, lyrics, unsynchronisedLyrics).
+ *
+ * @param tags Objeto de etiquetas de audio
+ * @returns Cadena de letra encontrada o null
  */
-export function getLyricsFromTags(tags) {
+export function getLyricsFromTags(tags: any): string | null {
   if (!tags) return null;
 
   if (tags.lyrics) {
@@ -143,8 +168,11 @@ export function getLyricsFromTags(tags) {
 
 /**
  * Busca archivos sidecar de letras (.lrc o .txt) en la misma ruta del archivo de audio.
+ *
+ * @param fileUri URI del archivo de audio ('file:///...')
+ * @returns Contenido del archivo de letras o null si no existe
  */
-export async function checkSidecarLyrics(fileUri) {
+export async function checkSidecarLyrics(fileUri?: string | null): Promise<string | null> {
   try {
     if (
       !fileUri ||

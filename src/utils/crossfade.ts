@@ -1,23 +1,27 @@
+/**
+ * Motor de fundido cruzado (Crossfade) y transiciones acústicas suaves para Vulpis Player.
+ */
+
 import TrackPlayer from '@rntp/player';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { CrossfadeSettings, DEFAULT_CROSSFADE_SETTINGS } from '../models/AudioSettings';
 
-const CROSSFADE_SETTINGS_KEY = 'vulpis_crossfade_settings';
+export const CROSSFADE_SETTINGS_KEY = 'vulpis_crossfade_settings';
 
-export const DEFAULT_CROSSFADE_SETTINGS = {
-  enabled: false,
-  duration: 4, // Duración en segundos (2s, 4s, 6s, 8s, 10s, 12s)
-};
+export { DEFAULT_CROSSFADE_SETTINGS };
 
-let currentFadeTimer = null;
+let currentFadeTimer: ReturnType<typeof setInterval> | null = null;
 let isAutoFading = false;
-let lastFadedTrackId = null;
+let lastFadedTrackId: string | null = null;
 let currentVol = 1.0;
 let activeBaselineVol = 1.0;
 
 /**
  * Establece el volumen base de la pista activa (calculado por ReplayGain).
+ *
+ * @param vol Nivel de volumen normalizado (0.0 a 1.0)
  */
-export function setActiveBaselineVolume(vol) {
+export function setActiveBaselineVolume(vol?: number | null): void {
   const safeVol = Math.max(0, Math.min(1, typeof vol === 'number' && !isNaN(vol) ? vol : 1.0));
   activeBaselineVol = safeVol;
   if (!isAutoFading && !currentFadeTimer) {
@@ -29,14 +33,14 @@ export function setActiveBaselineVolume(vol) {
 /**
  * Obtiene el volumen base activo actual.
  */
-export function getActiveBaselineVolume() {
+export function getActiveBaselineVolume(): number {
   return activeBaselineVol;
 }
 
 /**
- * Obtiene la configuración de fundido cruzado guardada.
+ * Obtiene la configuración de fundido cruzado guardada en AsyncStorage.
  */
-export async function getCrossfadeSettings() {
+export async function getCrossfadeSettings(): Promise<CrossfadeSettings> {
   try {
     const raw = await AsyncStorage.getItem(CROSSFADE_SETTINGS_KEY);
     if (raw) {
@@ -50,8 +54,10 @@ export async function getCrossfadeSettings() {
 
 /**
  * Guarda la configuración de fundido cruzado en AsyncStorage.
+ *
+ * @param settings Nuevos parámetros de fundido cruzado
  */
-export async function saveCrossfadeSettings(settings) {
+export async function saveCrossfadeSettings(settings: CrossfadeSettings): Promise<void> {
   try {
     await AsyncStorage.setItem(CROSSFADE_SETTINGS_KEY, JSON.stringify(settings));
   } catch (e) {
@@ -61,8 +67,12 @@ export async function saveCrossfadeSettings(settings) {
 
 /**
  * Interpola suavemente el volumen del reproductor hacia targetVolume en durationMs milisegundos.
+ * Utiliza una curva de coseno (Equal-Power) para una atenuación acústicamente natural.
+ *
+ * @param targetVolume Nivel de volumen objetivo (0.0 a 1.0)
+ * @param durationMs Duración de la transición en milisegundos
  */
-export function fadeVolume(targetVolume, durationMs = 300) {
+export function fadeVolume(targetVolume?: number | null, durationMs = 300): Promise<void> {
   return new Promise((resolve) => {
     if (currentFadeTimer) {
       clearInterval(currentFadeTimer);
@@ -86,7 +96,7 @@ export function fadeVolume(targetVolume, durationMs = 300) {
     currentFadeTimer = setInterval(() => {
       currentStep++;
       const progress = Math.min(1, currentStep / totalSteps);
-      
+
       // Curva de coseno para una atenuación y aumento acústicamente natural (Equal-Power curve)
       const curve = (1 - Math.cos(progress * Math.PI)) / 2;
       const newVol = startVol + (endVol - startVol) * curve;
@@ -95,8 +105,10 @@ export function fadeVolume(targetVolume, durationMs = 300) {
       TrackPlayer.setVolume(newVol);
 
       if (currentStep >= totalSteps) {
-        clearInterval(currentFadeTimer);
-        currentFadeTimer = null;
+        if (currentFadeTimer) {
+          clearInterval(currentFadeTimer);
+          currentFadeTimer = null;
+        }
         currentVol = endVol;
         TrackPlayer.setVolume(endVol);
         resolve();
@@ -106,16 +118,21 @@ export function fadeVolume(targetVolume, durationMs = 300) {
 }
 
 /**
- * Desvanece el volumen a 0.
+ * Desvanece el volumen gradualmente a 0.
+ *
+ * @param durationMs Duración del fundido de salida en milisegundos
  */
-export function fadeOut(durationMs = 250) {
+export function fadeOut(durationMs = 250): Promise<void> {
   return fadeVolume(0.0, durationMs);
 }
 
 /**
  * Aumenta el volumen a targetVolume (por defecto activeBaselineVol).
+ *
+ * @param durationMs Duración del fundido de entrada en milisegundos
+ * @param targetVolume Nivel de volumen deseado al finalizar
  */
-export function fadeIn(durationMs = 250, targetVolume = null) {
+export function fadeIn(durationMs = 250, targetVolume: number | null = null): Promise<void> {
   const target = typeof targetVolume === 'number' ? targetVolume : activeBaselineVol;
   return fadeVolume(target, durationMs);
 }
@@ -123,7 +140,7 @@ export function fadeIn(durationMs = 250, targetVolume = null) {
 /**
  * Restablece el volumen a activeBaselineVol inmediatamente si no hay un fundido en curso.
  */
-export function resetVolumeToNormal() {
+export function resetVolumeToNormal(): void {
   if (currentFadeTimer) {
     clearInterval(currentFadeTimer);
     currentFadeTimer = null;
@@ -134,8 +151,16 @@ export function resetVolumeToNormal() {
 
 /**
  * Envuelve una acción de cambio de pista con una transición suave de volumen.
+ *
+ * @param actionFn Acción asíncrona a ejecutar durante el silencio intermedio
+ * @param isEnabled Indica si el fundido suave está activo
+ * @param transitionMs Duración de cada rampa (in/out)
  */
-export async function smoothTrackTransition(actionFn, isEnabled = true, transitionMs = 250) {
+export async function smoothTrackTransition<T>(
+  actionFn: () => Promise<T> | T,
+  isEnabled = true,
+  transitionMs = 250
+): Promise<T | undefined> {
   if (!isEnabled) {
     const result = await actionFn();
     resetVolumeToNormal();
@@ -148,7 +173,7 @@ export async function smoothTrackTransition(actionFn, isEnabled = true, transiti
     console.log('[Crossfade] Error en fadeOut de transición:', e);
   }
 
-  let result;
+  let result: T | undefined;
   try {
     result = await actionFn();
   } catch (err) {
@@ -165,6 +190,18 @@ export async function smoothTrackTransition(actionFn, isEnabled = true, transiti
 }
 
 /**
+ * Parámetros requeridos para el cálculo reactivo del fundido automático.
+ */
+export interface AutoCrossfadeProgressParams {
+  position: number;
+  duration: number;
+  isPlaying: boolean;
+  crossfadeEnabled: boolean;
+  crossfadeDuration?: number;
+  activeTrackId?: string | null;
+}
+
+/**
  * Monitoreo de final de pista para fundido cruzado automático entre canciones.
  * Se invoca en cada tick de progreso del reproductor.
  */
@@ -175,7 +212,7 @@ export function handleAutoCrossfadeProgress({
   crossfadeEnabled,
   crossfadeDuration = 4,
   activeTrackId,
-}) {
+}: AutoCrossfadeProgressParams): void {
   if (!crossfadeEnabled || !isPlaying || duration <= 0) {
     if (isAutoFading) {
       isAutoFading = false;

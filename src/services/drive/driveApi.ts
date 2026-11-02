@@ -1,14 +1,31 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import { clearToken } from './driveAuth';
+import { Track } from '../../models/Track';
+
+/**
+ * Representación de un archivo retornado por la API de Google Drive.
+ */
+export interface DriveFile {
+  id: string;
+  name: string;
+  size?: string;
+  webContentLink?: string;
+}
+
+/**
+ * Resultado de subir un archivo a Google Drive.
+ */
+export interface UploadTrackResult {
+  id: string;
+  name: string;
+  mimeType: string;
+}
 
 /**
  * Obtiene el ID de la carpeta dedicada "Vulpis" en Google Drive, creándola si no existe.
- *
- * @param {string} accessToken - Token Bearer de Google Drive.
- * @returns {Promise<string>} ID de la carpeta Vulpis en Google Drive.
  */
-export const getOrCreateVulpisFolder = async (accessToken) => {
+export const getOrCreateVulpisFolder = async (accessToken: string): Promise<string> => {
   const FOLDER_CACHE_KEY = 'vulpis_google_folder_id';
   try {
     const cachedId = await AsyncStorage.getItem(FOLDER_CACHE_KEY);
@@ -73,7 +90,7 @@ export const getOrCreateVulpisFolder = async (accessToken) => {
     }
 
     const createData = await createRes.json();
-    const newFolderId = createData.id;
+    const newFolderId: string = createData.id;
     console.log('[DriveApi] Nueva carpeta Vulpis creada:', newFolderId);
     await AsyncStorage.setItem(FOLDER_CACHE_KEY, newFolderId);
     return newFolderId;
@@ -85,11 +102,8 @@ export const getOrCreateVulpisFolder = async (accessToken) => {
 
 /**
  * Obtiene los archivos de audio MP3 del Google Drive del usuario dentro de la carpeta dedicada Vulpis.
- *
- * @param {string} accessToken - Token Bearer de Google Drive.
- * @returns {Promise<Array<Object>>} Lista de objetos de archivos MP3.
  */
-export const fetchDriveMp3Files = async (accessToken) => {
+export const fetchDriveMp3Files = async (accessToken: string): Promise<DriveFile[]> => {
   if (!accessToken) {
     throw new Error('Token de acceso no válido.');
   }
@@ -126,7 +140,7 @@ export const fetchDriveMp3Files = async (accessToken) => {
     }
 
     const data = await response.json();
-    return data.files || [];
+    return (data.files || []) as DriveFile[];
   } catch (error) {
     console.error('[DriveApi] Error en fetchDriveMp3Files:', error);
     throw error;
@@ -135,12 +149,11 @@ export const fetchDriveMp3Files = async (accessToken) => {
 
 /**
  * Resuelve la URL final redireccionada de un archivo de Google Drive usando una petición GET con AbortController.
- *
- * @param {string} fileId - ID del archivo en Google Drive.
- * @param {string} accessToken - Token Bearer de autenticación.
- * @returns {Promise<string>} URL final redireccionada o URL de streaming directa de fallback.
  */
-export const getDriveRedirectUrl = async (fileId, accessToken) => {
+export const getDriveRedirectUrl = async (
+  fileId: string,
+  accessToken: string
+): Promise<string> => {
   const streamUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
@@ -167,9 +180,9 @@ export const getDriveRedirectUrl = async (fileId, accessToken) => {
     }
 
     return streamUrl;
-  } catch (error) {
+  } catch (error: any) {
     clearTimeout(timeoutId);
-    if (error.name === 'AbortError') {
+    if (error?.name === 'AbortError') {
       console.log('[DriveApi] Petición cancelada (descarga del cuerpo cancelada tras cabecera)');
     } else {
       console.error('[DriveApi] Error al resolver URL de redirección:', error);
@@ -180,14 +193,13 @@ export const getDriveRedirectUrl = async (fileId, accessToken) => {
 
 /**
  * Convierte un objeto de archivo de Google Drive al modelo Track normalizado de Vulpis.
- *
- * @param {Object} file - Archivo retornado por la API de Drive.
- * @param {string} accessToken - Token Bearer de acceso.
- * @param {string} defaultCover - Carátula por defecto de la aplicación.
- * @param {string} [resolvedUrl] - URL pre-resuelta de streaming.
- * @returns {Object} Pista normalizada para TrackPlayer.
  */
-export const mapDriveFileToTrack = (file, accessToken, defaultCover, resolvedUrl) => {
+export const mapDriveFileToTrack = (
+  file: DriveFile,
+  accessToken: string,
+  defaultCover: string,
+  resolvedUrl?: string
+): Track => {
   const streamUrl = resolvedUrl || `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`;
 
   return {
@@ -204,13 +216,12 @@ export const mapDriveFileToTrack = (file, accessToken, defaultCover, resolvedUrl
 
 /**
  * Sube un archivo MP3 a la carpeta dedicada Vulpis en Google Drive.
- *
- * @param {string} fileUri - URI local del archivo de audio a subir.
- * @param {string} fileName - Nombre que tendrá el archivo en Drive.
- * @param {string} accessToken - Token Bearer de acceso.
- * @returns {Promise<{id: string, name: string, mimeType: string}>}
  */
-export const uploadTrackToDrive = async (fileUri, fileName, accessToken) => {
+export const uploadTrackToDrive = async (
+  fileUri: string,
+  fileName: string,
+  accessToken: string
+): Promise<UploadTrackResult> => {
   if (!accessToken) {
     throw new Error('Token de acceso no válido.');
   }
@@ -239,7 +250,7 @@ export const uploadTrackToDrive = async (fileUri, fileName, accessToken) => {
   }
 
   const fileData = await createResponse.json();
-  const fileId = fileData.id;
+  const fileId: string = fileData.id;
   console.log('[DriveApi] Creado marcador de posición con ID:', fileId);
 
   const uploadUrl = `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`;
@@ -276,12 +287,11 @@ export const uploadTrackToDrive = async (fileUri, fileName, accessToken) => {
 
 /**
  * Elimina un archivo de Google Drive usando su identificador `fileId`.
- *
- * @param {string} fileId - ID del archivo en Google Drive.
- * @param {string} accessToken - Token Bearer de autenticación.
- * @returns {Promise<boolean>} True si fue eliminado exitosamente.
  */
-export const deleteTrackFromDrive = async (fileId, accessToken) => {
+export const deleteTrackFromDrive = async (
+  fileId: string,
+  accessToken: string
+): Promise<boolean> => {
   if (!accessToken) {
     throw new Error('Token de acceso no válido.');
   }

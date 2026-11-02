@@ -1,5 +1,5 @@
 /**
- * Barrel export del subsistema de servicios de Google Drive.
+ * Barrel export del subsistema de servicios de Google Drive en TypeScript.
  */
 
 export {
@@ -10,6 +10,7 @@ export {
   clearAllCredentials,
   signInWithGoogle,
 } from './driveAuth';
+export type { GoogleOAuthConfig } from './driveAuth';
 
 export {
   getOrCreateVulpisFolder,
@@ -19,8 +20,10 @@ export {
   uploadTrackToDrive,
   deleteTrackFromDrive,
 } from './driveApi';
+export type { DriveFile, UploadTrackResult } from './driveApi';
 
 export {
   downloadDriveFile,
   saveDriveTrackToDevice,
 } from './driveDownload';
+export type { SaveDriveTrackParams } from './driveDownload';

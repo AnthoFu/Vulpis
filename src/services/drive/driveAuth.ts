@@ -10,12 +10,18 @@ const TOKEN_KEY = 'vulpis_google_access_token';
 const TOKEN_EXPIRY_KEY = 'vulpis_google_token_expiry';
 
 /**
+ * Configuración de credenciales de Google OAuth 2.0.
+ */
+export interface GoogleOAuthConfig {
+  clientId: string;
+  redirectUri: string;
+}
+
+/**
  * Obtiene la configuración de cliente OAuth (Client ID y Redirect URI) desde AsyncStorage,
  * o recurre a los valores predeterminados de la aplicación.
- *
- * @returns {Promise<{clientId: string, redirectUri: string}>}
  */
-export const getGoogleConfig = async () => {
+export const getGoogleConfig = async (): Promise<GoogleOAuthConfig> => {
   try {
     const clientId = (await AsyncStorage.getItem(CLIENT_ID_KEY)) || GOOGLE_OAUTH_CONFIG.clientId;
     const redirectUri =
@@ -32,11 +38,8 @@ export const getGoogleConfig = async () => {
 
 /**
  * Guarda la configuración de OAuth en AsyncStorage.
- *
- * @param {string} clientId - Client ID de Google Cloud Console.
- * @param {string} redirectUri - Esquema de redirección registrado.
  */
-export const saveGoogleConfig = async (clientId, redirectUri) => {
+export const saveGoogleConfig = async (clientId: string, redirectUri: string): Promise<void> => {
   try {
     await AsyncStorage.setItem(CLIENT_ID_KEY, clientId);
     await AsyncStorage.setItem(REDIRECT_URI_KEY, redirectUri);
@@ -49,10 +52,8 @@ export const saveGoogleConfig = async (clientId, redirectUri) => {
 /**
  * Recupera el token de acceso vigente de Google Drive.
  * Si el token expiró o está a menos de 5 minutos de expirar, se descarta y retorna null.
- *
- * @returns {Promise<string|null>} Token Bearer válido o null si requiere autenticación.
  */
-export const getStoredToken = async () => {
+export const getStoredToken = async (): Promise<string | null> => {
   try {
     const token = await AsyncStorage.getItem(TOKEN_KEY);
     const expiryStr = await AsyncStorage.getItem(TOKEN_EXPIRY_KEY);
@@ -76,7 +77,7 @@ export const getStoredToken = async () => {
 /**
  * Elimina el token de acceso y su marca de tiempo de expiración.
  */
-export const clearToken = async () => {
+export const clearToken = async (): Promise<void> => {
   try {
     await AsyncStorage.removeItem(TOKEN_KEY);
     await AsyncStorage.removeItem(TOKEN_EXPIRY_KEY);
@@ -88,7 +89,7 @@ export const clearToken = async () => {
 /**
  * Limpia todas las credenciales persistidas de Google Drive (token y configuración personalizada).
  */
-export const clearAllCredentials = async () => {
+export const clearAllCredentials = async (): Promise<void> => {
   try {
     await clearToken();
     await AsyncStorage.removeItem(CLIENT_ID_KEY);
@@ -100,18 +101,17 @@ export const clearAllCredentials = async () => {
 
 /**
  * Inicia el flujo de autorización OAuth 2.0 con Google usando WebBrowser y PKCE (Proof Key for Code Exchange).
- *
- * @param {string} clientId - Client ID de Google OAuth.
- * @param {string} redirectUri - URI de redirección registrada en Google Cloud Console.
- * @returns {Promise<string|null>} Token de acceso obtenido o null si el usuario canceló el flujo.
  */
-export const signInWithGoogle = async (clientId, redirectUri) => {
+export const signInWithGoogle = async (
+  clientId: string,
+  redirectUri: string
+): Promise<string | null> => {
   if (!clientId) {
     throw new Error('Se requiere un Client ID de Google.');
   }
 
   // Generador de verificador criptográfico aleatorio para PKCE
-  const generateRandomString = (length) => {
+  const generateRandomString = (length: number): string => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
     let result = '';
     for (let i = 0; i < length; i++) {
@@ -142,8 +142,8 @@ export const signInWithGoogle = async (clientId, redirectUri) => {
 
     if (result.type === 'success' && result.url) {
       const urlStr = result.url;
-      let code = null;
-      let searchParams = null;
+      let code: string | null = null;
+      let searchParams: URLSearchParams | null = null;
 
       const questionIndex = urlStr.indexOf('?');
       const hashIndex = urlStr.indexOf('#');
@@ -190,7 +190,7 @@ export const signInWithGoogle = async (clientId, redirectUri) => {
       }
 
       const tokenData = await tokenResponse.json();
-      const accessToken = tokenData.access_token;
+      const accessToken: string = tokenData.access_token;
       const expiresIn = tokenData.expires_in; // en segundos
 
       if (!accessToken) {

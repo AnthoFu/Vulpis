@@ -2,17 +2,31 @@ import { Alert, Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { extractMetadata } from '../../utils/metadata';
+import { Track, createTrack } from '../../models/Track';
+
+/**
+ * Parámetros para la exportación y guardado permanente de una pista de Drive en el dispositivo.
+ */
+export interface SaveDriveTrackParams {
+  track: Track;
+  token: string;
+  defaultCover: string;
+  hasCustomLocalTracks: boolean;
+  localLibraryTracks: Track[];
+  saveLocalTracks: (tracks: Track[]) => Promise<void> | void;
+  showToast?: (message: string) => void;
+  setIsLoading?: (loading: boolean) => void;
+}
 
 /**
  * Descarga un archivo de Google Drive a la carpeta temporal de caché para reproducción local.
  * Implementa control de existencia previa para evitar descargas redundantes.
- *
- * @param {string} fileId - ID del archivo en Google Drive.
- * @param {string} title - Título de la pista para trazabilidad en logs.
- * @param {string} accessToken - Token Bearer de autenticación.
- * @returns {Promise<string|null>} URI local en el sistema de archivos (`file:///...`) o null en caso de error.
  */
-export const downloadDriveFile = async (fileId, title, accessToken) => {
+export const downloadDriveFile = async (
+  fileId: string,
+  title: string,
+  accessToken: string
+): Promise<string | null> => {
   const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
   const localUri = `${FileSystem.cacheDirectory}${fileId}.mp3`;
 
@@ -34,7 +48,8 @@ export const downloadDriveFile = async (fileId, title, accessToken) => {
       }
     );
 
-    const { uri } = await downloadResumable.downloadAsync();
+    const result = await downloadResumable.downloadAsync();
+    const uri = result?.uri || localUri;
     console.log('[DriveDownload] Archivo descargado exitosamente:', uri);
     return uri;
   } catch (error) {
@@ -45,16 +60,6 @@ export const downloadDriveFile = async (fileId, title, accessToken) => {
 
 /**
  * Descarga y exporta una pista de Google Drive al almacenamiento local permanente del dispositivo (SAF en Android).
- *
- * @param {Object} options
- * @param {Object} options.track - Objeto de pista de Drive.
- * @param {string} options.token - Token de acceso.
- * @param {string} options.defaultCover - Carátula por defecto.
- * @param {boolean} options.hasCustomLocalTracks - Si ya existen pistas personalizadas en la biblioteca.
- * @param {Array} options.localLibraryTracks - Lista actual de pistas locales.
- * @param {Function} options.saveLocalTracks - Función para persistir pistas locales.
- * @param {Function} [options.showToast] - Disparador de mensajes toast.
- * @param {Function} [options.setIsLoading] - Setter de estado de carga.
  */
 export const saveDriveTrackToDevice = async ({
   track,
@@ -65,13 +70,13 @@ export const saveDriveTrackToDevice = async ({
   saveLocalTracks,
   showToast,
   setIsLoading,
-}) => {
-  const startDownload = async (savedDirectoryUri = null) => {
+}: SaveDriveTrackParams): Promise<void> => {
+  const startDownload = async (savedDirectoryUri: string | null = null): Promise<void> => {
     if (setIsLoading) setIsLoading(true);
     if (showToast) showToast(`Preparando descarga: ${track.title}...`);
 
     try {
-      let persistentLocalUri = null;
+      let persistentLocalUri: string | null = null;
       const sanitizedTitle = track.title.replace(/[/\\?%*:|"<>]/g, '_');
       const tempFilename = `${sanitizedTitle}.mp3`;
 
@@ -123,7 +128,7 @@ export const saveDriveTrackToDevice = async ({
       }
 
       const meta = await extractMetadata(persistentLocalUri);
-      const newLocalTrack = {
+      const newLocalTrack = createTrack({
         mediaId: `local-drive-${Date.now()}`,
         url: persistentLocalUri,
         title: meta.title || track.title || tempFilename.replace(/\.mp3$/i, ''),
@@ -133,7 +138,7 @@ export const saveDriveTrackToDevice = async ({
         artworkUrl: meta.artworkUrl || track.artworkUrl || defaultCover,
         lyrics: meta.lyrics || null,
         replayGain: meta.replayGain || null,
-      };
+      });
 
       const existingCustom = hasCustomLocalTracks ? localLibraryTracks : [];
       const updatedTracks = [...existingCustom, newLocalTrack];

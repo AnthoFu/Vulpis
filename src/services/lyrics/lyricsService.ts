@@ -4,29 +4,38 @@ import {
   calculateSimilarity,
   calculateTitleSimilarity,
 } from '../../utils/fuzzyMatch';
+import {
+  LyricsSettings,
+  DEFAULT_LYRICS_SETTINGS,
+} from '../../models/AudioSettings';
 
 const CACHE_KEY = 'vulpis_online_lyrics_cache';
 const SETTINGS_KEY = 'vulpis_settings';
 const CUSTOM_LYRICS_KEY = 'vulpis_custom_lyrics';
 
-export const DEFAULT_SETTINGS = {
-  onlineLyricsEnabled: false, // Desactivado por defecto
-  matchThreshold: 0.75,       // 75% de coincidencia mínima por defecto
-  preferOnlineOverID3: true,  // Reemplazar letras ID3 por defecto con las de la API cuando la búsqueda esté activa
-};
+export const DEFAULT_SETTINGS = DEFAULT_LYRICS_SETTINGS;
 
 const REQUEST_HEADERS = {
   'User-Agent': 'Vulpis-MusicPlayer/1.0.0 (https://github.com/AnthoFu/Vulpis)',
-  'Accept': 'application/json',
+  Accept: 'application/json',
 };
 
 /**
- * Lee la letra personalizada guardada manualmente por el usuario.
- *
- * @param {string} mediaId - Identificador único de la pista.
- * @returns {Promise<string|null>} Letra personalizada o null si no existe.
+ * Representación de un candidato de letra obtenido de APIs públicas.
  */
-export async function getCustomLyrics(mediaId) {
+export interface LyricCandidate {
+  trackName?: string;
+  artistName?: string;
+  albumName?: string;
+  duration?: number;
+  plainLyrics?: string | null;
+  syncedLyrics?: string | null;
+}
+
+/**
+ * Lee la letra personalizada guardada manualmente por el usuario.
+ */
+export async function getCustomLyrics(mediaId: string): Promise<string | null> {
   if (!mediaId) return null;
   try {
     const raw = await AsyncStorage.getItem(CUSTOM_LYRICS_KEY);
@@ -41,11 +50,8 @@ export async function getCustomLyrics(mediaId) {
 
 /**
  * Guarda o actualiza manualmente la letra personalizada de una canción.
- *
- * @param {string} mediaId - Identificador único de la pista.
- * @param {string} lyrics - Contenido en texto plano o formato .lrc.
  */
-export async function saveCustomLyrics(mediaId, lyrics) {
+export async function saveCustomLyrics(mediaId: string, lyrics: string): Promise<void> {
   if (!mediaId) return;
   try {
     const raw = await AsyncStorage.getItem(CUSTOM_LYRICS_KEY);
@@ -59,10 +65,8 @@ export async function saveCustomLyrics(mediaId, lyrics) {
 
 /**
  * Elimina la letra personalizada para restaurar la letra por defecto.
- *
- * @param {string} mediaId - Identificador de la pista.
  */
-export async function removeCustomLyrics(mediaId) {
+export async function removeCustomLyrics(mediaId: string): Promise<void> {
   if (!mediaId) return;
   try {
     const raw = await AsyncStorage.getItem(CUSTOM_LYRICS_KEY);
@@ -77,36 +81,34 @@ export async function removeCustomLyrics(mediaId) {
 
 /**
  * Carga la configuración de letras y preferencias desde AsyncStorage.
- *
- * @returns {Promise<{onlineLyricsEnabled: boolean, matchThreshold: number, preferOnlineOverID3: boolean}>}
  */
-export async function getSettings() {
+export async function getSettings(): Promise<LyricsSettings> {
   try {
     const raw = await AsyncStorage.getItem(SETTINGS_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      return { ...DEFAULT_SETTINGS, ...parsed };
+      return { ...DEFAULT_LYRICS_SETTINGS, ...parsed };
     }
   } catch (e) {
     console.error('[LyricsService] Error leyendo ajustes:', e);
   }
-  return DEFAULT_SETTINGS;
+  return DEFAULT_LYRICS_SETTINGS;
 }
 
 /**
  * Guarda los ajustes de letras en AsyncStorage.
- *
- * @param {Object} newSettings - Nuevas opciones de configuración.
  */
-export async function saveSettings(newSettings) {
+export async function saveSettings(newSettings: Partial<LyricsSettings>): Promise<void> {
   try {
-    await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
+    const current = await getSettings();
+    const updated = { ...current, ...newSettings };
+    await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(updated));
   } catch (e) {
     console.error('[LyricsService] Error guardando ajustes:', e);
   }
 }
 
-function getCacheKey(title, artist) {
+function getCacheKey(title: string, artist: string): string {
   const cleanT = cleanTitleOnly(title);
   const cleanA = cleanTitleOnly(artist);
   return `${cleanA}__${cleanT}`;
@@ -114,12 +116,8 @@ function getCacheKey(title, artist) {
 
 /**
  * Consulta la caché local persistente de letras.
- *
- * @param {string} title - Título de la pista.
- * @param {string} artist - Artista de la pista.
- * @returns {Promise<string|null>} Letra en caché o null si no fue encontrada.
  */
-export async function getCachedLyrics(title, artist) {
+export async function getCachedLyrics(title: string, artist: string): Promise<string | null> {
   try {
     const rawCache = await AsyncStorage.getItem(CACHE_KEY);
     if (!rawCache) return null;
@@ -134,12 +132,12 @@ export async function getCachedLyrics(title, artist) {
 
 /**
  * Guarda una letra en la caché persistente local de AsyncStorage.
- *
- * @param {string} title - Título de la pista.
- * @param {string} artist - Artista de la pista.
- * @param {string} lyrics - Letra obtenida (o cadena vacía para memorizar resultado no encontrado).
  */
-export async function setCachedLyrics(title, artist, lyrics) {
+export async function setCachedLyrics(
+  title: string,
+  artist: string,
+  lyrics: string
+): Promise<void> {
   try {
     const rawCache = await AsyncStorage.getItem(CACHE_KEY);
     const cache = rawCache ? JSON.parse(rawCache) : {};
@@ -154,7 +152,7 @@ export async function setCachedLyrics(title, artist, lyrics) {
 /**
  * Limpia la totalidad de las letras almacenadas en la caché local.
  */
-export async function clearLyricsCache() {
+export async function clearLyricsCache(): Promise<void> {
   try {
     await AsyncStorage.removeItem(CACHE_KEY);
   } catch (e) {
@@ -165,8 +163,8 @@ export async function clearLyricsCache() {
 /**
  * Consulta la API pública LRCLIB mediante estrategias progresivas.
  */
-async function searchLrclib(cleanT, cleanA) {
-  const queriesToTry = [];
+async function searchLrclib(cleanT: string, cleanA: string): Promise<LyricCandidate[]> {
+  const queriesToTry: string[] = [];
 
   // 1. Título + Artista
   if (cleanA && cleanA !== 'desconocido' && cleanA !== 'artful') {
@@ -196,11 +194,11 @@ async function searchLrclib(cleanT, cleanA) {
       if (res.ok) {
         const items = await res.json();
         if (Array.isArray(items) && items.length > 0) {
-          return items;
+          return items as LyricCandidate[];
         }
       }
-    } catch (err) {
-      console.warn('[LyricsService] Fallo en intento LRCLIB:', url, err.message);
+    } catch (err: any) {
+      console.warn('[LyricsService] Fallo en intento LRCLIB:', url, err?.message);
     }
   }
 
@@ -210,32 +208,34 @@ async function searchLrclib(cleanT, cleanA) {
 /**
  * Proveedor secundario de fallback: Lyrist API / Lyrics.ovh
  */
-async function searchFallback(cleanT, cleanA) {
-  const titlesToTry = [cleanT];
+async function searchFallback(cleanT: string, cleanA: string): Promise<LyricCandidate[]> {
+  const titlesToTry: string[] = [cleanT];
   if (cleanT.includes(' x ') || cleanT.includes(' vs ')) {
     const parts = cleanT.split(/\s+(?:x|vs)\s+/i);
-    titlesToTry.push(...parts.map(p => p.trim()));
+    titlesToTry.push(...parts.map((p) => p.trim()));
   }
 
   for (const t of titlesToTry) {
     try {
-      const query = (cleanA && cleanA !== 'desconocido') ? `${t}/${cleanA}` : t;
+      const query = cleanA && cleanA !== 'desconocido' ? `${t}/${cleanA}` : t;
       const url = `https://lyrist.vercel.app/api/${encodeURIComponent(query)}`;
       console.log('[LyricsService] Petición Fallback (Lyrist):', url);
       const res = await fetch(url, { headers: REQUEST_HEADERS });
       if (res.ok) {
         const data = await res.json();
         if (data && data.lyrics) {
-          return [{
-            trackName: data.title || t,
-            artistName: data.artist || cleanA,
-            plainLyrics: data.lyrics,
-            syncedLyrics: null,
-          }];
+          return [
+            {
+              trackName: data.title || t,
+              artistName: data.artist || cleanA,
+              plainLyrics: data.lyrics,
+              syncedLyrics: null,
+            },
+          ];
         }
       }
-    } catch (e) {
-      console.log('[LyricsService] Error en fallback Lyrist:', e.message);
+    } catch (e: any) {
+      console.log('[LyricsService] Error en fallback Lyrist:', e?.message);
     }
 
     if (cleanA && cleanA !== 'desconocido') {
@@ -246,16 +246,18 @@ async function searchFallback(cleanT, cleanA) {
         if (res.ok) {
           const data = await res.json();
           if (data && data.lyrics) {
-            return [{
-              trackName: t,
-              artistName: cleanA,
-              plainLyrics: data.lyrics,
-              syncedLyrics: null,
-            }];
+            return [
+              {
+                trackName: t,
+                artistName: cleanA,
+                plainLyrics: data.lyrics,
+                syncedLyrics: null,
+              },
+            ];
           }
         }
-      } catch (e) {
-        console.log('[LyricsService] Error en fallback Lyrics.ovh:', e.message);
+      } catch (e: any) {
+        console.log('[LyricsService] Error en fallback Lyrics.ovh:', e?.message);
       }
     }
   }
@@ -265,15 +267,14 @@ async function searchFallback(cleanT, cleanA) {
 
 /**
  * Realiza la búsqueda de letras en APIs públicas (LRCLIB y fallbacks) aplicando matching difuso.
- *
- * @param {string} title - Título de la pista.
- * @param {string} artist - Nombre del artista.
- * @param {number} [duration=0] - Duración en segundos para afinar la coincidencia.
- * @param {number} [threshold=0.75] - Umbral mínimo de similitud de Sørensen-Dice (0.0 a 1.0).
- * @param {boolean} [ignoreCache=false] - Forzar consulta omitiendo la caché local.
- * @returns {Promise<string|null>} Letra encontrada (sincronizada o estática) o null.
  */
-export async function fetchOnlineLyrics(title, artist, duration = 0, threshold = 0.75, ignoreCache = false) {
+export async function fetchOnlineLyrics(
+  title: string,
+  artist: string = '',
+  duration: number = 0,
+  threshold: number = 0.75,
+  ignoreCache: boolean = false
+): Promise<string | null> {
   if (!title || title === 'No Track' || title === 'Pista Desconocida') {
     return null;
   }
@@ -292,7 +293,11 @@ export async function fetchOnlineLyrics(title, artist, duration = 0, threshold =
     }
   }
 
-  console.log(`[LyricsService] Buscando letras en línea: Título="${cleanT}" | Artista="${cleanA}" (Umbral: ${Math.round(threshold * 100)}%)`);
+  console.log(
+    `[LyricsService] Buscando letras en línea: Título="${cleanT}" | Artista="${cleanA}" (Umbral: ${Math.round(
+      threshold * 100
+    )}%)`
+  );
 
   let results = await searchLrclib(cleanT, cleanA);
 
@@ -307,7 +312,7 @@ export async function fetchOnlineLyrics(title, artist, duration = 0, threshold =
     return null;
   }
 
-  let bestMatch = null;
+  let bestMatch: LyricCandidate | null = null;
   let highestScore = 0;
 
   for (const item of results) {
@@ -322,12 +327,13 @@ export async function fetchOnlineLyrics(title, artist, duration = 0, threshold =
     if (hasValidArtist && artistSim > 0.3) {
       combinedScore = titleSim * 0.7 + artistSim * 0.3;
     } else if (titleSim >= 0.8) {
+      // Si el título coincide fuertemente (>= 80%), no penalizar si el artista local no coincide
       combinedScore = titleSim;
     } else {
       combinedScore = titleSim * 0.7 + artistSim * 0.3;
     }
 
-    if (duration > 0 && item.duration > 0) {
+    if (duration > 0 && typeof item.duration === 'number' && item.duration > 0) {
       const diffSec = Math.abs(duration - item.duration);
       if (diffSec <= 5) {
         combinedScore += 0.05;
@@ -336,7 +342,9 @@ export async function fetchOnlineLyrics(title, artist, duration = 0, threshold =
       }
     }
 
-    console.log(`[LyricsService] Candidato: "${resTrack}" - "${resArtist}" -> Similitud: ${(combinedScore * 100).toFixed(1)}%`);
+    console.log(
+      `[LyricsService] Candidato: "${resTrack}" - "${resArtist}" -> Similitud: ${(combinedScore * 100).toFixed(1)}%`
+    );
 
     if (combinedScore > highestScore) {
       highestScore = combinedScore;
@@ -352,7 +360,11 @@ export async function fetchOnlineLyrics(title, artist, duration = 0, threshold =
       return lyrics;
     }
   } else {
-    console.log(`[LyricsService] Coincidencia máxima (${(highestScore * 100).toFixed(1)}%) estuvo por debajo del umbral (${Math.round(threshold * 100)}%)`);
+    console.log(
+      `[LyricsService] Coincidencia máxima (${(highestScore * 100).toFixed(1)}%) estuvo por debajo del umbral (${Math.round(
+        threshold * 100
+      )}%)`
+    );
   }
 
   await setCachedLyrics(title, artist, '');

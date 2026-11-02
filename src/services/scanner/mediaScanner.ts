@@ -2,13 +2,27 @@ import * as MediaLibrary from 'expo-media-library/legacy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { extractMetadata } from '../../utils/metadata';
 import { isExcludedAudio } from '../../utils/audioFilter';
+import { Track, createTrack } from '../../models/Track';
 
 /**
- * @typedef {Object} ScanResult
- * @property {Array<Object>} tracks - Lista de canciones consolidadas con metadatos.
- * @property {boolean} isIdentical - True si no hubo modificaciones respecto a la caché previa.
- * @property {boolean} permissionGranted - Si el usuario concedió permisos de acceso a multimedia.
+ * Resultado del proceso de escaneo de audio local.
  */
+export interface ScanResult {
+  /** Lista consolidada de pistas con metadatos procesados */
+  tracks: Track[];
+  /** Indica si la biblioteca es idéntica a la que ya existía en memoria */
+  isIdentical: boolean;
+  /** Si el usuario concedió los permisos necesarios de lectura multimedia */
+  permissionGranted: boolean;
+}
+
+/**
+ * Opciones para el escaneo de audio.
+ */
+export interface ScanDeviceAudioOptions {
+  currentCache?: Track[];
+  defaultCover: string;
+}
 
 /**
  * Escaneo ultra-optimizado con caché incremental y procesamiento por lotes no bloqueante
@@ -16,22 +30,20 @@ import { isExcludedAudio } from '../../utils/audioFilter';
  *
  * Utiliza `expo-media-library` para consultar archivos del sistema y aplica el filtro
  * inteligente `isExcludedAudio` para descartar notas de voz (WhatsApp, Telegram, etc.).
- *
- * @param {Object} options
- * @param {Array} [options.currentCache=[]] - Lista actual en memoria para reutilizar metadatos en 0ms.
- * @param {string} options.defaultCover - URI del asset de carátula por defecto.
- * @returns {Promise<ScanResult>}
  */
-export async function scanDeviceAudio({ currentCache = [], defaultCover }) {
+export async function scanDeviceAudio({
+  currentCache = [],
+  defaultCover,
+}: ScanDeviceAudioOptions): Promise<ScanResult> {
   const { status } = await MediaLibrary.requestPermissionsAsync();
   if (status !== 'granted') {
     return { tracks: [], isIdentical: false, permissionGranted: false };
   }
 
   // 1. Obtener todas las pistas de audio disponibles en el almacenamiento
-  let allAssets = [];
+  let allAssets: MediaLibrary.Asset[] = [];
   let hasNextPage = true;
-  let endCursor = null;
+  let endCursor: string | undefined = undefined;
 
   while (hasNextPage && allAssets.length < 2000) {
     const media = await MediaLibrary.getAssetsAsync({
@@ -53,7 +65,7 @@ export async function scanDeviceAudio({ currentCache = [], defaultCover }) {
   const assetsList = allAssets.filter((asset) => !isExcludedAudio(asset));
 
   // 3. Construir mapa de caché de la biblioteca existente para reutilizar metadatos en 0ms
-  let cache = currentCache;
+  let cache: Track[] = currentCache;
   if (!cache || cache.length === 0) {
     try {
       const stored = await AsyncStorage.getItem('vulpis_local_tracks');
@@ -65,8 +77,8 @@ export async function scanDeviceAudio({ currentCache = [], defaultCover }) {
     }
   }
 
-  const cachedMap = new Map();
-  const customTracks = []; // Conservar pistas importadas manualmente o de Google Drive
+  const cachedMap = new Map<string, Track>();
+  const customTracks: Track[] = []; // Conservar pistas importadas manualmente o de Google Drive
 
   for (const track of cache) {
     if (
@@ -84,8 +96,8 @@ export async function scanDeviceAudio({ currentCache = [], defaultCover }) {
   }
 
   // 4. Identificar qué pistas ya tienen metadatos cacheados y cuáles son nuevas
-  const newTracks = [];
-  const pendingAssetsToExtract = [];
+  const newTracks: Track[] = [];
+  const pendingAssetsToExtract: Array<{ asset: MediaLibrary.Asset; index: number }> = [];
 
   for (let i = 0; i < assetsList.length; i++) {
     const asset = assetsList[i];
@@ -97,7 +109,7 @@ export async function scanDeviceAudio({ currentCache = [], defaultCover }) {
         ...cached,
         mediaId: asset.id || cached.mediaId,
         url: asset.uri,
-        duration: asset.duration || cached.duration,
+        duration: asset.duration || cached.duration || 0,
       });
     } else {
       // Nueva pista detectada para extracción de metadatos
@@ -113,18 +125,18 @@ export async function scanDeviceAudio({ currentCache = [], defaultCover }) {
       const results = await Promise.all(
         batch.map(async ({ asset, index }) => {
           const meta = await extractMetadata(asset.uri);
-          return {
+          return createTrack({
             mediaId: asset.id || `local-scanned-${index}-${Date.now()}`,
             url: asset.uri,
-            title: meta.title || asset.filename.replace(/\.[^/.]+$/, ''),
-            artist: meta.artist || 'Audio Local',
-            album: meta.album || 'Álbum Desconocido',
-            genre: meta.genre || null,
-            artworkUrl: meta.artworkUrl || defaultCover,
-            lyrics: meta.lyrics || null,
+            title: meta?.title || asset.filename.replace(/\.[^/.]+$/, ''),
+            artist: meta?.artist || 'Audio Local',
+            album: meta?.album || 'Álbum Desconocido',
+            genre: meta?.genre || null,
+            artworkUrl: meta?.artworkUrl || defaultCover,
+            lyrics: meta?.lyrics || null,
             duration: asset.duration || 0,
-            replayGain: meta.replayGain || null,
-          };
+            replayGain: meta?.replayGain || null,
+          });
         })
       );
       newTracks.push(...results);

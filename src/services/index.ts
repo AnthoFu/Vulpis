@@ -1,5 +1,5 @@
 /**
- * Barrel export centralizado para la capa de servicios de Vulpis.
+ * Barrel export centralizado para la capa de servicios de Vulpis en TypeScript.
  * Agrupa los adaptadores externos de infraestructura (APIs, I/O, FileSystem y autenticación).
  */
 

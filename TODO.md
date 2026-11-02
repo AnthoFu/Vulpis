@@ -119,6 +119,14 @@
   - [x] Creación de `PlayerFooterActions.js`: barra inferior de accesos directos a Letras, Cola y Temporizador de apagado.
   - [x] Barrel export actualizado en `src/components/index.js` y verificación de tipos/bundling sin errores.
 
+- [x] **Fase 2 de Migración a TypeScript — Capa de Servicios (`src/services/`):**
+  - [x] Migración de `driveAuth.ts`, `driveApi.ts` y `driveDownload.ts` a TypeScript estricto con interfaces de credenciales (`GoogleOAuthConfig`), archivos (`DriveFile`) y contratos de subida/descarga.
+  - [x] Integración de `Track` y `createTrack` en el mapeador de archivos de Drive y exportador al dispositivo.
+  - [x] Migración de `mediaScanner.ts` tipando `ScanResult`, `ScanDeviceAudioOptions` y retornos inmutables de `Track[]`.
+  - [x] Migración de `lyricsService.ts` tipando `LyricCandidate`, `getSettings`, `saveSettings` y respuestas de APIs públicas (LRCLIB, Lyrist, Lyrics.ovh).
+  - [x] Barrel exports actualizados en `src/services/drive/index.ts` y `src/services/index.ts`.
+  - [x] Verificación de tipos estricta con `tsc --noEmit` y empaquetado Expo sin errores.
+
 ---
 
 # Mejoras por hacer

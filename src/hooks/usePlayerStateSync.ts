@@ -1,40 +1,41 @@
-import { useEffect } from 'react';
-import TrackPlayer from '@rntp/player';
+import { useEffect, Dispatch, SetStateAction, MutableRefObject } from 'react';
+import TrackPlayer, { RepeatMode } from '@rntp/player';
 import { handleAutoCrossfadeProgress } from '../utils/crossfade';
 import { applyReplayGainToPlayer } from '../utils/replayGain';
+import { Track } from '../models/Track';
+import { CrossfadeSettings, ReplayGainSettings } from '../models/AudioSettings';
+import { SavePlayerStateParams } from './usePlayerPersistence';
 
-/**
- * @typedef {Object} ProgressState
- * @property {number} position - Posición actual en segundos.
- * @property {number} duration - Duración total de la pista en segundos.
- */
+export interface ProgressState {
+  position: number;
+  duration: number;
+}
 
-/**
- * @typedef {Object} PlayerStateSyncParams
- * @property {boolean} isPlayerInitialized - Indica si TrackPlayer ya fue inicializado nativamente.
- * @property {Function} setActiveTrack - Dispatcher para actualizar la pista activa en React State.
- * @property {Function} setIsPlaying - Dispatcher para el estado booleano de reproducción.
- * @property {Function} setRepeatMode - Dispatcher para el modo de repetición de TrackPlayer.
- * @property {Function} setIsShuffleActive - Dispatcher para el estado de reproducción aleatoria.
- * @property {Function} setPlayQueue - Dispatcher para la lista de reproducción activa en memoria.
- * @property {Function} setProgress - Dispatcher para la posición y duración actual.
- * @property {React.MutableRefObject<Array>} playQueueRef - Referencia mutable de la cola para lecturas sin stale-closure.
- * @property {React.MutableRefObject<boolean>} isReorderingRef - Bandera atómica activa durante el reordenamiento drag-and-drop.
- * @property {React.MutableRefObject<string>} currentSourceRef - Referencia a la fuente actual ('local' | 'private' | 'playlists').
- * @property {React.MutableRefObject<Object>} crossfadeSettingsRef - Referencia a la configuración de fundido cruzado.
- * @property {React.MutableRefObject<Object>} replayGainSettingsRef - Referencia a la configuración de ReplayGain.
- * @property {Function} savePlayerState - Función para persistir de forma segura el estado en AsyncStorage.
- */
+export interface PlayerStateSyncParams {
+  isPlayerInitialized: boolean;
+  setActiveTrack: Dispatch<SetStateAction<Track | null>>;
+  setIsPlaying: Dispatch<SetStateAction<boolean>>;
+  setRepeatMode: Dispatch<SetStateAction<RepeatMode>>;
+  setIsShuffleActive: Dispatch<SetStateAction<boolean>>;
+  setPlayQueue: Dispatch<SetStateAction<Track[]>>;
+  setProgress: Dispatch<SetStateAction<ProgressState>>;
+  playQueueRef: MutableRefObject<Track[]>;
+  isReorderingRef: MutableRefObject<boolean>;
+  currentSourceRef: MutableRefObject<string>;
+  crossfadeSettingsRef: MutableRefObject<CrossfadeSettings>;
+  replayGainSettingsRef: MutableRefObject<ReplayGainSettings>;
+  savePlayerState?: (params: SavePlayerStateParams) => Promise<void>;
+}
 
 /**
  * Determina si dos objetos de pista representan la misma canción activa.
  * Realiza una comparación superficial de las propiedades clave para evitar re-renders innecesarios.
  *
- * @param {Object|null} trackA - Pista previa en el estado de React.
- * @param {Object|null} trackB - Pista activa leída directamente de TrackPlayer vía JSI.
- * @returns {boolean} True si ambas pistas son funcionalmente idénticas.
+ * @param trackA Pista previa en el estado de React.
+ * @param trackB Pista activa leída directamente de TrackPlayer vía JSI.
+ * @returns True si ambas pistas son funcionalmente idénticas.
  */
-function areTracksEqual(trackA, trackB) {
+export function areTracksEqual(trackA?: Partial<Track> | null, trackB?: Partial<Track> | null): boolean {
   if (!trackA && !trackB) return true;
   if (!trackA || !trackB) return false;
   return (
@@ -47,11 +48,11 @@ function areTracksEqual(trackA, trackB) {
 /**
  * Compara dos colas de reproducción por identificador único de pista (`mediaId`).
  *
- * @param {Array} prevQueue - Cola almacenada previamente en React State.
- * @param {Array} currentQueue - Cola nativa obtenida de TrackPlayer.
- * @returns {boolean} True si ambas colas contienen los mismos elementos en el mismo orden.
+ * @param prevQueue Cola almacenada previamente en React State.
+ * @param currentQueue Cola nativa obtenida de TrackPlayer.
+ * @returns True si ambas colas contienen los mismos elementos en el mismo orden.
  */
-function areQueuesIdentical(prevQueue, currentQueue) {
+export function areQueuesIdentical(prevQueue?: Track[] | null, currentQueue?: Track[] | null): boolean {
   if (!prevQueue && !currentQueue) return true;
   if (!prevQueue || !currentQueue) return false;
   if (prevQueue.length !== currentQueue.length) return false;
@@ -67,13 +68,18 @@ function areQueuesIdentical(prevQueue, currentQueue) {
 /**
  * Evalúa si el progreso de reproducción avanzó lo suficiente como para justificar un re-render.
  *
- * @param {ProgressState} prevProgress - Progreso anterior en React State.
- * @param {number} newPos - Posición actual en segundos devuelta por JSI.
- * @param {number} newDur - Duración total en segundos devuelta por JSI.
- * @param {number} [threshold=0.25] - Umbral mínimo de cambio en segundos para actualizar.
- * @returns {boolean} True si el progreso ha cambiado significativamente.
+ * @param prevProgress Progreso anterior en React State.
+ * @param newPos Posición actual en segundos devuelta por JSI.
+ * @param newDur Duración total en segundos devuelta por JSI.
+ * @param threshold Umbral mínimo de cambio en segundos para actualizar.
+ * @returns True si el progreso ha cambiado significativamente.
  */
-function hasProgressChanged(prevProgress, newPos, newDur, threshold = 0.25) {
+export function hasProgressChanged(
+  prevProgress: ProgressState,
+  newPos: number,
+  newDur: number,
+  threshold = 0.25
+): boolean {
   if (prevProgress.duration !== newDur) return true;
   return Math.abs(prevProgress.position - newPos) >= threshold;
 }
@@ -83,15 +89,6 @@ function hasProgressChanged(prevProgress, newPos, newDur, threshold = 0.25) {
  *
  * Utiliza un bucle de polling activo cada 250ms sobre la API JSI de C++, garantizando lectura
  * sin sobrecarga del puente asíncrono y evitando desincronizaciones de UI durante transiciones.
- *
- * Responsabilidades:
- * 1. Sincronizar pista activa, progreso y estados de transporte (reproducción, shuffle, repeat).
- * 2. Mantener la cola de reproducción sincronizada con throttle (cada 1s) protegiendo operaciones de drag-and-drop.
- * 3. Aplicar normalización acústica ReplayGain al cambiar de pista.
- * 4. Gestionar el fundido cruzado automático (Crossfade) al aproximarse el fin de pista.
- * 5. Persistir periódicamente el estado en AsyncStorage evitando desbordes de memoria (`CursorWindow`).
- *
- * @param {PlayerStateSyncParams} params - Parámetros de configuración y dispatchers de estado.
  */
 export default function usePlayerStateSync({
   isPlayerInitialized,
@@ -107,16 +104,16 @@ export default function usePlayerStateSync({
   crossfadeSettingsRef,
   replayGainSettingsRef,
   savePlayerState,
-}) {
+}: PlayerStateSyncParams): void {
   useEffect(() => {
     if (!isPlayerInitialized) return;
 
     // Contadores y marcas de estado previo para optimizar operaciones y throttling
     let tick = 0;
     let lastSavedSec = -1;
-    let lastSavedTrackId = null;
+    let lastSavedTrackId: string | null = null;
     let lastSavedQueueLen = -1;
-    let lastAppliedTrackId = null;
+    let lastAppliedTrackId: string | null = null;
 
     /**
      * Ciclo principal de lectura síncrona JSI y actualización de estado React.
@@ -124,7 +121,7 @@ export default function usePlayerStateSync({
     const updatePlayerState = () => {
       try {
         // 1. Lecturas síncronas en memoria C++ vía JSI
-        const currentActive = TrackPlayer.getActiveMediaItem();
+        const currentActive = TrackPlayer.getActiveMediaItem() as Track | null;
         const currentPlaying = TrackPlayer.isPlaying();
         const currentProgress = TrackPlayer.getProgress();
         const currentRepeat = TrackPlayer.getRepeatMode();
@@ -151,7 +148,7 @@ export default function usePlayerStateSync({
         );
 
         if (shouldSyncQueue) {
-          const currentQueue = TrackPlayer.getQueue();
+          const currentQueue = TrackPlayer.getQueue() as Track[];
           if (currentQueue && currentQueue.length > 0) {
             setPlayQueue((prev) => {
               if (isReorderingRef.current) return prev;
@@ -203,7 +200,7 @@ export default function usePlayerStateSync({
           queueLen !== lastSavedQueueLen
         );
 
-        if (shouldSave) {
+        if (shouldSave && savePlayerState) {
           lastSavedSec = newPos;
           lastSavedTrackId = activeTrackId;
           lastSavedQueueLen = queueLen;

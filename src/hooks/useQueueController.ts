@@ -1,6 +1,30 @@
-import { useCallback } from 'react';
+import { useCallback, Dispatch, SetStateAction, MutableRefObject } from 'react';
 import { Alert } from 'react-native';
 import TrackPlayer from '@rntp/player';
+import { Track } from '../models/Track';
+import { SavePlayerStateParams } from './usePlayerPersistence';
+
+export interface UseQueueControllerParams {
+  playQueue: Track[];
+  setPlayQueue: Dispatch<SetStateAction<Track[]>>;
+  playQueueRef: MutableRefObject<Track[]>;
+  activeTrack?: Track | null;
+  progress: { position: number; duration: number };
+  showToast?: (message: string) => void;
+  currentSourceRef: MutableRefObject<string>;
+  savePlayerState?: (params: SavePlayerStateParams) => Promise<void>;
+  isReorderingRef: MutableRefObject<boolean>;
+}
+
+export interface UseQueueControllerReturn {
+  handleAddToQueue: (item: Track) => Promise<void>;
+  handleRemoveFromQueue: (item: Track, index: number) => Promise<void>;
+  handleMoveQueueItem: (fromIndex: number, toIndex: number) => Promise<void>;
+  handleClearUpcomingQueue: () => Promise<void>;
+  handleSetDragActive: (active: boolean) => void;
+  handleReorderQueueState: (fromIndex: number, toIndex: number) => void;
+  handleSyncReorderNative: (_finalQueue: Track[]) => Promise<void>;
+}
 
 /**
  * Hook para la manipulación y gestión reactiva y nativa de la cola de reproducción.
@@ -15,11 +39,11 @@ export default function useQueueController({
   currentSourceRef,
   savePlayerState,
   isReorderingRef,
-}) {
+}: UseQueueControllerParams): UseQueueControllerReturn {
   /**
    * Agrega una pista inmediatamente después de la pista activa en la cola.
    */
-  const handleAddToQueue = async (item) => {
+  const handleAddToQueue = async (item: Track): Promise<void> => {
     try {
       let activeIndex = TrackPlayer.getActiveMediaItemIndex();
       if (activeIndex === null || activeIndex === -1) {
@@ -28,7 +52,7 @@ export default function useQueueController({
       }
 
       const uniqueQueueId = `${item.mediaId}-q-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-      const queuedItem = {
+      const queuedItem: Track = {
         ...item,
         mediaId: uniqueQueueId,
         queueId: uniqueQueueId,
@@ -36,10 +60,10 @@ export default function useQueueController({
 
       console.log(`[useQueueController] Agregando pista ${item.title} a la cola después del índice ${activeIndex}`);
       isReorderingRef.current = true;
-      await TrackPlayer.insertMediaItem(activeIndex + 1, queuedItem);
+      await TrackPlayer.insertMediaItem(activeIndex + 1, queuedItem as any);
 
       // Actualizar el estado de la cola de reproducción (playQueue)
-      let updatedQueue = [];
+      let updatedQueue: Track[] = [];
       setPlayQueue((prev) => {
         const copy = [...prev];
         copy.splice(activeIndex + 1, 0, queuedItem);
@@ -60,7 +84,9 @@ export default function useQueueController({
         isReorderingRef.current = false;
       }, 500);
 
-      showToast(`Añadido a la cola: ${item.title}`);
+      if (showToast) {
+        showToast(`Añadido a la cola: ${item.title}`);
+      }
     } catch (e) {
       isReorderingRef.current = false;
       console.error('[useQueueController] Error al agregar pista a la cola:', e);
@@ -72,13 +98,13 @@ export default function useQueueController({
    * Elimina una pista de la cola en el índice especificado.
    */
   const handleRemoveFromQueue = useCallback(
-    async (item, index) => {
+    async (item: Track, index: number): Promise<void> => {
       try {
         console.log(`[useQueueController] 🗑️ Eliminando pista de la cola en índice ${index}: "${item.title}"`);
         isReorderingRef.current = true;
         await TrackPlayer.removeMediaItem(index);
 
-        let updatedQueue = [];
+        let updatedQueue: Track[] = [];
         setPlayQueue((prev) => {
           const copy = [...prev];
           copy.splice(index, 1);
@@ -99,7 +125,9 @@ export default function useQueueController({
           isReorderingRef.current = false;
         }, 500);
 
-        showToast(`Eliminado de la cola: ${item.title}`);
+        if (showToast) {
+          showToast(`Eliminado de la cola: ${item.title}`);
+        }
       } catch (e) {
         isReorderingRef.current = false;
         console.error('[useQueueController] ❌ Error al eliminar pista de la cola:', e);
@@ -113,7 +141,7 @@ export default function useQueueController({
    * Mueve una pista de un índice a otro en la cola usando TrackPlayer.moveMediaItem nativo sin cortar la música.
    */
   const handleMoveQueueItem = useCallback(
-    async (fromIndex, toIndex) => {
+    async (fromIndex: number, toIndex: number): Promise<void> => {
       try {
         if (fromIndex === toIndex) return;
         if (fromIndex < 0 || toIndex < 0) return;
@@ -130,7 +158,7 @@ export default function useQueueController({
         );
         isReorderingRef.current = true;
 
-        let updatedQueue = [];
+        let updatedQueue: Track[] = [];
         setPlayQueue((prev) => {
           const copy = [...prev];
           const [moved] = copy.splice(fromIndex, 1);
@@ -169,7 +197,7 @@ export default function useQueueController({
    * Vacía todas las pistas siguientes de la cola manteniendo la canción que está sonando.
    */
   const handleClearUpcomingQueue = useCallback(
-    async () => {
+    async (): Promise<void> => {
       try {
         let activeIndex = TrackPlayer.getActiveMediaItemIndex();
         const currentQ = playQueueRef.current || [];
@@ -178,7 +206,7 @@ export default function useQueueController({
         }
 
         if (activeIndex === -1 || activeIndex >= currentQ.length - 1) {
-          showToast('No hay canciones siguientes en la cola');
+          if (showToast) showToast('No hay canciones siguientes en la cola');
           return;
         }
 
@@ -205,7 +233,7 @@ export default function useQueueController({
           isReorderingRef.current = false;
         }, 500);
 
-        showToast('Cola de reproducción vaciada');
+        if (showToast) showToast('Cola de reproducción vaciada');
       } catch (e) {
         isReorderingRef.current = false;
         console.error('[useQueueController] ❌ Error al vaciar cola:', e);
@@ -219,7 +247,7 @@ export default function useQueueController({
    * Bloquea el polling mientras el usuario arrastra (evita que setPlayQueue del interval sobreescriba la cola en tiempo real).
    */
   const handleSetDragActive = useCallback(
-    (active) => {
+    (active: boolean): void => {
       console.log(`[useQueueController] 🎛️ Drag activo cambiado a: ${active}`);
       isReorderingRef.current = active;
     },
@@ -230,7 +258,7 @@ export default function useQueueController({
    * Callback para reordenar el estado de la cola cuando el usuario suelta un elemento arrastrado.
    */
   const handleReorderQueueState = useCallback(
-    (fromIndex, toIndex) => {
+    (fromIndex: number, toIndex: number): void => {
       handleMoveQueueItem(fromIndex, toIndex);
     },
     [handleMoveQueueItem]
@@ -239,7 +267,7 @@ export default function useQueueController({
   /**
    * Callback de sincronización con la cola nativa tras reordenar.
    */
-  const handleSyncReorderNative = useCallback(async (_finalQueue) => {
+  const handleSyncReorderNative = useCallback(async (_finalQueue: Track[]): Promise<void> => {
     // Ya no es necesario usar clear() destructivo; handleMoveQueueItem mueve nativamente en cada drop.
   }, []);
 

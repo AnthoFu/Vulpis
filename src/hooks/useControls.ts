@@ -1,6 +1,29 @@
 import { useState } from 'react';
 import TrackPlayer, { RepeatMode } from '@rntp/player';
 import { smoothTrackTransition } from '../utils/crossfade';
+import { Track } from '../models/Track';
+import { CrossfadeSettings } from '../models/AudioSettings';
+
+export interface UseControlsParams {
+  isPlaying: boolean;
+  repeatMode: RepeatMode;
+  isShuffleActive: boolean;
+  tracks?: Track[];
+  playQueue?: Track[];
+  activeTrack?: Track | null;
+  onSelectTrack?: (track: Track, index: number) => Promise<void> | void;
+  crossfadeSettings?: CrossfadeSettings;
+}
+
+export interface UseControlsReturn {
+  isProcessing: boolean;
+  togglePlayback: () => Promise<void>;
+  playNext: () => Promise<void>;
+  playPrevious: () => Promise<void>;
+  toggleShuffle: () => Promise<void>;
+  cycleRepeatMode: () => Promise<void>;
+  isRepeatActive: boolean;
+}
 
 export default function useControls({
   isPlaying,
@@ -11,19 +34,19 @@ export default function useControls({
   activeTrack,
   onSelectTrack,
   crossfadeSettings = { enabled: false, duration: 4 },
-}) {
+}: UseControlsParams): UseControlsReturn {
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const togglePlayback = async () => {
+  const togglePlayback = async (): Promise<void> => {
     if (isProcessing) return;
     setIsProcessing(true);
     const timer = setTimeout(() => setIsProcessing(false), 1500);
     try {
       console.log('[useControls] Alternando reproducción. isPlaying actual:', isPlaying);
       if (isPlaying) {
-        await TrackPlayer.pause();
+        TrackPlayer.pause();
       } else {
-        await TrackPlayer.play();
+        TrackPlayer.play();
       }
     } catch (e) {
       console.error('[useControls] Error al alternar la reproducción:', e);
@@ -33,14 +56,14 @@ export default function useControls({
     }
   };
 
-  const playLibraryFallback = async (direction) => {
+  const playLibraryFallback = async (direction: 'next' | 'prev'): Promise<void> => {
     try {
       if (tracks && tracks.length > 0 && onSelectTrack) {
         let targetIndex = 0;
         if (isShuffleActive) {
           targetIndex = Math.floor(Math.random() * tracks.length);
         } else if (activeTrack) {
-          const currentIdx = tracks.findIndex(t => t.mediaId === activeTrack.mediaId);
+          const currentIdx = tracks.findIndex((t) => t.mediaId === activeTrack.mediaId);
           if (currentIdx !== -1) {
             if (direction === 'next') {
               targetIndex = (currentIdx + 1) % tracks.length;
@@ -56,20 +79,20 @@ export default function useControls({
         }
       } else {
         await TrackPlayer.seekTo(0);
-        await TrackPlayer.play();
+        TrackPlayer.play();
       }
     } catch (fallbackErr) {
       console.error('[useControls] Error en playLibraryFallback:', fallbackErr);
       try {
         await TrackPlayer.seekTo(0);
-        await TrackPlayer.play();
+        TrackPlayer.play();
       } catch (err) {
         console.error('[useControls] Respaldo absoluto falló:', err);
       }
     }
   };
 
-  const playNext = async () => {
+  const playNext = async (): Promise<void> => {
     if (isProcessing) return;
     setIsProcessing(true);
     const timer = setTimeout(() => setIsProcessing(false), 1500);
@@ -78,7 +101,7 @@ export default function useControls({
         if (playQueue && playQueue.length > 1) {
           console.log('[useControls] Saltando a la siguiente pista de la cola');
           await TrackPlayer.skipToNext();
-          await TrackPlayer.play();
+          TrackPlayer.play();
         } else {
           console.log('[useControls] La cola tiene 1 o menos pistas, activando respaldo de biblioteca');
           await playLibraryFallback('next');
@@ -93,7 +116,7 @@ export default function useControls({
     }
   };
 
-  const playPrevious = async () => {
+  const playPrevious = async (): Promise<void> => {
     if (isProcessing) return;
     setIsProcessing(true);
     const timer = setTimeout(() => setIsProcessing(false), 1500);
@@ -102,7 +125,7 @@ export default function useControls({
         if (playQueue && playQueue.length > 1) {
           console.log('[useControls] Saltando a la pista anterior de la cola');
           await TrackPlayer.skipToPrevious();
-          await TrackPlayer.play();
+          TrackPlayer.play();
         } else {
           console.log('[useControls] La cola tiene 1 o menos pistas, activando respaldo de biblioteca');
           await playLibraryFallback('prev');
@@ -117,14 +140,14 @@ export default function useControls({
     }
   };
 
-  const toggleShuffle = async () => {
+  const toggleShuffle = async (): Promise<void> => {
     if (isProcessing) return;
     setIsProcessing(true);
     const timer = setTimeout(() => setIsProcessing(false), 1500);
     try {
       const nextShuffle = !isShuffleActive;
       console.log('[useControls] Estableciendo reproducción aleatoria activada:', nextShuffle);
-      await TrackPlayer.setShuffleEnabled(nextShuffle);
+      TrackPlayer.setShuffleEnabled(nextShuffle);
     } catch (e) {
       console.error('[useControls] Error al alternar la reproducción aleatoria:', e);
     } finally {
@@ -133,12 +156,12 @@ export default function useControls({
     }
   };
 
-  const cycleRepeatMode = async () => {
+  const cycleRepeatMode = async (): Promise<void> => {
     if (isProcessing) return;
     setIsProcessing(true);
     const timer = setTimeout(() => setIsProcessing(false), 1500);
     try {
-      let nextMode;
+      let nextMode: RepeatMode;
       if (repeatMode === RepeatMode.Off || !repeatMode) {
         nextMode = RepeatMode.All;
       } else if (repeatMode === RepeatMode.All) {
@@ -147,7 +170,7 @@ export default function useControls({
         nextMode = RepeatMode.Off;
       }
       console.log('[useControls] Estableciendo modo de repetición:', nextMode);
-      await TrackPlayer.setRepeatMode(nextMode);
+      TrackPlayer.setRepeatMode(nextMode);
     } catch (e) {
       console.error('[useControls] Error al establecer modo de repetición:', e);
     } finally {
@@ -156,7 +179,7 @@ export default function useControls({
     }
   };
 
-  const isRepeatActive = repeatMode && repeatMode !== RepeatMode.Off;
+  const isRepeatActive = Boolean(repeatMode && repeatMode !== RepeatMode.Off);
 
   return {
     isProcessing,

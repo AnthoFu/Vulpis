@@ -1,8 +1,8 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, Dispatch, SetStateAction } from 'react';
 import { Alert, Image } from 'react-native';
 import TrackPlayer, { RepeatMode } from '@rntp/player';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets, EdgeInsets } from 'react-native-safe-area-context';
 import { localTracks } from '../constants/tracks';
 import { getStoredToken } from '../services/drive';
 import { smoothTrackTransition } from '../utils/crossfade';
@@ -12,84 +12,87 @@ import useToast from './useToast';
 import usePlaylists from './usePlaylists';
 import useLocalLibrary from './useLocalLibrary';
 import useGoogleDrive from './useGoogleDrive';
-import useSleepTimer from './useSleepTimer';
+import useSleepTimer, { SleepTimerMode } from './useSleepTimer';
 import useAudioSettings from './useAudioSettings';
 import usePlayerPersistence from './usePlayerPersistence';
 import useQueueController from './useQueueController';
 import useDrivePrefetch from './useDrivePrefetch';
 import usePlayerInitializer from './usePlayerInitializer';
-import usePlayerStateSync from './usePlayerStateSync';
+import usePlayerStateSync, { ProgressState } from './usePlayerStateSync';
 
-/**
- * @typedef {Object} AppControllerResult
- * @property {import('react-native-safe-area-context').EdgeInsets} insets - Márgenes seguros de pantalla.
- * @property {string} defaultCover - URI local del asset de carátula por defecto.
- * @property {boolean} isPlayerInitialized - Si TrackPlayer completó la inicialización nativa.
- * @property {Object|null} activeTrack - Pista activa en reproducción.
- * @property {boolean} isPlaying - Indica si el reproductor está actualmente reproduciendo.
- * @property {{position: number, duration: number}} progress - Posición y duración en segundos.
- * @property {number} repeatMode - Modo de repetición actual (Off, Track, Queue).
- * @property {boolean} isShuffleActive - Indica si el modo aleatorio está activo.
- * @property {boolean} isFullPlayerVisible - Visibilidad de la vista expandida (PlayerCard).
- * @property {Function} setIsFullPlayerVisible - Setter de visibilidad de PlayerCard.
- * @property {boolean} startWithQueueVisible - Indica si PlayerCard debe abrirse mostrando la cola.
- * @property {Function} setStartWithQueueVisible - Setter para iniciar con la cola desplegada.
- * @property {Array} playQueue - Lista actual de canciones en la cola de reproducción.
- * @property {boolean} isDrawerOpen - Visibilidad del menú lateral de navegación.
- * @property {Function} setIsDrawerOpen - Setter de visibilidad del menú lateral.
- * @property {boolean} isSettingsOpen - Visibilidad del modal de ajustes generales.
- * @property {Function} setIsSettingsOpen - Setter de visibilidad de ajustes.
- * @property {string} currentSource - Fuente de datos activa ('local' | 'private' | 'playlists').
- * @property {Array} tracks - Lista de pistas visible en la biblioteca actual.
- * @property {boolean} isSourceChanging - Bandera de carga durante el cambio de fuente o descarga.
- * @property {Object} toast - Estado de la notificación emergente flotante.
- * @property {Function} showToast - Disparador de mensajes Toast.
- * @property {Array} playlists - Lista de todas las playlists personalizadas.
- * @property {Object} favoritesPlaylist - Lista especial automática de favoritos.
- * @property {Function} isFavoriteTrack - Verifica si una pista está en la lista de favoritos.
- * @property {Function} handleToggleFavorite - Alterna el estado de favorito de una pista.
- * @property {Function} handleCreatePlaylist - Crea una nueva playlist personalizada.
- * @property {Function} handleDeletePlaylist - Elimina una playlist existente.
- * @property {Function} handleAddTrackToPlaylist - Añade una pista a una playlist específica.
- * @property {Function} handleRemoveTrackFromPlaylist - Quita una pista de una playlist específica.
- * @property {boolean} hasCustomLocalTracks - Si el usuario escaneó pistas locales propias.
- * @property {Function} handleScanLocal - Dispara el escaneo de música en el dispositivo.
- * @property {Function} handleImportMp3 - Permite importar un archivo de audio mediante selector de documentos.
- * @property {Function} handleResetLocal - Restablece la biblioteca local a las pistas de demostración.
- * @property {Function} handleDeleteLocalTrack - Elimina permanentemente una pista del almacenamiento local.
- * @property {boolean} isDriveConnected - Indica si la cuenta de Google Drive está vinculada.
- * @property {string} googleClientId - Identificador del cliente OAuth 2.0.
- * @property {string} googleRedirectUri - URI de redirección para autenticación PKCE.
- * @property {boolean} isDriveLoading - Indica si hay sincronización de Drive en curso.
- * @property {Function} handleConnectDrive - Inicia el flujo de autenticación OAuth con Google.
- * @property {Function} handleDisconnectDrive - Revoca y limpia credenciales de Google Drive.
- * @property {Function} handleRefreshDrive - Recarga la lista de archivos de Google Drive.
- * @property {Function} handleUploadTrackToDrive - Sube un archivo seleccionado a Google Drive.
- * @property {Function} handleUploadLocalTrackToDrive - Sube una pista de la biblioteca local a Drive.
- * @property {Function} handleDeleteDriveTrack - Elimina un archivo remoto de Google Drive.
- * @property {Function} handleDownloadDriveTrack - Descarga y almacena localmente una pista de Drive.
- * @property {Function} handleAddToQueue - Añade una pista al final de la cola activa.
- * @property {Function} handleRemoveFromQueue - Elimina una pista de la cola nativa.
- * @property {Function} handleMoveQueueItem - Reordena elementos en la cola nativa.
- * @property {Function} handleClearUpcomingQueue - Vacía las pistas siguientes de la cola.
- * @property {Function} handleReorderQueueState - Actualiza el estado visual durante drag-and-drop.
- * @property {Function} handleSyncReorderNative - Aplica el reordenamiento visual en el motor nativo de TrackPlayer.
- * @property {Function} handleSetDragActive - Modifica la bandera de arrastre activo.
- * @property {Function} handleSourceChange - Cambia la fuente activa de música.
- * @property {Function} handleSelectTrack - Selecciona y reproduce una pista resolviendo descargas en demanda.
- * @property {boolean} isTimerActive - Si el temporizador de apagado está activo.
- * @property {string} timerMode - Modo del temporizador ('minutes' | 'end_of_track').
- * @property {number} secondsRemaining - Segundos restantes antes de pausar la música.
- * @property {string} timeRemainingFormatted - Tiempo restante formateado en texto (ej. "14m 20s").
- * @property {Function} startSleepTimer - Inicia un temporizador de apagado progresivo.
- * @property {Function} cancelSleepTimer - Cancela el temporizador activo.
- * @property {boolean} isSleepTimerModalOpen - Visibilidad del modal de temporizador de apagado.
- * @property {Function} setIsSleepTimerModalOpen - Setter de visibilidad del modal de temporizador.
- * @property {Object} crossfadeSettings - Configuración actual de fundido cruzado.
- * @property {Function} handleUpdateCrossfade - Actualiza la configuración de fundido cruzado.
- * @property {Object} replayGainSettings - Configuración actual de normalización ReplayGain.
- * @property {Function} handleUpdateReplayGain - Actualiza la configuración de ReplayGain.
- */
+import { Track } from '../models/Track';
+import { Playlist } from '../models/Playlist';
+import { CrossfadeSettings, ReplayGainSettings } from '../models/AudioSettings';
+
+export interface AppControllerResult {
+  insets: EdgeInsets;
+  defaultCover: string;
+  isPlayerInitialized: boolean;
+  activeTrack: Track | null;
+  isPlaying: boolean;
+  progress: ProgressState;
+  repeatMode: RepeatMode;
+  isShuffleActive: boolean;
+  isFullPlayerVisible: boolean;
+  setIsFullPlayerVisible: Dispatch<SetStateAction<boolean>>;
+  startWithQueueVisible: boolean;
+  setStartWithQueueVisible: Dispatch<SetStateAction<boolean>>;
+  playQueue: Track[];
+  isDrawerOpen: boolean;
+  setIsDrawerOpen: Dispatch<SetStateAction<boolean>>;
+  isSettingsOpen: boolean;
+  setIsSettingsOpen: Dispatch<SetStateAction<boolean>>;
+  currentSource: string;
+  tracks: Track[];
+  isSourceChanging: boolean;
+  toast: string | null;
+  showToast: (message: string) => void;
+  playlists: Playlist[];
+  favoritesPlaylist: Playlist | null;
+  isFavoriteTrack: (mediaId?: string | null) => boolean;
+  handleToggleFavorite: (track?: Track | null) => Promise<boolean>;
+  handleCreatePlaylist: (name: string) => Promise<Playlist | null>;
+  handleDeletePlaylist: (id: string) => Promise<void>;
+  handleAddTrackToPlaylist: (playlistId: string, track: Track) => Promise<void>;
+  handleRemoveTrackFromPlaylist: (playlistId: string, trackId: string) => Promise<void>;
+  hasCustomLocalTracks: boolean;
+  handleScanLocal: (options?: { silent?: boolean }) => Promise<Track[]>;
+  handleImportMp3: () => Promise<void>;
+  handleResetLocal: () => Promise<void>;
+  handleDeleteLocalTrack: (track: Track) => Promise<void>;
+  isDriveConnected: boolean;
+  googleClientId: string;
+  googleRedirectUri: string;
+  isDriveLoading: boolean;
+  handleConnectDrive: (clientId: string, redirectUri: string) => Promise<void>;
+  handleDisconnectDrive: () => Promise<void>;
+  handleRefreshDrive: () => Promise<void>;
+  handleUploadTrackToDrive: () => Promise<void>;
+  handleUploadLocalTrackToDrive: (track: Track) => Promise<void>;
+  handleDeleteDriveTrack: (track: Track) => Promise<void>;
+  handleDownloadDriveTrack: (track: Track) => Promise<void>;
+  handleAddToQueue: (item: Track) => Promise<void>;
+  handleRemoveFromQueue: (item: Track, index: number) => Promise<void>;
+  handleMoveQueueItem: (fromIndex: number, toIndex: number) => Promise<void>;
+  handleClearUpcomingQueue: () => Promise<void>;
+  handleReorderQueueState: (fromIndex: number, toIndex: number) => void;
+  handleSyncReorderNative: (_finalQueue: Track[]) => Promise<void>;
+  handleSetDragActive: (active: boolean) => void;
+  handleSourceChange: (source: string) => Promise<void>;
+  handleSelectTrack: (item: Track, index: number, playlistTracks?: Track[]) => Promise<void>;
+  isTimerActive: boolean;
+  timerMode: SleepTimerMode;
+  secondsRemaining: number;
+  timeRemainingFormatted: string | null;
+  startSleepTimer: (mode: SleepTimerMode | string) => void;
+  cancelSleepTimer: () => void;
+  isSleepTimerModalOpen: boolean;
+  setIsSleepTimerModalOpen: Dispatch<SetStateAction<boolean>>;
+  crossfadeSettings: CrossfadeSettings;
+  handleUpdateCrossfade: (newSettings: CrossfadeSettings) => Promise<void>;
+  replayGainSettings: ReplayGainSettings;
+  handleUpdateReplayGain: (newSettings: ReplayGainSettings) => Promise<void>;
+}
 
 /**
  * Hook orquestador principal de la aplicación Vulpis (`useAppController`).
@@ -97,21 +100,19 @@ import usePlayerStateSync from './usePlayerStateSync';
  * Actúa como punto central de coordinación de la arquitectura, conectando los hooks
  * de dominio (reproducción nativa, biblioteca local, Google Drive, listas de reproducción,
  * ajustes acústicos y persistencia segura) con la capa de presentación visual (`App.js`).
- *
- * @returns {AppControllerResult} Objeto con todos los estados y manejadores del ciclo de vida del reproductor.
  */
-export default function useAppController() {
+export default function useAppController(): AppControllerResult {
   const insets = useSafeAreaInsets();
   const defaultCover = Image.resolveAssetSource(require('../../assets/default-cover.jpg')).uri;
 
   // 1. Estados centrales de reproducción
   const [isPlayerInitialized, setIsPlayerInitialized] = useState(false);
-  const [activeTrack, setActiveTrack] = useState(null);
+  const [activeTrack, setActiveTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState({ position: 0, duration: 0 });
-  const [repeatMode, setRepeatMode] = useState(RepeatMode.Off);
+  const [progress, setProgress] = useState<ProgressState>({ position: 0, duration: 0 });
+  const [repeatMode, setRepeatMode] = useState<RepeatMode>(RepeatMode.Off);
   const [isShuffleActive, setIsShuffleActive] = useState(false);
-  const [playQueue, setPlayQueue] = useState([]);
+  const [playQueue, setPlayQueue] = useState<Track[]>([]);
 
   // Referencia mutable de la cola de reproducción para lecturas directas sin desactualización
   const playQueueRef = useRef(playQueue);
@@ -126,7 +127,7 @@ export default function useAppController() {
 
   // 3. Estados de la fuente de pistas ('local' | 'private' | 'playlists')
   const [currentSource, setCurrentSource] = useState('local');
-  const [tracks, setTracks] = useState(localTracks);
+  const [tracks, setTracks] = useState<Track[]>(localTracks);
   const [isSourceChanging, setIsSourceChanging] = useState(false);
 
   // 4. Banderas y referencias atómicas para control de concurrencia
@@ -313,7 +314,7 @@ export default function useAppController() {
       const restoreLibrary = async () => {
         try {
           await TrackPlayer.clear();
-          await TrackPlayer.setMediaItems(tracks);
+          await TrackPlayer.setMediaItems(tracks as any);
           await TrackPlayer.skipToIndex(0);
         } catch (err) {
           console.error('[useAppController] Error al restaurar las pistas de la biblioteca:', err);
@@ -327,7 +328,7 @@ export default function useAppController() {
    * Cambia la fuente activa de pistas ('local' | 'private' | 'playlists')
    * gestionando la carga de archivos o credenciales correspondientes.
    */
-  const handleSourceChange = useCallback(async (source) => {
+  const handleSourceChange = useCallback(async (source: string) => {
     if (source === currentSource || isSourceChanging) return;
     setIsSourceChanging(true);
     setCurrentSource(source);
@@ -355,16 +356,17 @@ export default function useAppController() {
    * Si la canción proviene de Google Drive y no está en caché local, la descarga
    * previamente y actualiza las listas de reproducción asociadas para persistir la URI local.
    */
-  const handleSelectTrack = useCallback(async (item, index, playlistTracks) => {
+  const handleSelectTrack = useCallback(async (item: Track, index: number, playlistTracks?: Track[]) => {
     const trackListToLoad = playlistTracks || tracks;
 
     // Caso 1: Pista remota de Google Drive pendiente de descarga
     if (item.mediaId.startsWith('drive-') && !item.url.startsWith('file://')) {
       try {
-        showToast(`Descargando canción: ${item.title}...`);
+        if (showToast) showToast(`Descargando canción: ${item.title}...`);
         setIsSourceChanging(true);
 
         const token = await getStoredToken();
+        if (!token) throw new Error('No hay token de Google Drive');
         const fileId = item.mediaId.replace('drive-', '');
         const localUri = await downloadDriveFile(fileId, item.title, token);
 
@@ -397,10 +399,10 @@ export default function useAppController() {
           console.log('[useAppController] Cargando pista con archivo local guardado en caché:', localUri);
           await smoothTrackTransition(async () => {
             await TrackPlayer.clear();
-            await TrackPlayer.setMediaItems(updatedTracks);
+            await TrackPlayer.setMediaItems(updatedTracks as any);
             const newIdx = updatedTracks.findIndex((t) => t.mediaId === item.mediaId);
             await TrackPlayer.skipToIndex(newIdx !== -1 ? newIdx : index);
-            await TrackPlayer.play();
+            TrackPlayer.play();
           }, crossfadeSettingsRef.current?.enabled);
         } else {
           Alert.alert('Error', 'No se pudo descargar el archivo de Google Drive.');
@@ -416,9 +418,9 @@ export default function useAppController() {
       try {
         await smoothTrackTransition(async () => {
           await TrackPlayer.clear();
-          await TrackPlayer.setMediaItems(trackListToLoad);
+          await TrackPlayer.setMediaItems(trackListToLoad as any);
           await TrackPlayer.skipToIndex(index);
-          await TrackPlayer.play();
+          TrackPlayer.play();
         }, crossfadeSettingsRef.current?.enabled);
       } catch (e) {
         console.error('[useAppController] Error al seleccionar pista:', e);

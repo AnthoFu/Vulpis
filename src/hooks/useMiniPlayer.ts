@@ -1,6 +1,27 @@
 import { useState } from 'react';
 import { Image } from 'react-native';
 import TrackPlayer from '@rntp/player';
+import { Track } from '../models/Track';
+
+export interface UseMiniPlayerParams {
+  activeTrack?: Track | null;
+  isPlaying: boolean;
+  position: number;
+  duration: number;
+  tracks?: Track[];
+  playQueue?: Track[];
+  onSelectTrack?: (track: Track, index: number) => Promise<void> | void;
+  isShuffleActive: boolean;
+}
+
+export interface UseMiniPlayerReturn {
+  isProcessing: boolean;
+  togglePlayback: () => Promise<void>;
+  playPrevious: () => Promise<void>;
+  playNext: () => Promise<void>;
+  progressPercent: number;
+  currentArtwork: string;
+}
 
 export default function useMiniPlayer({
   activeTrack,
@@ -11,18 +32,18 @@ export default function useMiniPlayer({
   playQueue = [],
   onSelectTrack,
   isShuffleActive,
-}) {
+}: UseMiniPlayerParams): UseMiniPlayerReturn {
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const togglePlayback = async () => {
+  const togglePlayback = async (): Promise<void> => {
     if (isProcessing) return;
     setIsProcessing(true);
     const timer = setTimeout(() => setIsProcessing(false), 1500);
     try {
       if (isPlaying) {
-        await TrackPlayer.pause();
+        TrackPlayer.pause();
       } else {
-        await TrackPlayer.play();
+        TrackPlayer.play();
       }
     } catch (e) {
       console.error('[useMiniPlayer] Error al alternar la reproducción:', e);
@@ -32,14 +53,14 @@ export default function useMiniPlayer({
     }
   };
 
-  const playLibraryFallback = async (direction) => {
+  const playLibraryFallback = async (direction: 'next' | 'prev'): Promise<void> => {
     try {
       if (tracks && tracks.length > 0 && onSelectTrack) {
         let targetIndex = 0;
         if (isShuffleActive) {
           targetIndex = Math.floor(Math.random() * tracks.length);
         } else if (activeTrack) {
-          const currentIdx = tracks.findIndex(t => t.mediaId === activeTrack.mediaId);
+          const currentIdx = tracks.findIndex((t) => t.mediaId === activeTrack.mediaId);
           if (currentIdx !== -1) {
             if (direction === 'next') {
               targetIndex = (currentIdx + 1) % tracks.length;
@@ -55,20 +76,20 @@ export default function useMiniPlayer({
         }
       } else {
         await TrackPlayer.seekTo(0);
-        await TrackPlayer.play();
+        TrackPlayer.play();
       }
     } catch (fallbackErr) {
       console.error('[useMiniPlayer] Error en playLibraryFallback:', fallbackErr);
       try {
         await TrackPlayer.seekTo(0);
-        await TrackPlayer.play();
+        TrackPlayer.play();
       } catch (err) {
         console.error('[useMiniPlayer] Respaldo absoluto falló:', err);
       }
     }
   };
 
-  const playPrevious = async () => {
+  const playPrevious = async (): Promise<void> => {
     if (isProcessing) return;
     setIsProcessing(true);
     const timer = setTimeout(() => setIsProcessing(false), 1500);
@@ -76,7 +97,7 @@ export default function useMiniPlayer({
       if (playQueue && playQueue.length > 1) {
         console.log('[useMiniPlayer] Saltando a la pista anterior de la cola');
         await TrackPlayer.skipToPrevious();
-        await TrackPlayer.play();
+        TrackPlayer.play();
       } else {
         console.log('[useMiniPlayer] La cola tiene 1 o menos pistas, activando respaldo de biblioteca');
         await playLibraryFallback('prev');
@@ -90,7 +111,7 @@ export default function useMiniPlayer({
     }
   };
 
-  const playNext = async () => {
+  const playNext = async (): Promise<void> => {
     if (isProcessing) return;
     setIsProcessing(true);
     const timer = setTimeout(() => setIsProcessing(false), 1500);
@@ -98,7 +119,7 @@ export default function useMiniPlayer({
       if (playQueue && playQueue.length > 1) {
         console.log('[useMiniPlayer] Saltando a la siguiente pista de la cola');
         await TrackPlayer.skipToNext();
-        await TrackPlayer.play();
+        TrackPlayer.play();
       } else {
         console.log('[useMiniPlayer] La cola tiene 1 o menos pistas, activando respaldo de biblioteca');
         await playLibraryFallback('next');

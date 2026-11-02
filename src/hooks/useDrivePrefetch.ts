@@ -1,7 +1,16 @@
-import { useEffect } from 'react';
+import { useEffect, Dispatch, SetStateAction } from 'react';
 import TrackPlayer, { RepeatMode } from '@rntp/player';
 import * as FileSystem from 'expo-file-system/legacy';
 import { getStoredToken } from '../services/drive';
+import { Track } from '../models/Track';
+
+export interface UseDrivePrefetchParams {
+  activeTrack?: Track | null;
+  isPlayerInitialized: boolean;
+  setPlayQueue: Dispatch<SetStateAction<Track[]>>;
+  setTracks: Dispatch<SetStateAction<Track[]>>;
+  downloadDriveFile: (fileId: string, title: string, token: string) => Promise<string | null>;
+}
 
 /**
  * Hook para la precarga y almacenamiento en caché en segundo plano
@@ -13,7 +22,7 @@ export default function useDrivePrefetch({
   setPlayQueue,
   setTracks,
   downloadDriveFile,
-}) {
+}: UseDrivePrefetchParams): void {
   useEffect(() => {
     if (!isPlayerInitialized) return;
     if (!activeTrack) return;
@@ -25,7 +34,7 @@ export default function useDrivePrefetch({
         const activeIndex = TrackPlayer.getActiveMediaItemIndex();
         if (activeIndex === null || activeIndex === -1) return;
 
-        const currentQueue = TrackPlayer.getQueue();
+        const currentQueue = TrackPlayer.getQueue() as Track[];
         if (!currentQueue || currentQueue.length <= 1) return;
 
         // Calcular el siguiente índice
@@ -33,7 +42,7 @@ export default function useDrivePrefetch({
         if (nextIndex >= currentQueue.length) {
           // Si la repetición de cola está activada, volver a 0
           const repeatMode = TrackPlayer.getRepeatMode();
-          if (repeatMode === RepeatMode.Queue) {
+          if (repeatMode === RepeatMode.All) {
             nextIndex = 0;
           } else {
             return; // No hay siguiente pista
@@ -47,25 +56,25 @@ export default function useDrivePrefetch({
         if (nextTrack.mediaId.startsWith('drive-') && !nextTrack.url.startsWith('file://')) {
           const fileId = nextTrack.mediaId.replace('drive-', '');
 
-          // Verificar si el archivo ya está en caché (para evitar solicitar token o iniciar la descarga si ya existe)
-          const localUri = FileSystem.cacheDirectory + `${fileId}.mp3`;
+          // Verificar si el archivo ya está en caché
+          const localUri = `${FileSystem.cacheDirectory}${fileId}.mp3`;
           const fileInfo = await FileSystem.getInfoAsync(localUri);
 
           if (fileInfo.exists) {
             console.log(
               `[Buffering] La siguiente pista ya está guardada en caché local en: ${localUri}. Actualizando cola...`
             );
-            const updatedTrack = { ...nextTrack, url: localUri };
+            const updatedTrack: Track = { ...nextTrack, url: localUri };
 
             if (isMounted) {
               // Actualizar la cola nativa
-              const latestQueue = TrackPlayer.getQueue();
+              const latestQueue = TrackPlayer.getQueue() as Track[];
               if (
                 latestQueue &&
                 nextIndex < latestQueue.length &&
                 latestQueue[nextIndex].mediaId === nextTrack.mediaId
               ) {
-                await TrackPlayer.replaceMediaItem(nextIndex, updatedTrack);
+                await TrackPlayer.replaceMediaItem(nextIndex, updatedTrack as any);
               }
               // Actualizar el estado
               setPlayQueue((prev) => {
@@ -89,16 +98,16 @@ export default function useDrivePrefetch({
 
           if (downloadedUri && isMounted) {
             console.log(`[Buffering] Predescarga en segundo plano finalizada: ${nextTrack.title}`);
-            const updatedTrack = { ...nextTrack, url: downloadedUri };
+            const updatedTrack: Track = { ...nextTrack, url: downloadedUri };
 
             // Actualizar la cola nativa
-            const latestQueue = TrackPlayer.getQueue();
+            const latestQueue = TrackPlayer.getQueue() as Track[];
             if (
               latestQueue &&
               nextIndex < latestQueue.length &&
               latestQueue[nextIndex].mediaId === nextTrack.mediaId
             ) {
-              await TrackPlayer.replaceMediaItem(nextIndex, updatedTrack);
+              await TrackPlayer.replaceMediaItem(nextIndex, updatedTrack as any);
             }
 
             // Actualizar el estado

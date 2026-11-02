@@ -7,32 +7,40 @@ import {
   SHEET_TRANSLATE_Y_HIDDEN,
 } from '../constants/animations';
 
+export interface SheetAnimationOptions {
+  enterDuration?: number;
+  exitDuration?: number;
+  spring?: typeof SPRING.gentle;
+  useSpringEnter?: boolean;
+}
+
+export interface UseSheetAnimationParams {
+  isOpen: boolean;
+  options?: SheetAnimationOptions;
+}
+
+export interface UseSheetAnimationReturn {
+  visible: boolean;
+  translateY: Animated.Value;
+  backdropOpacity: Animated.Value;
+}
+
 /**
  * useSheetAnimation — Hook reutilizable para bottom sheets animados
- *
- * Maneja el ciclo completo de un bottom sheet:
- *  1. visible: monta el componente en el DOM
- *  2. translateY: desliza el panel desde la parte inferior
- *  3. opacity: hace fade del backdrop
- *  4. Al cerrar: anima la salida y desmonta el componente al terminar
- *
- * Uso:
- *   const { visible, translateY, backdropOpacity } = useSheetAnimation({ isOpen });
- *   // En JSX: solo renderiza si `visible`, aplica transform al panel y opacity al backdrop
- *
- * @param {boolean} isOpen  — Estado de apertura controlado externamente
- * @param {object}  options — Opciones opcionales de personalización
  */
-export default function useSheetAnimation({ isOpen, options = {} }) {
+export default function useSheetAnimation({
+  isOpen,
+  options = {},
+}: UseSheetAnimationParams): UseSheetAnimationReturn {
   const {
     enterDuration = DURATION.normal,
-    exitDuration  = DURATION.fast,
-    spring        = SPRING.gentle,
+    exitDuration = DURATION.fast,
+    spring = SPRING.gentle,
     useSpringEnter = true,
   } = options;
 
   const [visible, setVisible] = useState(isOpen);
-  const translateY    = useRef(new Animated.Value(SHEET_TRANSLATE_Y_HIDDEN)).current;
+  const translateY = useRef(new Animated.Value(SHEET_TRANSLATE_Y_HIDDEN)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const isFirstRender = useRef(true);
 

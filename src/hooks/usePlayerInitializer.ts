@@ -1,7 +1,23 @@
-import { useEffect } from 'react';
+import { useEffect, Dispatch, SetStateAction } from 'react';
 import TrackPlayer, { PlayerCommand, Event } from '@rntp/player';
 import { getStoredToken } from '../services/drive';
 import { isExcludedAudio } from '../utils/audioFilter';
+import { Track } from '../models/Track';
+import { SavedPlayerState } from './usePlayerPersistence';
+import { ProgressState } from './usePlayerStateSync';
+
+export interface UsePlayerInitializerParams {
+  setLocalLibraryTracks: Dispatch<SetStateAction<Track[]>>;
+  setHasCustomLocalTracks: Dispatch<SetStateAction<boolean>>;
+  setTracks: Dispatch<SetStateAction<Track[]>>;
+  setCurrentSource: Dispatch<SetStateAction<string>>;
+  setPlayQueue: Dispatch<SetStateAction<Track[]>>;
+  setProgress: Dispatch<SetStateAction<ProgressState>>;
+  setIsPlayerInitialized: Dispatch<SetStateAction<boolean>>;
+  loadStoredLocalTracks: () => Promise<Track[]>;
+  loadPlayerState: () => Promise<SavedPlayerState | null>;
+  handleScanLocal: (options?: { silent?: boolean }) => Promise<any>;
+}
 
 /**
  * Hook para la inicialización y restauración del estado de TrackPlayer.
@@ -19,17 +35,17 @@ export default function usePlayerInitializer({
   loadStoredLocalTracks,
   loadPlayerState,
   handleScanLocal,
-}) {
+}: UsePlayerInitializerParams): void {
   useEffect(() => {
     let isMounted = true;
-    let sub1, sub2, sub3;
+    let sub1: any, sub2: any, sub3: any;
 
     async function init() {
       try {
         console.log('[usePlayerInitializer] Inicializando TrackPlayer...');
         try {
           await TrackPlayer.setupPlayer({});
-        } catch (e) {
+        } catch (e: any) {
           console.log('[usePlayerInitializer] Player ya estaba configurado, ignorando error:', e.message);
         }
 
@@ -82,7 +98,7 @@ export default function usePlayerInitializer({
           }
 
           // Filtrar cualquier audio de WhatsApp o no deseado que hubiera quedado en la cola guardada
-          const restoredQueue = savedState.playQueue.filter((t) => !isExcludedAudio(t));
+          const restoredQueue = (savedState.playQueue as Track[]).filter((t) => !isExcludedAudio(t));
           const effectiveQueue = restoredQueue.length > 0 ? restoredQueue : initialTracks;
 
           if (isMounted) {
@@ -98,7 +114,7 @@ export default function usePlayerInitializer({
           }
 
           if (effectiveQueue.length > 0) {
-            await TrackPlayer.setMediaItems(effectiveQueue);
+            await TrackPlayer.setMediaItems(effectiveQueue as any);
 
             // Buscar el índice de la pista activa
             let activeIndex = 0;
@@ -124,7 +140,7 @@ export default function usePlayerInitializer({
           }
         } else if (initialTracks.length > 0) {
           // Configuración predeterminada con pistas almacenadas
-          await TrackPlayer.setMediaItems(initialTracks);
+          await TrackPlayer.setMediaItems(initialTracks as any);
           await TrackPlayer.skipToIndex(0);
           if (isMounted) {
             setPlayQueue(initialTracks);

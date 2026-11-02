@@ -1,6 +1,36 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo, MutableRefObject } from 'react';
+import { ScrollView } from 'react-native';
 import TrackPlayer from '@rntp/player';
-import { parseLrcLyrics } from '../utils/metadata';
+import { parseLrcLyrics, LrcLine } from '../utils/lyrics';
+
+export interface UseSyncedLyricsParams {
+  rawLyrics?: string | null;
+  lyricsText?: string | null;
+  position: number;
+  activeTrackId?: string | null;
+  isVisible?: boolean;
+}
+
+export interface LineLayout {
+  y: number;
+  height: number;
+}
+
+export interface UseSyncedLyricsReturn {
+  parsedLines: LrcLine[];
+  hasTimestamps: boolean;
+  activeIndex: number;
+  activeLyricLine: string | null;
+  isUserScrolled: boolean;
+  lyricsScrollRef: MutableRefObject<ScrollView | null>;
+  lineLayoutsRef: MutableRefObject<Record<number, LineLayout>>;
+  containerHeightRef: MutableRefObject<number>;
+  handleScrollBeginDrag: () => void;
+  handleScrollEndDrag: () => void;
+  handleManualSyncPress: () => void;
+  handleLyricLinePress: (lineTime?: number | null) => Promise<void>;
+  scrollToActiveLine: (indexToScroll?: number, animated?: boolean) => void;
+}
 
 /**
  * Hook para la sincronización temporal, cálculo de líneas activas y auto-desplazamiento
@@ -12,12 +42,12 @@ export default function useSyncedLyrics({
   position,
   activeTrackId,
   isVisible = false,
-}) {
-  const lyricsScrollRef = useRef(null);
-  const lineLayoutsRef = useRef({});
-  const containerHeightRef = useRef(0);
+}: UseSyncedLyricsParams): UseSyncedLyricsReturn {
+  const lyricsScrollRef = useRef<ScrollView | null>(null);
+  const lineLayoutsRef = useRef<Record<number, LineLayout>>({});
+  const containerHeightRef = useRef<number>(0);
   const isUserScrollingRef = useRef(false);
-  const userScrollTimeoutRef = useRef(null);
+  const userScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isUserScrolled, setIsUserScrolled] = useState(false);
 
   const parsedLines = useMemo(() => parseLrcLyrics(rawLyrics), [rawLyrics]);
@@ -134,7 +164,7 @@ export default function useSyncedLyrics({
     scrollToActiveLine(activeIndex, true);
   }, [activeIndex, scrollToActiveLine]);
 
-  const handleLyricLinePress = useCallback(async (lineTime) => {
+  const handleLyricLinePress = useCallback(async (lineTime?: number | null) => {
     if (lineTime === null || lineTime === undefined) return;
     try {
       if (userScrollTimeoutRef.current) {

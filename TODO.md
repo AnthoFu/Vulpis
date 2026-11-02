@@ -136,6 +136,13 @@
   - [x] Creación de `src/types/modules.d.ts` y barrel export centralizado `src/utils/index.ts`.
   - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores) y bundle exitoso con `npx expo export`.
 
+- [x] **Fase 4 de Migración a TypeScript — Capa de Custom Hooks (`src/hooks/`):**
+  - [x] Migración de hooks centrales de reproducción: `usePlayerInitializer.ts`, `usePlayerStateSync.ts`, `usePlayerPersistence.ts`, `useQueueController.ts`, `useAudioSettings.ts`, `useSleepTimer.ts`.
+  - [x] Migración de fuentes y bibliotecas: `useLocalLibrary.ts`, `useGoogleDrive.ts`, `useDrivePrefetch.ts`, `usePlaylists.ts`.
+  - [x] Migración de controladores visuales: `useControls.ts`, `useMiniPlayer.ts`, `useProgressBar.ts`, `usePlayerCard.ts`, `useQueueList.ts`, `useSyncedLyrics.ts`, `useSheetAnimation.ts`, `useSidebarDrawer.ts`, `useToast.ts`.
+  - [x] Migración del orquestador maestro `useAppController.ts` y barrel export `src/hooks/index.ts`.
+  - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores) y empaquetado Expo sin errores.
+
 ---
 
 # Mejoras por hacer

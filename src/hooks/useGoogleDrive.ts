@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Dispatch, SetStateAction } from 'react';
 import { Alert } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as DocumentPicker from 'expo-document-picker';
@@ -17,6 +17,40 @@ import {
   downloadDriveFile,
   saveDriveTrackToDevice,
 } from '../services/drive';
+import { Track } from '../models/Track';
+
+export interface UseGoogleDriveParams {
+  currentSource: string;
+  setTracks: Dispatch<SetStateAction<Track[]>>;
+  setIsSourceChanging: Dispatch<SetStateAction<boolean>>;
+  playQueue: Track[];
+  setPlayQueue: Dispatch<SetStateAction<Track[]>>;
+  setActiveTrack: Dispatch<SetStateAction<Track | null>>;
+  setIsPlaying: Dispatch<SetStateAction<boolean>>;
+  showToast?: (message: string) => void;
+  defaultCover: any;
+  localLibraryTracks: Track[];
+  hasCustomLocalTracks: boolean;
+  saveLocalTracks: (tracks: Track[]) => Promise<void>;
+}
+
+export interface UseGoogleDriveReturn {
+  isDriveConnected: boolean;
+  setIsDriveConnected: Dispatch<SetStateAction<boolean>>;
+  googleClientId: string;
+  googleRedirectUri: string;
+  isDriveLoading: boolean;
+  setIsDriveLoading: Dispatch<SetStateAction<boolean>>;
+  downloadDriveFile: typeof downloadDriveFile;
+  loadDriveFiles: (token: string, forceUpdatePlayer?: boolean) => Promise<void>;
+  handleConnectDrive: (clientId: string, redirectUri: string) => Promise<void>;
+  handleDisconnectDrive: () => Promise<void>;
+  handleUploadTrackToDrive: () => Promise<void>;
+  handleUploadLocalTrackToDrive: (track: Track) => Promise<void>;
+  handleDeleteDriveTrack: (track: Track) => Promise<void>;
+  handleDownloadDriveTrack: (track: Track) => Promise<void>;
+  handleRefreshDrive: () => Promise<void>;
+}
 
 export default function useGoogleDrive({
   currentSource,
@@ -31,7 +65,7 @@ export default function useGoogleDrive({
   localLibraryTracks,
   hasCustomLocalTracks,
   saveLocalTracks,
-}) {
+}: UseGoogleDriveParams): UseGoogleDriveReturn {
   const [isDriveConnected, setIsDriveConnected] = useState(false);
   const [googleClientId, setGoogleClientId] = useState(GOOGLE_OAUTH_CONFIG.clientId);
   const [googleRedirectUri, setGoogleRedirectUri] = useState(GOOGLE_OAUTH_CONFIG.redirectUri);
@@ -62,8 +96,7 @@ export default function useGoogleDrive({
     loadGoogleConfigData();
   }, []);
 
-
-  const loadDriveFiles = async (token, forceUpdatePlayer = false) => {
+  const loadDriveFiles = async (token: string, forceUpdatePlayer = false): Promise<void> => {
     setIsDriveLoading(true);
     const isPrivateActive = currentSourceRef.current === 'private';
     if (isPrivateActive) {
@@ -77,22 +110,22 @@ export default function useGoogleDrive({
           return mapDriveFileToTrack(file, token, defaultCover, resolvedUrl);
         })
       );
-      
+
       if (isPrivateActive) {
         setTracks(driveTracks);
       }
-      
+
       if (forceUpdatePlayer && isPrivateActive) {
         const active = TrackPlayer.getActiveMediaItem();
         if (!active) {
           await TrackPlayer.clear();
           if (driveTracks.length > 0) {
-            await TrackPlayer.setMediaItems(driveTracks);
+            await TrackPlayer.setMediaItems(driveTracks as any);
             await TrackPlayer.skipToIndex(0);
           }
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[useGoogleDrive] Error al cargar archivos de Drive:', err);
       if (err.message === 'AUTH_EXPIRED') {
         setIsDriveConnected(false);
@@ -111,7 +144,7 @@ export default function useGoogleDrive({
     }
   };
 
-  const handleConnectDrive = async (clientId, redirectUri) => {
+  const handleConnectDrive = async (clientId: string, redirectUri: string): Promise<void> => {
     setIsDriveLoading(true);
     try {
       const token = await signInWithGoogle(clientId, redirectUri);
@@ -119,10 +152,10 @@ export default function useGoogleDrive({
         setIsDriveConnected(true);
         setGoogleClientId(clientId);
         setGoogleRedirectUri(redirectUri);
-        showToast('Google Drive conectado exitosamente');
+        if (showToast) showToast('Google Drive conectado exitosamente');
         await loadDriveFiles(token);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[useGoogleDrive] Error al conectar Google Drive:', err);
       Alert.alert('Error de Conexión', err.message || 'No se pudo conectar a Google Drive.');
     } finally {
@@ -130,7 +163,7 @@ export default function useGoogleDrive({
     }
   };
 
-  const handleDisconnectDrive = async () => {
+  const handleDisconnectDrive = async (): Promise<void> => {
     Alert.alert(
       'Desconectar Nube Privada',
       '¿Estás seguro de que quieres desconectar tu cuenta de Google Drive?',
@@ -146,19 +179,19 @@ export default function useGoogleDrive({
               setIsDriveConnected(false);
               setTracks([]);
               await TrackPlayer.clear();
-              showToast('Google Drive desconectado');
+              if (showToast) showToast('Google Drive desconectado');
             } catch (err) {
               console.error('[useGoogleDrive] Error al desconectar:', err);
             } finally {
               setIsDriveLoading(false);
             }
-          }
-        }
+          },
+        },
       ]
     );
   };
 
-  const handleUploadTrackToDrive = async () => {
+  const handleUploadTrackToDrive = async (): Promise<void> => {
     const token = await getStoredToken();
     if (!token) {
       Alert.alert('No Conectado', 'Por favor, conéctate a Google Drive primero.');
@@ -176,11 +209,11 @@ export default function useGoogleDrive({
 
       const asset = res.assets[0];
       setIsDriveLoading(true);
-      showToast(`Subiendo: ${asset.name}...`);
+      if (showToast) showToast(`Subiendo: ${asset.name}...`);
 
       await uploadTrackToDrive(asset.uri, asset.name, token);
-      
-      showToast('¡Subida completada!');
+
+      if (showToast) showToast('¡Subida completada!');
       await loadDriveFiles(token);
     } catch (e) {
       console.error('[useGoogleDrive] Error al subir a Drive:', e);
@@ -190,7 +223,7 @@ export default function useGoogleDrive({
     }
   };
 
-  const handleUploadLocalTrackToDrive = async (track) => {
+  const handleUploadLocalTrackToDrive = async (track: Track): Promise<void> => {
     const token = await getStoredToken();
     if (!token) {
       Alert.alert(
@@ -201,7 +234,7 @@ export default function useGoogleDrive({
     }
 
     setIsDriveLoading(true);
-    showToast(`Subiendo a Drive: ${track.title}...`);
+    if (showToast) showToast(`Subiendo a Drive: ${track.title}...`);
 
     try {
       let filename = track.title;
@@ -210,7 +243,7 @@ export default function useGoogleDrive({
       }
 
       await uploadTrackToDrive(track.url, filename, token);
-      showToast('¡Subido a Drive exitosamente!');
+      if (showToast) showToast('¡Subido a Drive exitosamente!');
       await loadDriveFiles(token);
     } catch (e) {
       console.error('[useGoogleDrive] Error al subir pista local a Drive:', e);
@@ -220,7 +253,7 @@ export default function useGoogleDrive({
     }
   };
 
-  const handleDeleteDriveTrack = async (track) => {
+  const handleDeleteDriveTrack = async (track: Track): Promise<void> => {
     const token = await getStoredToken();
     if (!token) {
       Alert.alert('No Conectado', 'Por favor, conéctate a Google Drive primero.');
@@ -229,12 +262,12 @@ export default function useGoogleDrive({
 
     const fileId = track.mediaId.replace(/^drive-/, '');
     setIsDriveLoading(true);
-    showToast(`Eliminando: ${track.title}...`);
+    if (showToast) showToast(`Eliminando: ${track.title}...`);
 
     try {
       await deleteTrackFromDrive(fileId, token);
 
-      const cacheUri = FileSystem.cacheDirectory + `${fileId}.mp3`;
+      const cacheUri = `${FileSystem.cacheDirectory}${fileId}.mp3`;
       try {
         const cacheInfo = await FileSystem.getInfoAsync(cacheUri);
         if (cacheInfo.exists) {
@@ -244,7 +277,7 @@ export default function useGoogleDrive({
         console.warn('[useGoogleDrive] Error al eliminar archivo en caché:', cacheErr);
       }
 
-      const active = TrackPlayer.getActiveMediaItem();
+      const active = TrackPlayer.getActiveMediaItem() as Track | null;
       if (active && active.mediaId === track.mediaId) {
         await TrackPlayer.stop();
         await TrackPlayer.clear();
@@ -252,11 +285,11 @@ export default function useGoogleDrive({
         setIsPlaying(false);
       }
 
-      const updatedQueue = playQueue.filter(t => t.mediaId !== track.mediaId);
+      const updatedQueue = playQueue.filter((t) => t.mediaId !== track.mediaId);
       setPlayQueue(updatedQueue);
 
       await loadDriveFiles(token);
-      showToast('Canción eliminada de Drive');
+      if (showToast) showToast('Canción eliminada de Drive');
     } catch (e) {
       console.error('[useGoogleDrive] Error al eliminar de Drive:', e);
       Alert.alert('Error', 'No se pudo eliminar la canción de Google Drive.');
@@ -265,7 +298,7 @@ export default function useGoogleDrive({
     }
   };
 
-  const handleDownloadDriveTrack = async (track) => {
+  const handleDownloadDriveTrack = async (track: Track): Promise<void> => {
     const token = await getStoredToken();
     if (!token) {
       Alert.alert('No Conectado', 'Por favor, conéctate a Google Drive primero.');
@@ -284,12 +317,11 @@ export default function useGoogleDrive({
     });
   };
 
-
-  const handleRefreshDrive = async () => {
+  const handleRefreshDrive = async (): Promise<void> => {
     const token = await getStoredToken();
     if (token) {
       await loadDriveFiles(token);
-      showToast('Biblioteca de Drive actualizada');
+      if (showToast) showToast('Biblioteca de Drive actualizada');
     } else {
       setIsDriveConnected(false);
       Alert.alert('No Conectado', 'Por favor, conéctate a Google Drive primero.');

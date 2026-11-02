@@ -1,23 +1,44 @@
 import { useState, useEffect, useRef } from 'react';
 import TrackPlayer from '@rntp/player';
+import { Track } from '../models/Track';
 
 export const SLEEP_TIMER_MODES = {
   MINUTES_15: '15m',
   MINUTES_30: '30m',
   MINUTES_60: '60m',
   END_OF_TRACK: 'end_of_track',
-};
+} as const;
 
-export default function useSleepTimer({ isPlaying, activeTrack, showToast }) {
-  const [timerMode, setTimerMode] = useState(null); // '15m' | '30m' | '60m' | 'end_of_track' | null
-  const [targetTimestamp, setTargetTimestamp] = useState(null);
-  const [trackedTrackId, setTrackedTrackId] = useState(null);
-  const [secondsRemaining, setSecondsRemaining] = useState(0);
+export type SleepTimerMode = typeof SLEEP_TIMER_MODES[keyof typeof SLEEP_TIMER_MODES] | number | null;
 
-  const timerModeRef = useRef(timerMode);
-  const targetTimestampRef = useRef(targetTimestamp);
-  const trackedTrackIdRef = useRef(trackedTrackId);
-  const activeTrackRef = useRef(activeTrack);
+export interface UseSleepTimerParams {
+  isPlaying?: boolean;
+  activeTrack?: Track | null;
+  showToast?: (message: string) => void;
+}
+
+export interface UseSleepTimerReturn {
+  isTimerActive: boolean;
+  timerMode: SleepTimerMode;
+  secondsRemaining: number;
+  timeRemainingFormatted: string | null;
+  startSleepTimer: (mode: SleepTimerMode | string) => void;
+  cancelSleepTimer: () => void;
+}
+
+export default function useSleepTimer({
+  activeTrack,
+  showToast,
+}: UseSleepTimerParams): UseSleepTimerReturn {
+  const [timerMode, setTimerMode] = useState<SleepTimerMode>(null);
+  const [targetTimestamp, setTargetTimestamp] = useState<number | null>(null);
+  const [trackedTrackId, setTrackedTrackId] = useState<string | null>(null);
+  const [secondsRemaining, setSecondsRemaining] = useState<number>(0);
+
+  const timerModeRef = useRef<SleepTimerMode>(timerMode);
+  const targetTimestampRef = useRef<number | null>(targetTimestamp);
+  const trackedTrackIdRef = useRef<string | null>(trackedTrackId);
+  const activeTrackRef = useRef<Track | null | undefined>(activeTrack);
 
   useEffect(() => {
     timerModeRef.current = timerMode;
@@ -33,7 +54,6 @@ export default function useSleepTimer({ isPlaying, activeTrack, showToast }) {
 
   // Manejo de cambio de pista para la opción "Al finalizar la pista actual"
   useEffect(() => {
-    const prevTrack = activeTrackRef.current;
     activeTrackRef.current = activeTrack;
 
     if (
@@ -44,13 +64,17 @@ export default function useSleepTimer({ isPlaying, activeTrack, showToast }) {
       // Si la pista activa cambió respecto a la que estaba sonando cuando se activó el temporizador
       if (activeTrack.mediaId !== trackedTrackIdRef.current) {
         console.log('[useSleepTimer] Pista finalizada en modo end_of_track. Deteniendo reproducción...');
-        TrackPlayer.pause().catch(err => console.error('[useSleepTimer] Error pausando TrackPlayer:', err));
+        try {
+          TrackPlayer.pause();
+        } catch (err: any) {
+          console.error('[useSleepTimer] Error pausando TrackPlayer:', err);
+        }
         cancelTimerInternal('Temporizador: Pista finalizada, reproducción detenida');
       }
     }
   }, [activeTrack?.mediaId]);
 
-  const cancelTimerInternal = (toastMessage) => {
+  const cancelTimerInternal = (toastMessage?: string): void => {
     setTimerMode(null);
     setTargetTimestamp(null);
     setTrackedTrackId(null);
@@ -63,11 +87,11 @@ export default function useSleepTimer({ isPlaying, activeTrack, showToast }) {
     }
   };
 
-  const cancelSleepTimer = () => {
+  const cancelSleepTimer = (): void => {
     cancelTimerInternal('Temporizador de apagado desactivado');
   };
 
-  const startSleepTimer = (mode) => {
+  const startSleepTimer = (mode: SleepTimerMode | string): void => {
     if (!mode || mode === 'off') {
       cancelSleepTimer();
       return;
@@ -96,11 +120,11 @@ export default function useSleepTimer({ isPlaying, activeTrack, showToast }) {
 
     if (minutes > 0) {
       const target = Date.now() + minutes * 60 * 1000;
-      setTimerMode(mode);
+      setTimerMode(mode as SleepTimerMode);
       setTargetTimestamp(target);
       setTrackedTrackId(null);
       setSecondsRemaining(minutes * 60);
-      timerModeRef.current = mode;
+      timerModeRef.current = mode as SleepTimerMode;
       targetTimestampRef.current = target;
 
       if (showToast) {
@@ -115,16 +139,21 @@ export default function useSleepTimer({ isPlaying, activeTrack, showToast }) {
       return;
     }
 
-    const checkTimer = () => {
+    const checkTimer = (): void => {
       const now = Date.now();
-      const remainingMs = targetTimestampRef.current - now;
+      const target = targetTimestampRef.current ?? 0;
+      const remainingMs = target - now;
       const remainingSec = Math.max(0, Math.ceil(remainingMs / 1000));
 
       setSecondsRemaining(remainingSec);
 
       if (remainingMs <= 0) {
         console.log('[useSleepTimer] Tiempo transcurrido. Deteniendo reproducción automáticamente...');
-        TrackPlayer.pause().catch(err => console.error('[useSleepTimer] Error pausando TrackPlayer:', err));
+        try {
+          TrackPlayer.pause();
+        } catch (err: any) {
+          console.error('[useSleepTimer] Error pausando TrackPlayer:', err);
+        }
         cancelTimerInternal('Temporizador de apagado: Reproducción detenida');
       }
     };
@@ -136,7 +165,7 @@ export default function useSleepTimer({ isPlaying, activeTrack, showToast }) {
   }, [timerMode, targetTimestamp]);
 
   // Formato para visualización en la UI
-  const formatRemainingTime = () => {
+  const formatRemainingTime = (): string | null => {
     if (!timerMode) return null;
     if (timerMode === SLEEP_TIMER_MODES.END_OF_TRACK) return 'Fin de pista';
 

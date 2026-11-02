@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, MutableRefObject } from 'react';
 import {
   getCrossfadeSettings,
   saveCrossfadeSettings,
@@ -10,16 +10,35 @@ import {
   DEFAULT_REPLAYGAIN_SETTINGS,
   applyReplayGainToPlayer,
 } from '../utils/replayGain';
+import { CrossfadeSettings, ReplayGainSettings } from '../models/AudioSettings';
+import { Track } from '../models/Track';
+
+export interface UseAudioSettingsParams {
+  activeTrack?: Track | null;
+  showToast?: (message: string) => void;
+}
+
+export interface UseAudioSettingsReturn {
+  crossfadeSettings: CrossfadeSettings;
+  crossfadeSettingsRef: MutableRefObject<CrossfadeSettings>;
+  handleUpdateCrossfade: (newSettings: CrossfadeSettings) => Promise<void>;
+  replayGainSettings: ReplayGainSettings;
+  replayGainSettingsRef: MutableRefObject<ReplayGainSettings>;
+  handleUpdateReplayGain: (newSettings: ReplayGainSettings) => Promise<void>;
+}
 
 /**
  * Hook para la gestión y sincronización de los ajustes acústicos (Fundido Cruzado y ReplayGain).
  */
-export default function useAudioSettings({ activeTrack, showToast }) {
-  const [crossfadeSettings, setCrossfadeSettings] = useState(DEFAULT_CROSSFADE_SETTINGS);
-  const crossfadeSettingsRef = useRef(crossfadeSettings);
+export default function useAudioSettings({
+  activeTrack,
+  showToast,
+}: UseAudioSettingsParams): UseAudioSettingsReturn {
+  const [crossfadeSettings, setCrossfadeSettings] = useState<CrossfadeSettings>(DEFAULT_CROSSFADE_SETTINGS);
+  const crossfadeSettingsRef = useRef<CrossfadeSettings>(crossfadeSettings);
 
-  const [replayGainSettings, setReplayGainSettings] = useState(DEFAULT_REPLAYGAIN_SETTINGS);
-  const replayGainSettingsRef = useRef(replayGainSettings);
+  const [replayGainSettings, setReplayGainSettings] = useState<ReplayGainSettings>(DEFAULT_REPLAYGAIN_SETTINGS);
+  const replayGainSettingsRef = useRef<ReplayGainSettings>(replayGainSettings);
 
   useEffect(() => {
     crossfadeSettingsRef.current = crossfadeSettings;
@@ -40,7 +59,7 @@ export default function useAudioSettings({ activeTrack, showToast }) {
     });
   }, []);
 
-  const handleUpdateCrossfade = async (newSettings) => {
+  const handleUpdateCrossfade = async (newSettings: CrossfadeSettings): Promise<void> => {
     setCrossfadeSettings(newSettings);
     await saveCrossfadeSettings(newSettings);
     if (showToast) {
@@ -52,7 +71,7 @@ export default function useAudioSettings({ activeTrack, showToast }) {
     }
   };
 
-  const handleUpdateReplayGain = async (newSettings) => {
+  const handleUpdateReplayGain = async (newSettings: ReplayGainSettings): Promise<void> => {
     setReplayGainSettings(newSettings);
     await saveReplayGainSettings(newSettings);
     if (activeTrack) {

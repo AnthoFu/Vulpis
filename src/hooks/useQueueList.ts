@@ -7,6 +7,9 @@ import {
   buildAlbumList,
   filterArtists,
   filterAlbums,
+  ArtistNode,
+  AlbumNode,
+  LibraryTabItem,
 } from '../utils/libraryOrganizer';
 
 import {
@@ -14,7 +17,12 @@ import {
   normalizeSearchString,
   filterTrackList,
   calculateOdooFilterCounts,
+  SearchFilterId,
+  SearchFilterOption,
+  OdooFilterCounts,
 } from '../utils/trackFilter';
+import { Track } from '../models/Track';
+import { Playlist } from '../models/Playlist';
 
 // Re-exportar utilidades para compatibilidad hacia atrás
 export {
@@ -24,6 +32,67 @@ export {
   calculateOdooFilterCounts,
 };
 
+export interface UseQueueListParams {
+  tracks: Track[];
+  playlists: Playlist[];
+  currentSource: string;
+  onSelectTrack?: (track: Track, index: number, playlistTracks?: Track[]) => Promise<void> | void;
+  onCreatePlaylist?: (name: string) => Promise<Playlist | null>;
+  onAddTrackToPlaylist?: (playlistId: string, track: Track) => Promise<void>;
+  onSelectSource?: (source: string) => void;
+}
+
+export interface UseQueueListReturn {
+  activeTab: string;
+  handleTabChange: (tabId: string) => void;
+  tabs: LibraryTabItem[];
+  artistTree: ArtistNode[];
+  displayArtists: ArtistNode[];
+  selectedArtistId: string | null;
+  setSelectedArtistId: (id: string | null) => void;
+  selectedArtist: ArtistNode | null;
+  handlePlayArtist: (artist: ArtistNode) => Promise<void>;
+  albumList: AlbumNode[];
+  displayAlbums: AlbumNode[];
+  selectedAlbumId: string | null;
+  setSelectedAlbumId: (id: string | null) => void;
+  selectedAlbum: AlbumNode | null;
+  handlePlayAlbum: (album: AlbumNode) => Promise<void>;
+  isProcessing: boolean;
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+  handleSearchChange: (text: string) => void;
+  searchFilter: string;
+  setSearchFilter: (filter: string) => void;
+  handleSelectFilter: (filterId: string) => void;
+  searchFilters: SearchFilterOption[];
+  searchPlaceholder: string;
+  handleClearSearch: () => void;
+  isDropdownOpen: boolean;
+  setIsDropdownOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
+  toggleDropdown: () => void;
+  filterCounts: OdooFilterCounts;
+  selectedPlaylistId: string | null;
+  setSelectedPlaylistId: (id: string | null) => void;
+  showCreateInput: boolean;
+  setShowCreateInput: (show: boolean) => void;
+  newPlaylistName: string;
+  setNewPlaylistName: (name: string) => void;
+  selectedTrackForOptions: Track | null;
+  setSelectedTrackForOptions: (track: Track | null) => void;
+  isPlaylistPickerVisible: boolean;
+  setIsPlaylistPickerVisible: (visible: boolean) => void;
+  inlineNewPlaylistName: string;
+  setInlineNewPlaylistName: (name: string) => void;
+  selectTrack: (item: Track, index: number, playlistTracks?: Track[]) => Promise<void>;
+  handlePlayPlaylist: (playlist: Playlist) => Promise<void>;
+  handleCreateNewPlaylist: () => Promise<void>;
+  handleCreateAndAdd: () => Promise<void>;
+  displayTracks: Track[];
+  filterTrackList: typeof filterTrackList;
+  defaultArtwork: string;
+}
+
 export default function useQueueList({
   tracks,
   playlists,
@@ -32,22 +101,22 @@ export default function useQueueList({
   onCreatePlaylist,
   onAddTrackToPlaylist,
   onSelectSource,
-}) {
+}: UseQueueListParams): UseQueueListReturn {
   const [activeTab, setActiveTab] = useState(
     currentSource === 'playlists' ? 'playlists' : 'songs'
   );
-  const [selectedArtistId, setSelectedArtistId] = useState(null);
-  const [selectedAlbumId, setSelectedAlbumId] = useState(null);
-  const [selectedPlaylistId, setSelectedPlaylistId] = useState(null);
+  const [selectedArtistId, setSelectedArtistId] = useState<string | null>(null);
+  const [selectedAlbumId, setSelectedAlbumId] = useState<string | null>(null);
+  const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchFilter, setSearchFilter] = useState('all');
+  const [searchFilter, setSearchFilter] = useState<SearchFilterId | string>('all');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const [showCreateInput, setShowCreateInput] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
-  const [selectedTrackForOptions, setSelectedTrackForOptions] = useState(null);
+  const [selectedTrackForOptions, setSelectedTrackForOptions] = useState<Track | null>(null);
   const [isPlaylistPickerVisible, setIsPlaylistPickerVisible] = useState(false);
   const [inlineNewPlaylistName, setInlineNewPlaylistName] = useState('');
 
@@ -64,7 +133,7 @@ export default function useQueueList({
     setIsDropdownOpen(false);
   }, [currentSource]);
 
-  const handleTabChange = (tabId) => {
+  const handleTabChange = (tabId: string): void => {
     if (tabId === activeTab) return;
     setActiveTab(tabId);
     setSelectedArtistId(null);
@@ -80,7 +149,7 @@ export default function useQueueList({
     }
   };
 
-  const handleSearchChange = (text) => {
+  const handleSearchChange = (text: string): void => {
     setSearchQuery(text);
     if (text && text.trim().length > 0) {
       setIsDropdownOpen(true);
@@ -90,22 +159,22 @@ export default function useQueueList({
     }
   };
 
-  const handleClearSearch = useCallback(() => {
+  const handleClearSearch = useCallback((): void => {
     setSearchQuery('');
     setSearchFilter('all');
     setIsDropdownOpen(false);
   }, []);
 
-  const toggleDropdown = useCallback(() => {
+  const toggleDropdown = useCallback((): void => {
     setIsDropdownOpen((prev) => !prev);
   }, []);
 
-  const handleSelectFilter = (filterId) => {
+  const handleSelectFilter = (filterId: string): void => {
     setSearchFilter(filterId);
     setIsDropdownOpen(false);
   };
 
-  const selectTrack = async (item, index, playlistTracks) => {
+  const selectTrack = async (item: Track, index: number, playlistTracks?: Track[]): Promise<void> => {
     if (isProcessing) return;
     setIsProcessing(true);
     try {
@@ -114,9 +183,9 @@ export default function useQueueList({
       } else {
         const trackList = playlistTracks || tracks;
         await TrackPlayer.clear();
-        await TrackPlayer.setMediaItems(trackList);
+        await TrackPlayer.setMediaItems(trackList as any);
         await TrackPlayer.skipToIndex(index);
-        await TrackPlayer.play();
+        TrackPlayer.play();
       }
     } catch (e) {
       console.error('[useQueueList] Error al seleccionar la pista:', e);
@@ -126,7 +195,7 @@ export default function useQueueList({
   };
 
   // Reproducir todas las canciones de un artista
-  const handlePlayArtist = async (artist) => {
+  const handlePlayArtist = async (artist: ArtistNode): Promise<void> => {
     if (!artist || !artist.tracks || artist.tracks.length === 0) {
       Alert.alert('Artista vacío', 'Este artista no tiene canciones disponibles.');
       return;
@@ -135,7 +204,7 @@ export default function useQueueList({
   };
 
   // Reproducir todas las canciones de un álbum
-  const handlePlayAlbum = async (album) => {
+  const handlePlayAlbum = async (album: AlbumNode): Promise<void> => {
     if (!album || !album.tracks || album.tracks.length === 0) {
       Alert.alert('Álbum vacío', 'Este álbum no tiene canciones disponibles.');
       return;
@@ -143,7 +212,7 @@ export default function useQueueList({
     await selectTrack(album.tracks[0], 0, album.tracks);
   };
 
-  const handlePlayPlaylist = async (playlist) => {
+  const handlePlayPlaylist = async (playlist: Playlist): Promise<void> => {
     if (!playlist || playlist.tracks.length === 0) {
       Alert.alert('Playlist vacía', 'Añade canciones a esta playlist antes de reproducirla.');
       return;
@@ -155,9 +224,9 @@ export default function useQueueList({
         await onSelectTrack(playlist.tracks[0], 0, playlist.tracks);
       } else {
         await TrackPlayer.clear();
-        await TrackPlayer.setMediaItems(playlist.tracks);
+        await TrackPlayer.setMediaItems(playlist.tracks as any);
         await TrackPlayer.skipToIndex(0);
-        await TrackPlayer.play();
+        TrackPlayer.play();
       }
     } catch (e) {
       console.error('[useQueueList] Error al reproducir la lista de reproducción:', e);
@@ -166,7 +235,7 @@ export default function useQueueList({
     }
   };
 
-  const handleCreateNewPlaylist = async () => {
+  const handleCreateNewPlaylist = async (): Promise<void> => {
     if (!newPlaylistName || newPlaylistName.trim() === '') return;
     if (onCreatePlaylist) {
       await onCreatePlaylist(newPlaylistName);
@@ -175,7 +244,7 @@ export default function useQueueList({
     }
   };
 
-  const handleCreateAndAdd = async () => {
+  const handleCreateAndAdd = async (): Promise<void> => {
     if (!inlineNewPlaylistName || inlineNewPlaylistName.trim() === '') return;
     if (onCreatePlaylist && onAddTrackToPlaylist && selectedTrackForOptions) {
       const created = await onCreatePlaylist(inlineNewPlaylistName);

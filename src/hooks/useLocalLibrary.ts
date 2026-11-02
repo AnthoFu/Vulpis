@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Dispatch, SetStateAction } from 'react';
 import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as MediaLibrary from 'expo-media-library/legacy';
@@ -8,6 +8,31 @@ import TrackPlayer from '@rntp/player';
 import { extractMetadata } from '../utils/metadata';
 import { scanDeviceAudio } from '../services/scanner/mediaScanner';
 import { localTracks } from '../constants/tracks';
+import { Track } from '../models/Track';
+
+export interface UseLocalLibraryParams {
+  currentSource: string;
+  setTracks: Dispatch<SetStateAction<Track[]>>;
+  defaultCover: any;
+  setIsSourceChanging: Dispatch<SetStateAction<boolean>>;
+  playQueue?: Track[];
+  setPlayQueue?: Dispatch<SetStateAction<Track[]>>;
+  setActiveTrack?: Dispatch<SetStateAction<Track | null>>;
+  setIsPlaying?: Dispatch<SetStateAction<boolean>>;
+  showToast?: (message: string) => void;
+}
+
+export interface UseLocalLibraryReturn {
+  localLibraryTracks: Track[];
+  setLocalLibraryTracks: Dispatch<SetStateAction<Track[]>>;
+  hasCustomLocalTracks: boolean;
+  setHasCustomLocalTracks: Dispatch<SetStateAction<boolean>>;
+  saveLocalTracks: (newTracksList: Track[], shouldUpdatePlayer?: boolean) => Promise<void>;
+  handleScanLocal: (options?: { silent?: boolean }) => Promise<Track[]>;
+  handleImportMp3: () => Promise<void>;
+  handleResetLocal: () => Promise<void>;
+  handleDeleteLocalTrack: (track: Track) => Promise<void>;
+}
 
 export default function useLocalLibrary({
   currentSource,
@@ -19,8 +44,8 @@ export default function useLocalLibrary({
   setActiveTrack,
   setIsPlaying,
   showToast,
-}) {
-  const [localLibraryTracks, setLocalLibraryTracks] = useState(localTracks);
+}: UseLocalLibraryParams): UseLocalLibraryReturn {
+  const [localLibraryTracks, setLocalLibraryTracks] = useState<Track[]>(localTracks);
   const [hasCustomLocalTracks, setHasCustomLocalTracks] = useState(false);
 
   const currentSourceRef = useRef(currentSource);
@@ -34,7 +59,7 @@ export default function useLocalLibrary({
     localTracksRef.current = localLibraryTracks;
   }, [localLibraryTracks]);
 
-  const saveLocalTracks = async (newTracksList, shouldUpdatePlayer = true) => {
+  const saveLocalTracks = async (newTracksList: Track[], shouldUpdatePlayer = true): Promise<void> => {
     setLocalLibraryTracks(newTracksList);
     setHasCustomLocalTracks(true);
     await AsyncStorage.setItem('vulpis_local_tracks', JSON.stringify(newTracksList));
@@ -44,9 +69,9 @@ export default function useLocalLibrary({
 
       if (shouldUpdatePlayer) {
         try {
-          const active = TrackPlayer.getActiveMediaItem();
+          const active = TrackPlayer.getActiveMediaItem() as Track | null;
           await TrackPlayer.clear();
-          await TrackPlayer.setMediaItems(newTracksList);
+          await TrackPlayer.setMediaItems(newTracksList as any);
 
           if (active) {
             const idx = newTracksList.findIndex((t) => t.mediaId === active.mediaId);
@@ -68,7 +93,7 @@ export default function useLocalLibrary({
   /**
    * Escaneo ultra-optimizado con caché incremental y procesamiento por lotes no bloqueante.
    */
-  const handleScanLocal = async (options = {}) => {
+  const handleScanLocal = async (options: { silent?: boolean } = {}): Promise<Track[]> => {
     const isSilent = typeof options === 'object' && options?.silent === true;
     try {
       if (!isSilent) {
@@ -125,7 +150,7 @@ export default function useLocalLibrary({
     }
   };
 
-  const handleImportMp3 = async () => {
+  const handleImportMp3 = async (): Promise<void> => {
     try {
       const res = await DocumentPicker.getDocumentAsync({
         type: ['audio/*', 'audio/mpeg', 'audio/mp3', 'audio/m4a', 'audio/flac', 'audio/wav'],
@@ -137,7 +162,7 @@ export default function useLocalLibrary({
 
       setIsSourceChanging(true);
 
-      const importedTracks = [];
+      const importedTracks: Track[] = [];
       const BATCH_SIZE = 4;
 
       for (let i = 0; i < res.assets.length; i += BATCH_SIZE) {
@@ -178,7 +203,7 @@ export default function useLocalLibrary({
     }
   };
 
-  const handleResetLocal = async () => {
+  const handleResetLocal = async (): Promise<void> => {
     Alert.alert(
       'Restablecer Biblioteca',
       '¿Estás seguro de que quieres restablecer la biblioteca local? Se escaneará nuevamente la música del teléfono.',
@@ -210,7 +235,7 @@ export default function useLocalLibrary({
     );
   };
 
-  const handleDeleteLocalTrack = async (track) => {
+  const handleDeleteLocalTrack = async (track: Track): Promise<void> => {
     setIsSourceChanging(true);
     try {
       // 1. Si es una pista escaneada del sistema
@@ -252,7 +277,7 @@ export default function useLocalLibrary({
 
       // 3. Detener el reproductor si la pista eliminada es la pista activa
       try {
-        const active = TrackPlayer.getActiveMediaItem();
+        const active = TrackPlayer.getActiveMediaItem() as Track | null;
         if (active && active.mediaId === track.mediaId) {
           await TrackPlayer.stop();
           await TrackPlayer.clear();

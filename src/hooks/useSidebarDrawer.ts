@@ -7,7 +7,17 @@ import {
   DRAWER_TRANSLATE_X_HIDDEN,
 } from '../constants/animations';
 
-export default function useSidebarDrawer({ isOpen }) {
+export interface UseSidebarDrawerParams {
+  isOpen: boolean;
+}
+
+export interface UseSidebarDrawerReturn {
+  visible: boolean;
+  slideAnim: Animated.Value;
+  fadeAnim: Animated.Value;
+}
+
+export default function useSidebarDrawer({ isOpen }: UseSidebarDrawerParams): UseSidebarDrawerReturn {
   const [visible, setVisible] = useState(isOpen);
   const slideAnim = useRef(new Animated.Value(DRAWER_TRANSLATE_X_HIDDEN)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -62,4 +72,3 @@ export default function useSidebarDrawer({ isOpen }) {
     fadeAnim,
   };
 }
-

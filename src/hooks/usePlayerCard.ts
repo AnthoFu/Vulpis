@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, Dispatch, SetStateAction } from 'react';
 import { Image, Animated } from 'react-native';
 import TrackPlayer from '@rntp/player';
 import ImageColors from 'react-native-image-colors';
@@ -11,16 +11,47 @@ import {
   removeCustomLyrics,
 } from '../services/lyrics/lyricsService';
 import { smoothTrackTransition, getCrossfadeSettings } from '../utils/crossfade';
+import { DEFAULT_LYRICS_SETTINGS } from '../models/AudioSettings';
+import { Track } from '../models/Track';
+
+export interface UsePlayerCardParams {
+  activeTrack?: Track | null;
+  tracks?: Track[];
+  initialQueueVisible: boolean;
+}
+
+export interface UsePlayerCardReturn {
+  isQueueVisible: boolean;
+  setIsQueueVisible: Dispatch<SetStateAction<boolean>>;
+  isLyricsVisible: boolean;
+  setIsLyricsVisible: Dispatch<SetStateAction<boolean>>;
+  lyricsText: string | null;
+  rawLyrics: string | null;
+  isLoadingLyrics: boolean;
+  colorA: string;
+  colorB: string;
+  fadeAnim: Animated.Value;
+  defaultCover: string;
+  defaultTrack: Partial<Track>;
+  currentTrackTitle: string;
+  currentTrackArtist: string;
+  currentTrackArtwork: string;
+  selectTrackFromQueue: (indexOrItem: number | Track, maybeIndex?: number) => Promise<void>;
+  togglePlayback: (isPlayingState: boolean) => Promise<void>;
+  handleSaveCustomLyrics: (newLyrics: string) => Promise<void>;
+  handleResetCustomLyrics: () => Promise<void>;
+  handleFetchOnlineLyricsForce: () => Promise<boolean>;
+}
 
 export default function usePlayerCard({
   activeTrack,
-  tracks,
+  tracks = [],
   initialQueueVisible,
-}) {
+}: UsePlayerCardParams): UsePlayerCardReturn {
   const [isQueueVisible, setIsQueueVisible] = useState(initialQueueVisible);
   const [isLyricsVisible, setIsLyricsVisible] = useState(false);
-  const [lyricsText, setLyricsText] = useState(null);
-  const [rawLyrics, setRawLyrics] = useState(null);
+  const [lyricsText, setLyricsText] = useState<string | null>(null);
+  const [rawLyrics, setRawLyrics] = useState<string | null>(null);
   const [isLoadingLyrics, setIsLoadingLyrics] = useState(false);
 
   const [colorA, setColorA] = useState('#161722');
@@ -32,11 +63,11 @@ export default function usePlayerCard({
   }, [initialQueueVisible]);
 
   const defaultCover = Image.resolveAssetSource(require('../../assets/default-cover.jpg')).uri;
-  const defaultTrack = tracks && tracks.length > 0 ? tracks[0] : { title: 'No Track', artist: 'No Artist', artworkUrl: defaultCover };
-  
-  const currentTrackTitle = activeTrack?.title ?? defaultTrack.title;
-  const currentTrackArtist = activeTrack?.artist ?? defaultTrack.artist;
-  const currentTrackArtwork = activeTrack?.artworkUrl ?? defaultTrack.artworkUrl;
+  const defaultTrack: Partial<Track> = tracks && tracks.length > 0 ? tracks[0] : { title: 'No Track', artist: 'No Artist', artworkUrl: defaultCover };
+
+  const currentTrackTitle = activeTrack?.title ?? defaultTrack.title ?? 'No Track';
+  const currentTrackArtist = activeTrack?.artist ?? defaultTrack.artist ?? 'No Artist';
+  const currentTrackArtwork = activeTrack?.artworkUrl ?? defaultTrack.artworkUrl ?? defaultCover;
 
   // Cargar/extraer letras automáticamente cuando cambia la pista activa
   useEffect(() => {
@@ -61,7 +92,7 @@ export default function usePlayerCard({
         const custom = await getCustomLyrics(trackKey);
         if (custom) {
           if (isMounted) {
-            activeTrack.customLyrics = custom;
+            (activeTrack as any).customLyrics = custom;
             setRawLyrics(custom);
             setLyricsText(formatLyricsText(custom));
             setIsLoadingLyrics(false);
@@ -72,8 +103,8 @@ export default function usePlayerCard({
         console.error('[usePlayerCard] Error leyendo letra personalizada:', err);
       }
 
-      let foundLyrics = null;
-      const settings = await getSettings().catch(() => DEFAULT_SETTINGS);
+      let foundLyrics: string | null = null;
+      const settings = await getSettings().catch(() => DEFAULT_LYRICS_SETTINGS);
 
       // 2. Si la búsqueda en línea está activada Y se prefiere reemplazar metadatos por la API (preferOnlineOverID3)
       if (settings.onlineLyricsEnabled && settings.preferOnlineOverID3) {
@@ -147,11 +178,11 @@ export default function usePlayerCard({
     };
   }, [activeTrack?.mediaId, activeTrack?.url]);
 
-  const handleFetchOnlineLyricsForce = async () => {
+  const handleFetchOnlineLyricsForce = async (): Promise<boolean> => {
     if (!activeTrack) return false;
     setIsLoadingLyrics(true);
     try {
-      const settings = await getSettings().catch(() => DEFAULT_SETTINGS);
+      const settings = await getSettings().catch(() => DEFAULT_LYRICS_SETTINGS);
       console.log('[usePlayerCard] Forzando búsqueda remota en la API para:', activeTrack.title);
       const online = await fetchOnlineLyrics(
         activeTrack.title,
@@ -177,26 +208,26 @@ export default function usePlayerCard({
     return false;
   };
 
-  const handleSaveCustomLyrics = async (newLyrics) => {
+  const handleSaveCustomLyrics = async (newLyrics: string): Promise<void> => {
     if (!activeTrack) return;
     const trackKey = activeTrack.mediaId || activeTrack.url;
     await saveCustomLyrics(trackKey, newLyrics);
-    activeTrack.customLyrics = newLyrics;
+    (activeTrack as any).customLyrics = newLyrics;
     setRawLyrics(newLyrics);
     setLyricsText(formatLyricsText(newLyrics));
   };
 
-  const handleResetCustomLyrics = async () => {
+  const handleResetCustomLyrics = async (): Promise<void> => {
     if (!activeTrack) return;
     const trackKey = activeTrack.mediaId || activeTrack.url;
     await removeCustomLyrics(trackKey);
-    delete activeTrack.customLyrics;
+    delete (activeTrack as any).customLyrics;
     delete activeTrack.lyrics;
     setRawLyrics(null);
     setLyricsText(null);
     setIsLoadingLyrics(true);
 
-    let original = null;
+    let original: string | null = null;
     if (activeTrack.url && (activeTrack.url.startsWith('file://') || activeTrack.url.startsWith('/'))) {
       const meta = await extractMetadata(activeTrack.url).catch(() => null);
       original = meta?.lyrics || null;
@@ -219,7 +250,7 @@ export default function usePlayerCard({
 
   useEffect(() => {
     let isMounted = true;
-    
+
     const fetchColors = async () => {
       if (!currentTrackArtwork) return;
       try {
@@ -230,11 +261,11 @@ export default function usePlayerCard({
         });
 
         let newColor = '#161722';
-        if (result.type === 'android') {
+        if (result.platform === 'android') {
           newColor = result.dominant || result.vibrant || result.darkVibrant || '#161722';
-        } else if (result.type === 'ios') {
+        } else if (result.platform === 'ios') {
           newColor = result.primary || result.background || '#161722';
-        } else if (result.type === 'web') {
+        } else if (result.platform === 'web') {
           newColor = result.dominant || '#161722';
         }
 
@@ -264,7 +295,7 @@ export default function usePlayerCard({
     };
   }, [currentTrackArtwork]);
 
-  const selectTrackFromQueue = useCallback(async (indexOrItem, maybeIndex) => {
+  const selectTrackFromQueue = useCallback(async (indexOrItem: number | Track, maybeIndex?: number): Promise<void> => {
     try {
       let index = typeof indexOrItem === 'number' ? indexOrItem : maybeIndex;
       if (typeof index !== 'number' || isNaN(index)) {
@@ -274,20 +305,20 @@ export default function usePlayerCard({
       console.log(`[usePlayerCard Queue] Saltando al índice: ${index}`);
       const crossfade = await getCrossfadeSettings();
       await smoothTrackTransition(async () => {
-        await TrackPlayer.skipToIndex(index);
-        await TrackPlayer.play();
+        await TrackPlayer.skipToIndex(index!);
+        TrackPlayer.play();
       }, crossfade?.enabled);
     } catch (e) {
       console.error('[usePlayerCard Queue] Error al saltar al índice:', e);
     }
   }, []);
 
-  const togglePlayback = useCallback(async (isPlayingState) => {
+  const togglePlayback = useCallback(async (isPlayingState: boolean): Promise<void> => {
     try {
       if (isPlayingState) {
-        await TrackPlayer.pause();
+        TrackPlayer.pause();
       } else {
-        await TrackPlayer.play();
+        TrackPlayer.play();
       }
     } catch (e) {
       console.error('[usePlayerCard] Error al alternar reproducción:', e);
@@ -317,4 +348,3 @@ export default function usePlayerCard({
     handleFetchOnlineLyricsForce,
   };
 }
-

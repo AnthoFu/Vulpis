@@ -4,6 +4,11 @@ export { default as SidebarDrawer } from './layout/SidebarDrawer';
 
 // Player
 export { default as PlayerCard } from './player/PlayerCard';
+export { default as PlayerHeader } from './player/PlayerHeader';
+export { default as PlayerArtwork } from './player/PlayerArtwork';
+export { default as PlayerTrackDetails } from './player/PlayerTrackDetails';
+export { default as PlayerLiveLyric } from './player/PlayerLiveLyric';
+export { default as PlayerFooterActions } from './player/PlayerFooterActions';
 export { default as MiniPlayer } from './player/MiniPlayer';
 export { default as Controls } from './player/Controls';
 export { default as ProgressBar } from './player/ProgressBar';

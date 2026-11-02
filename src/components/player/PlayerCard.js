@@ -1,28 +1,40 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
-  Text,
   View,
-  Image,
-  TouchableOpacity,
   Animated,
   StyleSheet,
   Dimensions,
 } from 'react-native';
 import styles from '../../styles/PlayerCard.styles';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+
+// Subcomponentes modulares de PlayerCard
+import PlayerHeader from './PlayerHeader';
+import PlayerArtwork from './PlayerArtwork';
+import PlayerTrackDetails from './PlayerTrackDetails';
+import PlayerLiveLyric from './PlayerLiveLyric';
+import PlayerFooterActions from './PlayerFooterActions';
 import ProgressBar from './ProgressBar';
 import Controls from './Controls';
 import QueueSheet from './QueueSheet';
 import LyricsSheet from './LyricsSheet';
+
+// Modales complementarios
+import EditLyricsModal from '../modals/EditLyricsModal';
+import SleepTimerModal from '../modals/SleepTimerModal';
+
+// Hooks y animaciones
 import usePlayerCard from '../../hooks/usePlayerCard';
 import useSyncedLyrics from '../../hooks/useSyncedLyrics';
 import { SPRING, DURATION } from '../../constants/animations';
-import EditLyricsModal from '../modals/EditLyricsModal';
-import SleepTimerModal from '../modals/SleepTimerModal';
 import { PlayerContext } from '../../context/PlayerContext';
 
+/**
+ * Vista a pantalla completa del reproductor activo (PlayerCard).
+ * Orquesta la presentación visual modular, animaciones de transición y hojas modales.
+ * Puede consumir directamente el `PlayerContext` o recibir propiedades explícitas.
+ */
 export default function PlayerCard(props) {
   const player = React.useContext(PlayerContext) || {};
 
@@ -57,8 +69,8 @@ export default function PlayerCard(props) {
   const insets = useSafeAreaInsets();
   const [isEditLyricsVisible, setIsEditLyricsVisible] = useState(false);
   const [isSleepTimerVisible, setIsSleepTimerVisible] = useState(false);
-  const heartScaleAnim = useRef(new Animated.Value(1)).current;
 
+  // Hook controlador de PlayerCard (colores dinámicos, letras y cola)
   const {
     isQueueVisible,
     setIsQueueVisible,
@@ -106,6 +118,7 @@ export default function PlayerCard(props) {
     isVisible: isLyricsVisible,
   });
 
+  // Animación de deslizamiento de entrada de la tarjeta completa
   const SCREEN_HEIGHT = Dimensions.get('window').height;
   const playerSlideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
 
@@ -117,7 +130,7 @@ export default function PlayerCard(props) {
     }).start();
   }, []);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     Animated.timing(playerSlideAnim, {
       toValue: SCREEN_HEIGHT,
       duration: DURATION.fast,
@@ -125,7 +138,7 @@ export default function PlayerCard(props) {
     }).start(() => {
       onClose();
     });
-  };
+  }, [playerSlideAnim, SCREEN_HEIGHT, onClose]);
 
   const handleCloseQueue = useCallback(() => {
     setIsQueueVisible(false);
@@ -134,42 +147,6 @@ export default function PlayerCard(props) {
   const handleTogglePlaybackFromQueue = useCallback(() => {
     togglePlayback(isPlaying);
   }, [togglePlayback, isPlaying]);
-
-  const handleHeartPress = useCallback(() => {
-    Animated.sequence([
-      Animated.spring(heartScaleAnim, {
-        toValue: 1.4,
-        friction: 3,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-      Animated.spring(heartScaleAnim, {
-        toValue: 1,
-        friction: 4,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    if (onToggleFavorite) {
-      onToggleFavorite();
-    }
-  }, [onToggleFavorite, heartScaleAnim]);
-
-  const lyricFadeAnim = useRef(new Animated.Value(1)).current;
-  const prevLyricRef = useRef(activeLyricLine);
-
-  useEffect(() => {
-    if (prevLyricRef.current !== activeLyricLine) {
-      prevLyricRef.current = activeLyricLine;
-      lyricFadeAnim.setValue(0);
-      Animated.timing(lyricFadeAnim, {
-        toValue: 1,
-        duration: 650,
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [activeLyricLine]);
 
   const renderBackground = () => (
     <View style={StyleSheet.absoluteFill}>
@@ -204,88 +181,25 @@ export default function PlayerCard(props) {
     >
       {renderBackground()}
 
-      {/* Fila de encabezado */}
-      <View style={styles.headerRow}>
-        <TouchableOpacity onPress={handleClose} style={styles.closeButton} activeOpacity={0.7}>
-          <MaterialCommunityIcons name="chevron-down" size={28} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>SONANDO AHORA</Text>
-        <View style={styles.headerPlaceholder} />
-      </View>
+      {/* 1. Encabezado superior */}
+      <PlayerHeader onClose={handleClose} />
 
-      {/* Sección de portada con contenedor de sombra */}
-      <View style={styles.artworkContainer}>
-        <View style={styles.artworkShadowWrapper}>
-          <Image
-            source={{ uri: currentTrackArtwork }}
-            style={styles.artwork}
-            resizeMode="cover"
-          />
-        </View>
-      </View>
+      {/* 2. Portada con marco de sombra */}
+      <PlayerArtwork artworkUrl={currentTrackArtwork} />
 
-      {/* Detalles de la pista, progreso y controles */}
+      {/* 3. Sección inferior: Detalles, progreso, controles y acciones */}
       <View style={styles.bottomSection}>
         <View style={styles.trackDetails}>
-          <View style={styles.trackDetailsMainRow}>
-            <View style={styles.trackDetailsTextCol}>
-              <Text style={styles.trackTitle} numberOfLines={1}>
-                {currentTrackTitle}
-              </Text>
-              <Text style={styles.trackArtist} numberOfLines={1}>
-                {currentTrackArtist}
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              onPress={handleHeartPress}
-              style={styles.favoriteButton}
-              activeOpacity={0.7}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            >
-              <Animated.View style={{ transform: [{ scale: heartScaleAnim }] }}>
-                <MaterialCommunityIcons
-                  name={isFavorite ? 'heart' : 'heart-outline'}
-                  size={26}
-                  color={isFavorite ? '#EF4444' : '#8E8F9E'}
-                />
-              </Animated.View>
-            </TouchableOpacity>
-          </View>
-
-          {/* Banner con animación de fade para previsualización de la línea activa de la letra */}
-          {activeLyricLine && (
-            <Animated.View
-              style={{
-                opacity: lyricFadeAnim,
-                transform: [
-                  {
-                    translateY: lyricFadeAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [10, 0],
-                    }),
-                  },
-                ],
-                width: '100%',
-              }}
-            >
-              <TouchableOpacity
-                onPress={() => setIsLyricsVisible(true)}
-                activeOpacity={0.8}
-                style={styles.liveLyricContainer}
-              >
-                <MaterialCommunityIcons
-                  name="microphone-variant"
-                  size={14}
-                  color="rgba(167, 139, 250, 0.7)"
-                  style={{ marginRight: 6 }}
-                />
-                <Text style={styles.liveLyricText} numberOfLines={1}>
-                  {activeLyricLine}
-                </Text>
-              </TouchableOpacity>
-            </Animated.View>
-          )}
+          <PlayerTrackDetails
+            title={currentTrackTitle}
+            artist={currentTrackArtist}
+            isFavorite={isFavorite}
+            onToggleFavorite={onToggleFavorite}
+          />
+          <PlayerLiveLyric
+            activeLyricLine={activeLyricLine}
+            onPress={() => setIsLyricsVisible(true)}
+          />
         </View>
 
         <ProgressBar position={position} duration={duration} />
@@ -301,55 +215,16 @@ export default function PlayerCard(props) {
           crossfadeSettings={crossfadeSettings}
         />
 
-        {/* Botones de pie de página: Letras, Cola y Temporizador */}
-        <View style={styles.footerRow}>
-          <TouchableOpacity
-            onPress={() => setIsLyricsVisible(true)}
-            style={[styles.footerButton, { marginRight: 8 }]}
-            activeOpacity={0.7}
-          >
-            <MaterialCommunityIcons
-              name="microphone-variant"
-              size={18}
-              color="#A78BFA"
-              style={{ marginRight: 6 }}
-            />
-            <Text style={styles.footerButtonText}>Letras</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => setIsQueueVisible(true)}
-            style={[styles.footerButton, { marginRight: 8 }]}
-            activeOpacity={0.7}
-          >
-            <MaterialCommunityIcons
-              name="playlist-play"
-              size={20}
-              color="#8E8F9E"
-              style={{ marginRight: 6 }}
-            />
-            <Text style={styles.footerButtonText}>Cola</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => setIsSleepTimerVisible(true)}
-            style={[styles.footerButton, isTimerActive && styles.footerButtonActive]}
-            activeOpacity={0.7}
-          >
-            <MaterialCommunityIcons
-              name={isTimerActive ? 'bed-clock' : 'timer-outline'}
-              size={18}
-              color={isTimerActive ? '#A78BFA' : '#8E8F9E'}
-              style={{ marginRight: 6 }}
-            />
-            <Text style={[styles.footerButtonText, isTimerActive && styles.footerButtonTextActive]}>
-              {isTimerActive ? timeRemainingFormatted || 'Activo' : 'Apagado'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <PlayerFooterActions
+          onOpenLyrics={() => setIsLyricsVisible(true)}
+          onOpenQueue={() => setIsQueueVisible(true)}
+          onOpenSleepTimer={() => setIsSleepTimerVisible(true)}
+          isTimerActive={isTimerActive}
+          timeRemainingFormatted={timeRemainingFormatted}
+        />
       </View>
 
-      {/* HOJA MODAL INFERIOR DE LETRAS */}
+      {/* 4. Hoja modal de letras */}
       <LyricsSheet
         visible={isLyricsVisible}
         onClose={() => setIsLyricsVisible(false)}
@@ -372,7 +247,7 @@ export default function PlayerCard(props) {
         onOpenEditLyrics={() => setIsEditLyricsVisible(true)}
       />
 
-      {/* MODAL DE EDICIÓN DE LETRAS */}
+      {/* 5. Modal de edición de letras */}
       <EditLyricsModal
         visible={isEditLyricsVisible}
         onClose={() => setIsEditLyricsVisible(false)}
@@ -384,7 +259,7 @@ export default function PlayerCard(props) {
         onFetchOnline={handleFetchOnlineLyricsForce}
       />
 
-      {/* MODAL DE TEMPORIZADOR DE APAGADO */}
+      {/* 6. Modal de temporizador de apagado */}
       <SleepTimerModal
         visible={isSleepTimerVisible}
         onClose={() => setIsSleepTimerVisible(false)}
@@ -395,7 +270,7 @@ export default function PlayerCard(props) {
         onCancelTimer={onCancelTimer}
       />
 
-      {/* HOJA MODULAR DE COLA DE REPRODUCCIÓN */}
+      {/* 7. Hoja modular de cola de reproducción */}
       <QueueSheet
         visible={isQueueVisible}
         onClose={handleCloseQueue}

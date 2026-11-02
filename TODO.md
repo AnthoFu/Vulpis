@@ -110,6 +110,15 @@
   - [x] Barrel export `src/models/index.ts` para tipado y acceso unificado.
   - [x] Verificación estricta de tipos con `tsc --noEmit` y validación de bundling híbrido sin minificar en Expo.
 
+- [x] **Modularización Integral de PlayerCard (`src/components/player/`):**
+  - [x] Desacoplamiento del componente monolítico `PlayerCard.js` en subcomponentes atómicos de presentación.
+  - [x] Creación de `PlayerHeader.js`: botón de minimizar/cerrar y título de sección.
+  - [x] Creación de `PlayerArtwork.js`: contenedor de portada con sombra dinámica y elevación visual.
+  - [x] Creación de `PlayerTrackDetails.js`: título, artista y animación spring encapsulada para el botón de Favoritos.
+  - [x] Creación de `PlayerLiveLyric.js`: banner interactivo con animación independiente de entrada y opacidad para la línea activa.
+  - [x] Creación de `PlayerFooterActions.js`: barra inferior de accesos directos a Letras, Cola y Temporizador de apagado.
+  - [x] Barrel export actualizado en `src/components/index.js` y verificación de tipos/bundling sin errores.
+
 ---
 
 # Mejoras por hacer

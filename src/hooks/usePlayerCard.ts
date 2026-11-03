@@ -36,7 +36,7 @@ export interface UsePlayerCardReturn {
   currentTrackTitle: string;
   currentTrackArtist: string;
   currentTrackArtwork: string;
-  selectTrackFromQueue: (indexOrItem: number | Track, maybeIndex?: number) => Promise<void>;
+  selectTrackFromQueue: (indexOrItem: number | Track, maybeIndexOrTrack?: number | Track) => Promise<void>;
   togglePlayback: (isPlayingState: boolean) => Promise<void>;
   handleSaveCustomLyrics: (newLyrics: string) => Promise<void>;
   handleResetCustomLyrics: () => Promise<void>;
@@ -295,11 +295,11 @@ export default function usePlayerCard({
     };
   }, [currentTrackArtwork]);
 
-  const selectTrackFromQueue = useCallback(async (indexOrItem: number | Track, maybeIndex?: number): Promise<void> => {
+  const selectTrackFromQueue = useCallback(async (indexOrItem: number | Track, maybeIndexOrTrack?: number | Track): Promise<void> => {
     try {
-      let index = typeof indexOrItem === 'number' ? indexOrItem : maybeIndex;
+      let index = typeof indexOrItem === 'number' ? indexOrItem : (typeof maybeIndexOrTrack === 'number' ? maybeIndexOrTrack : undefined);
       if (typeof index !== 'number' || isNaN(index)) {
-        console.error('[usePlayerCard Queue] Índice inválido recibido:', indexOrItem, maybeIndex);
+        console.error('[usePlayerCard Queue] Índice inválido recibido:', indexOrItem, maybeIndexOrTrack);
         return;
       }
       console.log(`[usePlayerCard Queue] Saltando al índice: ${index}`);

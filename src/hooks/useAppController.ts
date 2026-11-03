@@ -24,6 +24,8 @@ import { Track } from '../models/Track';
 import { Playlist } from '../models/Playlist';
 import { CrossfadeSettings, ReplayGainSettings } from '../models/AudioSettings';
 
+export type AudioSource = 'local' | 'private' | string;
+
 export interface AppControllerResult {
   insets: EdgeInsets;
   defaultCover: string;

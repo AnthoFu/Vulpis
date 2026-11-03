@@ -143,6 +143,17 @@
   - [x] Migración del orquestador maestro `useAppController.ts` y barrel export `src/hooks/index.ts`.
   - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores) y empaquetado Expo sin errores.
 
+- [x] **Fase 5 de Migración a TypeScript — Componentes de UI, Modales, Contexto y App (`src/components/`, `src/context/`, `App.tsx`):**
+  - [x] Migración de Contexto: `PlayerContext.tsx` y barrel export `src/context/index.ts`.
+  - [x] Migración de Layout: `Header.tsx` y `SidebarDrawer.tsx`.
+  - [x] Migración de Modales: `SettingsModal.tsx`, `SleepTimerModal.tsx`, `TrackOptionsModal.tsx`, `PlaylistPickerModal.tsx`, `EditLyricsModal.tsx` y secciones de configuración (`CrossfadeSection.tsx`, `OnlineLyricsSection.tsx`, `ReplayGainSection.tsx`).
+  - [x] Migración de Componentes de Reproductor: `PlayerCard.tsx`, `MiniPlayer.tsx`, `Controls.tsx`, `ProgressBar.tsx`, `QueueSheet.tsx`, `QueueItemRow.tsx`, `LyricsSheet.tsx` y subcomponentes atómicos (`PlayerHeader.tsx`, `PlayerArtwork.tsx`, `PlayerTrackDetails.tsx`, `PlayerLiveLyric.tsx`, `PlayerFooterActions.tsx`).
+  - [x] Migración de Biblioteca Musical: `QueueList.tsx`, `TrackItem.tsx`, `LibraryTabs.tsx`, `LibrarySearchBar.tsx`, `GoogleDrivePanel.tsx`, `SongsTab.tsx`, `AlbumsTab.tsx`, `ArtistsTab.tsx`, `PlaylistsTab.tsx`, `PlaylistDetailView.tsx`, `PlaylistArtwork.tsx`.
+  - [x] Barrel export unificado con interfaces públicas en `src/components/index.ts`.
+  - [x] Migración del contenedor raíz de aplicación `App.tsx`.
+  - [x] Eliminación completa de archivos `.js` de componentes y vistas.
+  - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores) y empaquetado Expo (`npx expo export -p android --no-minify`, 823 módulos).
+
 ---
 
 # Mejoras por hacer
@@ -162,5 +173,5 @@
 - [ ] **Soporte de Widget para Android:** Widget de pantalla de inicio con controles de reproducción y carátula.
 - [ ] **Atajos y Controles Multimedia Avanzados:** Soporte extendido para eventos de auriculares Bluetooth (doble toque, triple toque).
 - [ ] **Migración a `@shopify/flash-list`:** Reemplazar `FlatList` tradicional por `FlashList` para optimizar el rendimiento y la fluidez del scroll con miles de canciones.
-- [ ] **Migración Gradual a TypeScript:** Añadir tipado estricto para modelos de datos (`Track`, `Playlist`), hooks e interfaces de servicios.
+- [x] **Migración Completa a TypeScript:** Tipado estricto culminado en toda la aplicación (Modelos, Servicios, Utilidades, Hooks, Contexto, Componentes y App).
 - [ ] **Suite de Pruebas Unitarias (Jest):** Implementar tests para lógica crítica como `drive.js`, `metadata.js` y `onlineLyrics.js`.

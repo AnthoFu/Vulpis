@@ -95,6 +95,65 @@
   - [x] Creación de `src/services/index.js` como barrel export unificado de infraestructura.
   - [x] Preservación de adaptadores retrocompatibles en `src/utils/` y migración de hooks y componentes a la nueva capa de servicios.
 
+- [x] **Arquitectura de Contexto Global y Erradicación de Prop Drilling (`src/context/`):**
+  - [x] Creación de `PlayerContext` y `PlayerProvider` en `src/context/PlayerContext.js`.
+  - [x] Hook de consumo `usePlayer()` con validación estricta de alcance (Provider boundary check).
+  - [x] Barrel export `src/context/index.js` para simplificar la integración de contextos.
+  - [x] Adaptación híbrida de componentes (`Header`, `SidebarDrawer`, `SettingsModal`, `MiniPlayer`, `PlayerCard`, `QueueList`) para consumir directamente del contexto o aceptar props opcionales.
+  - [x] Limpieza radical de `App.js`: reducción de ~244 líneas con más de 70 props manuales a ~80 líneas declarativas y desacopladas.
+
+- [x] **Fase 1 de Migración Progresiva a TypeScript y Modelos de Dominio (`src/models/`):**
+  - [x] Configuración del compilador TypeScript (`tsconfig.json`) extendiendo `expo/tsconfig.base` con verificación estricta.
+  - [x] Creación de `src/models/Track.ts`: interfaz `Track`, `ReplayGainData`, fábrica `createTrack` y sanitización contra `CursorWindow`.
+  - [x] Creación de `src/models/Playlist.ts`: interfaz `Playlist`, constantes de Favoritos, fábrica `createPlaylist` y utilidades de ordenamiento.
+  - [x] Creación de `src/models/AudioSettings.ts`: interfaces y valores predeterminados para `ReplayGainSettings`, `CrossfadeSettings` y `LyricsSettings`.
+  - [x] Barrel export `src/models/index.ts` para tipado y acceso unificado.
+  - [x] Verificación estricta de tipos con `tsc --noEmit` y validación de bundling híbrido sin minificar en Expo.
+
+- [x] **Modularización Integral de PlayerCard (`src/components/player/`):**
+  - [x] Desacoplamiento del componente monolítico `PlayerCard.js` en subcomponentes atómicos de presentación.
+  - [x] Creación de `PlayerHeader.js`: botón de minimizar/cerrar y título de sección.
+  - [x] Creación de `PlayerArtwork.js`: contenedor de portada con sombra dinámica y elevación visual.
+  - [x] Creación de `PlayerTrackDetails.js`: título, artista y animación spring encapsulada para el botón de Favoritos.
+  - [x] Creación de `PlayerLiveLyric.js`: banner interactivo con animación independiente de entrada y opacidad para la línea activa.
+  - [x] Creación de `PlayerFooterActions.js`: barra inferior de accesos directos a Letras, Cola y Temporizador de apagado.
+  - [x] Barrel export actualizado en `src/components/index.js` y verificación de tipos/bundling sin errores.
+
+- [x] **Fase 2 de Migración a TypeScript — Capa de Servicios (`src/services/`):**
+  - [x] Migración de `driveAuth.ts`, `driveApi.ts` y `driveDownload.ts` a TypeScript estricto con interfaces de credenciales (`GoogleOAuthConfig`), archivos (`DriveFile`) y contratos de subida/descarga.
+  - [x] Integración de `Track` y `createTrack` en el mapeador de archivos de Drive y exportador al dispositivo.
+  - [x] Migración de `mediaScanner.ts` tipando `ScanResult`, `ScanDeviceAudioOptions` y retornos inmutables de `Track[]`.
+  - [x] Migración de `lyricsService.ts` tipando `LyricCandidate`, `getSettings`, `saveSettings` y respuestas de APIs públicas (LRCLIB, Lyrist, Lyrics.ovh).
+  - [x] Barrel exports actualizados en `src/services/drive/index.ts` y `src/services/index.ts`.
+  - [x] Verificación de tipos estricta con `tsc --noEmit` y empaquetado Expo sin errores.
+
+- [x] **Fase 3 de Migración a TypeScript — Capa de Utilidades Puras y Dominio (`src/utils/`):**
+  - [x] Migración de utilidades matemáticas y de texto: `fuzzyMatch.ts`, `trackFilter.ts`, `audioFilter.ts`.
+  - [x] Migración de motores acústicos y transiciones: `crossfade.ts` y `replayGain.ts` fuertemente tipados con `AudioSettings` y `Track`.
+  - [x] Migración de organización de datos y caché: `artwork.ts`, `lyrics.ts` (con interfaz `LrcLine`) y `libraryOrganizer.ts` (árboles `ArtistNode` y `AlbumNode`).
+  - [x] Migración del parser nativo ID3 y metadatos: `id3Parser.ts` y `metadata.ts` tipando `ID3ParsedMetadata`.
+  - [x] Migración de adaptadores retrocompatibles (`drive.ts`, `driveAuth.ts`, `driveDownload.ts`, `localScanner.ts`, `onlineLyrics.ts`).
+  - [x] Creación de `src/types/modules.d.ts` y barrel export centralizado `src/utils/index.ts`.
+  - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores) y bundle exitoso con `npx expo export`.
+
+- [x] **Fase 4 de Migración a TypeScript — Capa de Custom Hooks (`src/hooks/`):**
+  - [x] Migración de hooks centrales de reproducción: `usePlayerInitializer.ts`, `usePlayerStateSync.ts`, `usePlayerPersistence.ts`, `useQueueController.ts`, `useAudioSettings.ts`, `useSleepTimer.ts`.
+  - [x] Migración de fuentes y bibliotecas: `useLocalLibrary.ts`, `useGoogleDrive.ts`, `useDrivePrefetch.ts`, `usePlaylists.ts`.
+  - [x] Migración de controladores visuales: `useControls.ts`, `useMiniPlayer.ts`, `useProgressBar.ts`, `usePlayerCard.ts`, `useQueueList.ts`, `useSyncedLyrics.ts`, `useSheetAnimation.ts`, `useSidebarDrawer.ts`, `useToast.ts`.
+  - [x] Migración del orquestador maestro `useAppController.ts` y barrel export `src/hooks/index.ts`.
+  - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores) y empaquetado Expo sin errores.
+
+- [x] **Fase 5 de Migración a TypeScript — Componentes de UI, Modales, Contexto y App (`src/components/`, `src/context/`, `App.tsx`):**
+  - [x] Migración de Contexto: `PlayerContext.tsx` y barrel export `src/context/index.ts`.
+  - [x] Migración de Layout: `Header.tsx` y `SidebarDrawer.tsx`.
+  - [x] Migración de Modales: `SettingsModal.tsx`, `SleepTimerModal.tsx`, `TrackOptionsModal.tsx`, `PlaylistPickerModal.tsx`, `EditLyricsModal.tsx` y secciones de configuración (`CrossfadeSection.tsx`, `OnlineLyricsSection.tsx`, `ReplayGainSection.tsx`).
+  - [x] Migración de Componentes de Reproductor: `PlayerCard.tsx`, `MiniPlayer.tsx`, `Controls.tsx`, `ProgressBar.tsx`, `QueueSheet.tsx`, `QueueItemRow.tsx`, `LyricsSheet.tsx` y subcomponentes atómicos (`PlayerHeader.tsx`, `PlayerArtwork.tsx`, `PlayerTrackDetails.tsx`, `PlayerLiveLyric.tsx`, `PlayerFooterActions.tsx`).
+  - [x] Migración de Biblioteca Musical: `QueueList.tsx`, `TrackItem.tsx`, `LibraryTabs.tsx`, `LibrarySearchBar.tsx`, `GoogleDrivePanel.tsx`, `SongsTab.tsx`, `AlbumsTab.tsx`, `ArtistsTab.tsx`, `PlaylistsTab.tsx`, `PlaylistDetailView.tsx`, `PlaylistArtwork.tsx`.
+  - [x] Barrel export unificado con interfaces públicas en `src/components/index.ts`.
+  - [x] Migración del contenedor raíz de aplicación `App.tsx`.
+  - [x] Eliminación completa de archivos `.js` de componentes y vistas.
+  - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores) y empaquetado Expo (`npx expo export -p android --no-minify`, 823 módulos).
+
 ---
 
 # Mejoras por hacer
@@ -114,5 +173,5 @@
 - [ ] **Soporte de Widget para Android:** Widget de pantalla de inicio con controles de reproducción y carátula.
 - [ ] **Atajos y Controles Multimedia Avanzados:** Soporte extendido para eventos de auriculares Bluetooth (doble toque, triple toque).
 - [ ] **Migración a `@shopify/flash-list`:** Reemplazar `FlatList` tradicional por `FlashList` para optimizar el rendimiento y la fluidez del scroll con miles de canciones.
-- [ ] **Migración Gradual a TypeScript:** Añadir tipado estricto para modelos de datos (`Track`, `Playlist`), hooks e interfaces de servicios.
+- [x] **Migración Completa a TypeScript:** Tipado estricto culminado en toda la aplicación (Modelos, Servicios, Utilidades, Hooks, Contexto, Componentes y App).
 - [ ] **Suite de Pruebas Unitarias (Jest):** Implementar tests para lógica crítica como `drive.js`, `metadata.js` y `onlineLyrics.js`.

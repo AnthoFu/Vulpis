@@ -162,6 +162,14 @@
   - [x] Integración de botón de ordenamiento en `LibrarySearchBar.tsx`, conexión reactiva en `useQueueList.ts` y propagación a `QueueList.tsx`, `PlaylistsTab.tsx` y `PlaylistDetailView.tsx`.
   - [x] Incremento de versión del proyecto a `0.5.20` en `app.config.js`.
 
+- [x] **Fase 6 de Migración a TypeScript — Constantes, Barrel Export y Entrypoints Nativos (`src/constants/`, `index.ts`, `service.ts`):**
+  - [x] Migración de `animations.ts`, `colors.ts`, `config.ts` y `tracks.ts` con tipado estricto de tokens de animación, paleta de colores, credenciales OAuth y pistas de fallback.
+  - [x] Creación de `src/constants/index.ts` como barrel export centralizado.
+  - [x] Migración de `service.ts` implementando `playbackService` con la firma nativa `BackgroundEventHandler` y tipado de `BackgroundEvent` de `@rntp/player`.
+  - [x] Migración del punto de entrada principal `index.ts` con registro síncrono de eventos remotos para iOS/primer plano y enlace de `package.json` a `index.ts`.
+  - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores) y empaquetado Expo (`npx expo export -p android --no-minify`, 826 módulos).
+  - [x] Incremento de versión del proyecto a `0.5.21` en `app.config.js`.
+
 ---
 
 # Mejoras por hacer

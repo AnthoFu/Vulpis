@@ -1,5 +1,5 @@
 /**
- * animations.js — Tokens de animación globales de Vulpis
+ * animations.ts — Tokens de animación globales de Vulpis
  *
  * Todas las duraciones, curvas y configs de spring se definen aquí para que
  * cada superficie de la app tenga el mismo lenguaje visual de movimiento.
@@ -10,6 +10,11 @@
  *  - Micro-interacciones: 100-150ms (hover, press)
  */
 
+export interface SpringConfig {
+  tension: number;
+  friction: number;
+}
+
 // ─── Duraciones ──────────────────────────────────────────────────────────────
 export const DURATION = {
   micro:  120,   // Press feedback, highlight
@@ -17,10 +22,12 @@ export const DURATION = {
   normal: 280,   // Sheet entrada / fade de fondo
   slow:   400,   // Transiciones de página
   color:  800,   // Transición de color de fondo del player
-};
+} as const;
+
+export type DurationKey = keyof typeof DURATION;
 
 // ─── Configuraciones de Spring ────────────────────────────────────────────────
-export const SPRING = {
+export const SPRING: Record<'gentle' | 'bouncy' | 'stiff', SpringConfig> = {
   /** Rebote suave — sheets, drawer */
   gentle: { tension: 65, friction: 11 },
   /** Rebote medio — fab, botones flotantes */
@@ -30,10 +37,8 @@ export const SPRING = {
 };
 
 // ─── Configuraciones de Easing personalizadas ────────────────────────────────
-// Requieren Easing de react-native si se quieren usar con timing
-// Exportamos los valores raw para usarlos con Animated.timing({ easing })
-export const EASING_OUT = 'easeOut';   // Para salidas
-export const EASING_IN  = 'easeIn';   // Para entradas
+export const EASING_OUT = 'easeOut' as const;   // Para salidas
+export const EASING_IN  = 'easeIn' as const;    // Para entradas
 
 // ─── Opacity presets ─────────────────────────────────────────────────────────
 export const BACKDROP_OPACITY = 0.65; // Backdrop del drawer / sheets

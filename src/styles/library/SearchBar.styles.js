@@ -9,6 +9,26 @@ export const searchBarStyles = {
     marginBottom: 16,
     width: '100%',
   },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    gap: 8,
+  },
+  sortButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: Colors.bgInput,
+    borderWidth: 1,
+    borderColor: Colors.borderSubtle,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sortButtonActive: {
+    backgroundColor: Colors.accentAlpha12,
+    borderColor: Colors.accent,
+  },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',

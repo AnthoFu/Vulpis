@@ -146,6 +146,59 @@ export const libraryModalsStyles = {
     fontSize: 12,
     fontWeight: '600',
   },
+  sortOptionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.bgInput,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.borderSubtle,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 8,
+    width: '100%',
+  },
+  sortOptionItemActive: {
+    backgroundColor: Colors.accentAlpha12,
+    borderColor: Colors.accent,
+  },
+  sortOptionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  sortOptionTextCol: {
+    flex: 1,
+  },
+  sortOptionTitle: {
+    color: Colors.white,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  sortOptionTitleActive: {
+    color: Colors.accentLight,
+  },
+  sortOptionSubtitle: {
+    color: Colors.textTertiary,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  sortOrderBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.accentAlpha12,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    gap: 4,
+  },
+  sortOrderText: {
+    color: Colors.accentLight,
+    fontSize: 11,
+    fontWeight: '700',
+  },
 };
 
 export default libraryModalsStyles;

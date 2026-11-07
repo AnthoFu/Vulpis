@@ -23,6 +23,12 @@ import {
 } from '../utils/trackFilter';
 import { Track } from '../models/Track';
 import { Playlist } from '../models/Playlist';
+import { SortConfig, DEFAULT_SORT_CONFIG } from '../models/SortOptions';
+import {
+  sortTracks,
+  getStoredSortConfig,
+  saveSortConfig,
+} from '../utils/trackSort';
 
 // Re-exportar utilidades para compatibilidad hacia atrás
 export {
@@ -91,6 +97,10 @@ export interface UseQueueListReturn {
   displayTracks: Track[];
   filterTrackList: typeof filterTrackList;
   defaultArtwork: string;
+  sortConfig: SortConfig;
+  handleSortChange: (newConfig: SortConfig) => Promise<void>;
+  isSortModalVisible: boolean;
+  setIsSortModalVisible: (visible: boolean) => void;
 }
 
 export default function useQueueList({
@@ -119,6 +129,17 @@ export default function useQueueList({
   const [selectedTrackForOptions, setSelectedTrackForOptions] = useState<Track | null>(null);
   const [isPlaylistPickerVisible, setIsPlaylistPickerVisible] = useState(false);
   const [inlineNewPlaylistName, setInlineNewPlaylistName] = useState('');
+  const [sortConfig, setSortConfig] = useState<SortConfig>(DEFAULT_SORT_CONFIG);
+  const [isSortModalVisible, setIsSortModalVisible] = useState(false);
+
+  useEffect(() => {
+    getStoredSortConfig().then(setSortConfig);
+  }, []);
+
+  const handleSortChange = useCallback(async (newConfig: SortConfig): Promise<void> => {
+    setSortConfig(newConfig);
+    await saveSortConfig(newConfig);
+  }, []);
 
   // Sincronizar pestaña activa cuando cambia currentSource
   useEffect(() => {
@@ -299,10 +320,11 @@ export default function useQueueList({
     return calculateOdooFilterCounts(activeContextTracks, searchQuery);
   }, [activeContextTracks, searchQuery]);
 
-  // Filtrado reactivo de canciones con memoización
+  // Filtrado y ordenamiento reactivo de canciones con memoización
   const displayTracks = useMemo(() => {
-    return filterTrackList(tracks, searchQuery, searchFilter);
-  }, [tracks, searchQuery, searchFilter]);
+    const filtered = filterTrackList(tracks, searchQuery, searchFilter);
+    return sortTracks(filtered, sortConfig);
+  }, [tracks, searchQuery, searchFilter, sortConfig]);
 
   // Árbol de Artistas y lista de Álbumes calculados reactivamente
   const artistTree = useMemo(() => {
@@ -384,5 +406,9 @@ export default function useQueueList({
     displayTracks,
     filterTrackList,
     defaultArtwork,
+    sortConfig,
+    handleSortChange,
+    isSortModalVisible,
+    setIsSortModalVisible,
   };
 }

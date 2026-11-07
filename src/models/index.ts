@@ -10,3 +10,6 @@ export * from './Playlist';
 
 // Configuraciones Acústicas (ReplayGain, Crossfade, Letras)
 export * from './AudioSettings';
+
+// Configuración de Ordenamiento Multicriterio
+export * from './SortOptions';

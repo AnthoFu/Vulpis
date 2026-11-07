@@ -154,12 +154,20 @@
   - [x] Eliminación completa de archivos `.js` de componentes y vistas.
   - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores) y empaquetado Expo (`npx expo export -p android --no-minify`, 823 módulos).
 
+- [x] **Ordenamiento Multicriterio en la Biblioteca:**
+  - [x] Modelo de dominio `SortOptions.ts` con tipos (`SortField`, `SortOrder`, `SortConfig`) y configuración por defecto.
+  - [x] Extensión de `Track` con `addedAt` y captura de marcas de tiempo en el escáner de medios (`mediaScanner.ts`).
+  - [x] Utilidad pura `trackSort.ts` para ordenamiento insensible a acentos/mayúsculas (A-Z / Z-A por Título, Artista, Álbum; más corta/larga por Duración; más reciente/antigua por Fecha de adición) y persistencia en AsyncStorage (`vulpis_library_sort_config`).
+  - [x] Modal interactivo `SortModal.tsx` con cambio de dirección interactivo (ascendente/descendente) e indicadores visuales activos.
+  - [x] Integración de botón de ordenamiento en `LibrarySearchBar.tsx`, conexión reactiva en `useQueueList.ts` y propagación a `QueueList.tsx`, `PlaylistsTab.tsx` y `PlaylistDetailView.tsx`.
+  - [x] Incremento de versión del proyecto a `0.5.20` en `app.config.js`.
+
 ---
 
 # Mejoras por hacer
 
 - [ ] **Ecualizador de Audio (EQ):** Ecualizador con presets integrados (Rock, Pop, Jazz, Bass Boost, etc.).
-- [ ] **Ordenamiento Multicriterio:** Opción para ordenar listas por Nombre, Artista, Duración, Fecha de adición o Número de reproducciones.
+- [x] **Ordenamiento Multicriterio:** Opción para ordenar listas por Nombre, Artista, Duración y Fecha de adición.
 - [ ] **Exportación e Importación de Playlists:** Respaldar y compartir listas de reproducción en formato `.m3u` o `.json`.
 - [ ] **Historial de Reproducción:** Sección para consultar las canciones escuchadas recientemente.
 - [ ] **Búsqueda Manual Interactiva de Letras:** Permitir al usuario buscar y seleccionar manualmente la letra en LRCLIB si la búsqueda automática no coincide.

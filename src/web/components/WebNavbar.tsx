@@ -3,6 +3,15 @@ import { View, Text, TextInput, TouchableOpacity, Image } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import styles from '../styles/web.styles';
 
+export interface WebNavbarProps {
+  isDriveConnected: boolean;
+  onOpenDriveModal: () => void;
+  onRefreshDrive: () => void;
+  onDisconnectDrive: () => void;
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
+}
+
 export default function WebNavbar({
   isDriveConnected,
   onOpenDriveModal,
@@ -10,7 +19,7 @@ export default function WebNavbar({
   onDisconnectDrive,
   searchQuery,
   onSearchChange,
-}) {
+}: WebNavbarProps): React.JSX.Element {
   return (
     <View style={styles.navbar}>
       {/* Marca / Logo */}
@@ -50,7 +59,6 @@ export default function WebNavbar({
             <TouchableOpacity
               style={[styles.driveConnectBtn, styles.driveConnectedBtn]}
               onPress={onRefreshDrive}
-              title="Actualizar biblioteca de Drive"
             >
               <Ionicons name="cloud-done-outline" size={16} color="#22C55E" />
               <Text style={[styles.driveBtnText, { color: '#22C55E' }]}>Drive Conectado</Text>
@@ -60,7 +68,6 @@ export default function WebNavbar({
             <TouchableOpacity
               style={styles.actionIconBtn}
               onPress={onDisconnectDrive}
-              title="Desconectar Drive"
             >
               <Feather name="log-out" size={18} color="#EF4444" />
             </TouchableOpacity>

@@ -3,6 +3,15 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import styles from '../styles/web.styles';
 
+export interface WebSidebarProps {
+  currentView: 'drive' | 'queue';
+  onSelectView: (view: 'drive' | 'queue') => void;
+  queueCount?: number;
+  driveTrackCount?: number;
+  onToggleLyrics: () => void;
+  isLyricsOpen: boolean;
+}
+
 export default function WebSidebar({
   currentView,
   onSelectView,
@@ -10,7 +19,7 @@ export default function WebSidebar({
   driveTrackCount = 0,
   onToggleLyrics,
   isLyricsOpen,
-}) {
+}: WebSidebarProps): React.JSX.Element {
   return (
     <View style={styles.sidebar}>
       <Text style={styles.sidebarSectionTitle}>Mi Música</Text>

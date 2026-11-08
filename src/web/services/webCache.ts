@@ -1,19 +1,19 @@
 /**
  * Servicio de caché local para la versión Web de Vulpis.
- * Utiliza la Cache Storage API del navegador (o IndexedDB como fallback)
+ * Utiliza la Cache Storage API del navegador
  * para almacenar los blobs de audio descargados de Google Drive.
  */
 
 const CACHE_NAME = 'vulpis-web-audio-v1';
 
-export const isCacheAvailable = () => {
+export const isCacheAvailable = (): boolean => {
   return typeof window !== 'undefined' && 'caches' in window;
 };
 
 /**
  * Obtiene un Blob de audio previamente guardado en la caché del navegador.
  */
-export const getCachedAudioBlob = async (fileId) => {
+export const getCachedAudioBlob = async (fileId: string): Promise<Blob | null> => {
   if (!isCacheAvailable()) return null;
   try {
     const cache = await caches.open(CACHE_NAME);
@@ -32,7 +32,7 @@ export const getCachedAudioBlob = async (fileId) => {
 /**
  * Almacena un Blob de audio en la caché del navegador.
  */
-export const saveAudioBlob = async (fileId, blob) => {
+export const saveAudioBlob = async (fileId: string, blob: Blob): Promise<void> => {
   if (!isCacheAvailable() || !blob) return;
   try {
     const cache = await caches.open(CACHE_NAME);
@@ -53,7 +53,7 @@ export const saveAudioBlob = async (fileId, blob) => {
 /**
  * Limpia todas las pistas de audio almacenadas en la caché web.
  */
-export const clearWebAudioCache = async () => {
+export const clearWebAudioCache = async (): Promise<void> => {
   if (!isCacheAvailable()) return;
   try {
     await caches.delete(CACHE_NAME);

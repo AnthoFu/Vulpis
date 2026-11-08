@@ -1,10 +1,24 @@
 import { useState, useEffect, useMemo } from 'react';
 import { fetchWebLyrics } from '../services/webLyrics';
+import { WebTrack, WebLyricsData } from '../types';
 
-export default function useWebLyrics(currentTrack, currentTime, onSeek) {
-  const [lyricsData, setLyricsData] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isPanelOpen, setIsPanelOpen] = useState(false);
+export interface UseWebLyricsReturn {
+  lyricsData: WebLyricsData | null;
+  isLoading: boolean;
+  isPanelOpen: boolean;
+  activeLineIndex: number;
+  togglePanel: () => void;
+  handleLineClick: (time: number | null) => void;
+}
+
+export default function useWebLyrics(
+  currentTrack: WebTrack | null,
+  currentTime: number,
+  onSeek?: (seconds: number) => void
+): UseWebLyricsReturn {
+  const [lyricsData, setLyricsData] = useState<WebLyricsData | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isPanelOpen, setIsPanelOpen] = useState<boolean>(false);
 
   useEffect(() => {
     if (!currentTrack) {
@@ -47,22 +61,23 @@ export default function useWebLyrics(currentTrack, currentTime, onSeek) {
     const lines = lyricsData.parsed;
     let index = -1;
     for (let i = 0; i < lines.length; i++) {
-      if (lines[i].time !== null && currentTime >= lines[i].time) {
+      const lineTime = lines[i].time;
+      if (lineTime !== null && currentTime >= lineTime) {
         index = i;
-      } else if (lines[i].time !== null && currentTime < lines[i].time) {
+      } else if (lineTime !== null && currentTime < lineTime) {
         break;
       }
     }
     return index;
   }, [lyricsData, currentTime]);
 
-  const handleLineClick = (time) => {
+  const handleLineClick = (time: number | null): void => {
     if (time !== null && onSeek) {
       onSeek(time);
     }
   };
 
-  const togglePanel = () => {
+  const togglePanel = (): void => {
     setIsPanelOpen((prev) => !prev);
   };
 

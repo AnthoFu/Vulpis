@@ -3,16 +3,17 @@
  * Consulta la API pública de LRCLIB (lrclib.net) y parsea el formato .lrc
  * sin dependencias de sistemas de archivos nativos.
  */
+import type { WebLrcLine, WebLyricsData } from '../types';
 
 const LYRICS_CACHE_KEY = 'vulpis_web_lyrics_cache';
 
 /**
- * Parsea el formato LRC en un arreglo de { time: number | null, text: string, isBreak: boolean }.
+ * Parsea el formato LRC en un arreglo de WebLrcLine.
  */
-export function parseWebLrcLyrics(rawLyrics) {
+export function parseWebLrcLyrics(rawLyrics: string | null | undefined): WebLrcLine[] {
   if (!rawLyrics || typeof rawLyrics !== 'string') return [];
   const lines = rawLyrics.split('\n');
-  const result = [];
+  const result: WebLrcLine[] = [];
   const timeRegex = /\[(\d{1,3}):(\d{2})(?:\.(\d{1,3}))?\]/g;
   const metaRegex = /^\[(ar|ti|al|by|length|re|ve):.*\]$/i;
 
@@ -68,7 +69,12 @@ export function parseWebLrcLyrics(rawLyrics) {
 /**
  * Consulta la API de LRCLIB para obtener letras sincronizadas o normales.
  */
-export async function fetchWebLyrics(title, artist = '', album = '', duration = 0) {
+export async function fetchWebLyrics(
+  title: string,
+  artist = '',
+  album = '',
+  duration = 0
+): Promise<WebLyricsData | null> {
   if (!title) return null;
 
   // 1. Revisar caché local en localStorage
@@ -99,7 +105,7 @@ export async function fetchWebLyrics(title, artist = '', album = '', duration = 
 
     if (res.ok) {
       const data = await res.json();
-      const lyricData = {
+      const lyricData: WebLyricsData = {
         synced: data.syncedLyrics || null,
         plain: data.plainLyrics || null,
         parsed: data.syncedLyrics ? parseWebLrcLyrics(data.syncedLyrics) : null,
@@ -119,7 +125,9 @@ export async function fetchWebLyrics(title, artist = '', album = '', duration = 
     }
 
     // 3. Si no hay coincidencia exacta, probar búsqueda /api/search
-    const searchUrl = `https://lrclib.net/api/search?q=${encodeURIComponent(title + (artist && artist !== 'Google Drive' ? ' ' + artist : ''))}`;
+    const searchUrl = `https://lrclib.net/api/search?q=${encodeURIComponent(
+      title + (artist && artist !== 'Google Drive' ? ' ' + artist : '')
+    )}`;
     res = await fetch(searchUrl, {
       headers: { 'User-Agent': 'Vulpis-Web/1.0' },
     });
@@ -128,7 +136,7 @@ export async function fetchWebLyrics(title, artist = '', album = '', duration = 
       const results = await res.json();
       if (Array.isArray(results) && results.length > 0) {
         const best = results[0];
-        const lyricData = {
+        const lyricData: WebLyricsData = {
           synced: best.syncedLyrics || null,
           plain: best.plainLyrics || null,
           parsed: best.syncedLyrics ? parseWebLrcLyrics(best.syncedLyrics) : null,

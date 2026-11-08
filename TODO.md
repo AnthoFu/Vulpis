@@ -178,6 +178,17 @@
   - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores) y empaquetado Expo (`npx expo export -p android --no-minify`, 826 módulos).
   - [x] Incremento de versión del proyecto a `0.5.22` en `app.config.js`.
 
+- [x] **Fase 8 de Migración a TypeScript — Versión Web Completa y 100% Cobertura del Proyecto (`src/web/`, `index.web.ts`):**
+  - [x] Tipado de dominio web en `src/web/types.ts` (`WebTrack`, `WebLrcLine`, `WebLyricsData`, `WebRepeatMode`, `WebPlayerState`, `WebGoogleConfig`, `WebDriveFile`).
+  - [x] Migración de estilos web en `src/web/styles/web.styles.ts`.
+  - [x] Migración de servicios web: `webCache.ts`, `webLyrics.ts`, `webDrive.ts` y motor de audio HTML5 `webAudioPlayer.ts`.
+  - [x] Migración de custom hooks web: `useWebPlayer.ts`, `useWebDrive.ts` y `useWebLyrics.ts`.
+  - [x] Migración de componentes web UI: `WebNavbar.tsx`, `WebSidebar.tsx`, `WebTrackList.tsx`, `WebPlayerBottomBar.tsx`, `WebLyricsPanel.tsx`, `WebDriveModal.tsx` y contenedor `App.tsx`.
+  - [x] Migración del punto de entrada web `index.web.ts` y ajuste de resolución agnóstica de plataforma en `package.json` (`"main": "index"`).
+  - [x] Erradicación del 100% de archivos JavaScript del código fuente (cero archivos `.js`/`.jsx` en `src/`).
+  - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores), compilación web limpia (`npm run build:web`, 299 módulos) y empaquetado Expo nativo (`npx expo export -p android --no-minify`, 826 módulos).
+  - [x] Incremento de versión del proyecto a `0.5.23` en `app.config.js`.
+
 ---
 
 # Mejoras por hacer

@@ -1,5 +1,6 @@
 import jsmediatags from 'jsmediatags/dist/jsmediatags.min.js';
 import { getCachedAudioBlob, saveAudioBlob } from './webCache';
+import { WebGoogleConfig, WebDriveFile } from '../types';
 
 const CLIENT_ID_KEY = 'vulpis_web_google_client_id';
 const TOKEN_KEY = 'vulpis_web_google_access_token';
@@ -14,7 +15,7 @@ const DEFAULT_CLIENT_ID =
 /**
  * Obtiene la configuración guardada de Google Drive para la web.
  */
-export const getWebGoogleConfig = () => {
+export const getWebGoogleConfig = (): WebGoogleConfig => {
   if (typeof window === 'undefined') return { clientId: DEFAULT_CLIENT_ID };
   const envWebId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
   const saved = localStorage.getItem(CLIENT_ID_KEY);
@@ -26,7 +27,7 @@ export const getWebGoogleConfig = () => {
 /**
  * Guarda el Client ID personalizado de Google.
  */
-export const saveWebGoogleConfig = (clientId) => {
+export const saveWebGoogleConfig = (clientId: string): void => {
   if (typeof window !== 'undefined') {
     localStorage.setItem(CLIENT_ID_KEY, clientId.trim());
   }
@@ -35,7 +36,7 @@ export const saveWebGoogleConfig = (clientId) => {
 /**
  * Obtiene el token de acceso guardado si sigue siendo válido.
  */
-export const getWebStoredToken = () => {
+export const getWebStoredToken = (): string | null => {
   if (typeof window === 'undefined') return null;
   const token = localStorage.getItem(TOKEN_KEY);
   const expiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
@@ -53,7 +54,7 @@ export const getWebStoredToken = () => {
 /**
  * Guarda el token de acceso y su vigencia.
  */
-export const saveWebStoredToken = (token, expiresInSeconds = 3600) => {
+export const saveWebStoredToken = (token: string, expiresInSeconds = 3600): void => {
   if (typeof window !== 'undefined' && token) {
     const expiry = Date.now() + expiresInSeconds * 1000;
     localStorage.setItem(TOKEN_KEY, token.trim());
@@ -64,7 +65,7 @@ export const saveWebStoredToken = (token, expiresInSeconds = 3600) => {
 /**
  * Limpia el token y sesión de Drive en la web.
  */
-export const clearWebToken = () => {
+export const clearWebToken = (): void => {
   if (typeof window !== 'undefined') {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(TOKEN_EXPIRY_KEY);
@@ -74,7 +75,7 @@ export const clearWebToken = () => {
 /**
  * Carga de forma dinámica la biblioteca de Google Identity Services (GSI) si no está presente.
  */
-const loadGoogleGsiScript = () => {
+const loadGoogleGsiScript = (): Promise<any> => {
   return new Promise((resolve, reject) => {
     if (typeof window === 'undefined') return reject(new Error('No window'));
     if (window.google?.accounts?.oauth2) {
@@ -82,7 +83,7 @@ const loadGoogleGsiScript = () => {
     }
     const existingScript = document.getElementById('google-gsi-client');
     if (existingScript) {
-      existingScript.addEventListener('load', () => resolve(window.google.accounts.oauth2));
+      existingScript.addEventListener('load', () => resolve(window.google?.accounts?.oauth2));
       existingScript.addEventListener('error', reject);
       return;
     }
@@ -91,7 +92,7 @@ const loadGoogleGsiScript = () => {
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
     script.defer = true;
-    script.onload = () => resolve(window.google.accounts.oauth2);
+    script.onload = () => resolve(window.google?.accounts?.oauth2);
     script.onerror = reject;
     document.head.appendChild(script);
   });
@@ -100,7 +101,7 @@ const loadGoogleGsiScript = () => {
 /**
  * Inicia sesión con Google Drive usando Google Identity Services (GSI) en Web.
  */
-export const signInWebWithGoogle = async (customClientId) => {
+export const signInWebWithGoogle = async (customClientId?: string): Promise<string> => {
   const { clientId } = getWebGoogleConfig();
   const effectiveClientId = (customClientId || clientId || '').trim();
 
@@ -130,7 +131,7 @@ export const signInWebWithGoogle = async (customClientId) => {
         client_id: effectiveClientId,
         scope:
           'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file',
-        callback: (response) => {
+        callback: (response: any) => {
           if (isSettled) return;
           isSettled = true;
           clearTimeout(timeout);
@@ -151,14 +152,14 @@ export const signInWebWithGoogle = async (customClientId) => {
             reject(new Error('No se recibió token de acceso de Google.'));
           }
         },
-        error_callback: (error) => {
+        error_callback: (error: any) => {
           if (isSettled) return;
           isSettled = true;
           clearTimeout(timeout);
           console.warn('[WebDrive] Error en GSI Token Client:', error);
           reject(
             new Error(
-              error.message ||
+              error?.message ||
                 'Error de autorización: Cliente no válido o el origen web no está registrado en Google Cloud Console.'
             )
           );
@@ -180,7 +181,7 @@ export const signInWebWithGoogle = async (customClientId) => {
 /**
  * Obtiene o crea la carpeta dedicada "Vulpis" en el Google Drive del usuario.
  */
-export const getOrCreateWebVulpisFolder = async (accessToken) => {
+export const getOrCreateWebVulpisFolder = async (accessToken: string): Promise<string> => {
   if (typeof window !== 'undefined') {
     const cachedId = localStorage.getItem(FOLDER_ID_KEY);
     if (cachedId) {
@@ -238,11 +239,14 @@ export const getOrCreateWebVulpisFolder = async (accessToken) => {
  * Obtiene los archivos de audio MP3 de Google Drive.
  * Permite buscar en la carpeta Vulpis o en todo el Drive si la carpeta Vulpis está vacía.
  */
-export const fetchWebDriveMp3Files = async (accessToken, searchEntireDrive = false) => {
+export const fetchWebDriveMp3Files = async (
+  accessToken: string,
+  searchEntireDrive = false
+): Promise<WebDriveFile[]> => {
   if (!accessToken) throw new Error('Token de acceso no válido.');
 
   let q = "mimeType = 'audio/mpeg' and trashed = false";
-  
+
   if (!searchEntireDrive) {
     try {
       const folderId = await getOrCreateWebVulpisFolder(accessToken);
@@ -271,7 +275,7 @@ export const fetchWebDriveMp3Files = async (accessToken, searchEntireDrive = fal
   }
 
   const data = await response.json();
-  const files = data.files || [];
+  const files: WebDriveFile[] = data.files || [];
 
   // Si buscamos en la carpeta Vulpis y está vacía, intentamos buscar en todo el Drive
   if (files.length === 0 && !searchEntireDrive) {
@@ -282,11 +286,21 @@ export const fetchWebDriveMp3Files = async (accessToken, searchEntireDrive = fal
   return files;
 };
 
+export interface WebAudioBlobResult {
+  objectUrl: string;
+  blob: Blob;
+  fromCache: boolean;
+}
+
 /**
  * Descarga el archivo de audio de Google Drive en memoria / caché del navegador
  * y devuelve un Blob URL listo para reproducir con <audio>.
  */
-export const getWebAudioBlobUrl = async (fileId, accessToken, onProgress) => {
+export const getWebAudioBlobUrl = async (
+  fileId: string,
+  accessToken: string,
+  _onProgress?: (progress: number) => void
+): Promise<WebAudioBlobResult> => {
   // 1. Revisar caché local en el navegador
   const cachedBlob = await getCachedAudioBlob(fileId);
   if (cachedBlob) {
@@ -325,10 +339,17 @@ export const getWebAudioBlobUrl = async (fileId, accessToken, onProgress) => {
   };
 };
 
+export interface ExtractedBlobMetadata {
+  title: string;
+  artist: string;
+  album: string;
+  artwork: string | null;
+}
+
 /**
  * Extrae metadatos ID3 (título, artista, álbum, carátula) desde un Blob en el navegador.
  */
-export const extractMetadataFromBlob = (blob, defaultTitle) => {
+export const extractMetadataFromBlob = (blob: Blob, defaultTitle: string): Promise<ExtractedBlobMetadata> => {
   return new Promise((resolve) => {
     if (!blob || typeof jsmediatags === 'undefined') {
       return resolve({
@@ -341,9 +362,9 @@ export const extractMetadataFromBlob = (blob, defaultTitle) => {
 
     try {
       jsmediatags.read(blob, {
-        onSuccess: (tag) => {
+        onSuccess: (tag: any) => {
           const tags = tag.tags || {};
-          let artworkUrl = null;
+          let artworkUrl: string | null = null;
 
           if (tags.picture) {
             try {

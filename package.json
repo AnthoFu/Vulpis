@@ -1,7 +1,7 @@
 {
   "name": "vulpis",
   "version": "1.0.0",
-  "main": "index.ts",
+  "main": "index",
   "dependencies": {
     "@expo/metro-runtime": "~56.0.21",
     "@expo/vector-icons": "^15.0.2",

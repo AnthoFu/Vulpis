@@ -4,6 +4,15 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import styles from '../styles/web.styles';
 import { getWebGoogleConfig } from '../services/webDrive';
 
+export interface WebDriveModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConnectGoogle: (clientId?: string) => void;
+  onConnectToken: (token: string) => void;
+  isLoading: boolean;
+  errorMessage: string | null;
+}
+
 export default function WebDriveModal({
   isOpen,
   onClose,
@@ -11,11 +20,11 @@ export default function WebDriveModal({
   onConnectToken,
   isLoading,
   errorMessage,
-}) {
-  const [clientId, setClientId] = useState(() => getWebGoogleConfig().clientId);
-  const [manualToken, setManualToken] = useState('');
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [copied, setCopied] = useState(false);
+}: WebDriveModalProps): React.JSX.Element | null {
+  const [clientId, setClientId] = useState<string>(() => getWebGoogleConfig().clientId);
+  const [manualToken, setManualToken] = useState<string>('');
+  const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
+  const [copied, setCopied] = useState<boolean>(false);
 
   if (!isOpen) return null;
 

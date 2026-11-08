@@ -2,6 +2,15 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import styles from '../styles/web.styles';
+import { WebLyricsData } from '../types';
+
+export interface WebLyricsPanelProps {
+  lyricsData: WebLyricsData | null;
+  isLoading: boolean;
+  activeLineIndex: number;
+  onLineClick: (time: number | null) => void;
+  onClose: () => void;
+}
 
 export default function WebLyricsPanel({
   lyricsData,
@@ -9,8 +18,8 @@ export default function WebLyricsPanel({
   activeLineIndex,
   onLineClick,
   onClose,
-}) {
-  const activeLineRef = useRef(null);
+}: WebLyricsPanelProps): React.JSX.Element {
+  const activeLineRef = useRef<HTMLDivElement | null>(null);
 
   // Auto-scroll hacia la línea activa
   useEffect(() => {

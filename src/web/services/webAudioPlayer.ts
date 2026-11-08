@@ -4,7 +4,25 @@
  * shuffle, repeat, buffering y notificaciones de estado.
  */
 
-class WebAudioPlayer {
+import { WebTrack, WebPlayerState, WebRepeatMode } from '../types';
+
+export class WebAudioPlayer {
+  private audio: HTMLAudioElement | null;
+  private queue: WebTrack[];
+  private originalQueue: WebTrack[];
+  private currentIndex: number;
+  private currentTrack: WebTrack | null;
+  private isPlaying: boolean;
+  private isLoading: boolean;
+  private currentTime: number;
+  private duration: number;
+  private volume: number;
+  private isMuted: boolean;
+  private isShuffle: boolean;
+  private repeatMode: WebRepeatMode;
+  private listeners: Set<(state: WebPlayerState) => void>;
+  private driveTokenGetter: (() => string | null) | null;
+
   constructor() {
     this.audio = typeof Audio !== 'undefined' ? new Audio() : null;
     this.queue = [];
@@ -27,11 +45,13 @@ class WebAudioPlayer {
     }
   }
 
-  setDriveTokenGetter(fn) {
+  setDriveTokenGetter(fn: () => string | null): void {
     this.driveTokenGetter = fn;
   }
 
-  _setupAudioListeners() {
+  private _setupAudioListeners(): void {
+    if (!this.audio) return;
+
     this.audio.addEventListener('play', () => {
       this.isPlaying = true;
       this.isLoading = false;
@@ -44,12 +64,14 @@ class WebAudioPlayer {
     });
 
     this.audio.addEventListener('timeupdate', () => {
+      if (!this.audio) return;
       this.currentTime = this.audio.currentTime || 0;
       this.duration = this.audio.duration || this.duration || 0;
       this._notify();
     });
 
     this.audio.addEventListener('loadedmetadata', () => {
+      if (!this.audio) return;
       this.duration = this.audio.duration || 0;
       this.isLoading = false;
       this._notify();
@@ -77,7 +99,9 @@ class WebAudioPlayer {
     });
   }
 
-  _handleTrackEnded() {
+  private _handleTrackEnded(): void {
+    if (!this.audio) return;
+
     if (this.repeatMode === 'track') {
       this.audio.currentTime = 0;
       this.audio.play().catch(console.warn);
@@ -95,13 +119,13 @@ class WebAudioPlayer {
     }
   }
 
-  subscribe(listener) {
+  subscribe(listener: (state: WebPlayerState) => void): () => void {
     this.listeners.add(listener);
     listener(this.getState());
     return () => this.listeners.delete(listener);
   }
 
-  _notify() {
+  private _notify(): void {
     const state = this.getState();
     this.listeners.forEach((listener) => {
       try {
@@ -112,7 +136,7 @@ class WebAudioPlayer {
     });
   }
 
-  getState() {
+  getState(): WebPlayerState {
     return {
       currentTrack: this.currentTrack,
       queue: this.queue,
@@ -128,7 +152,7 @@ class WebAudioPlayer {
     };
   }
 
-  async playTrack(track, newQueue = null) {
+  async playTrack(track: WebTrack, newQueue: WebTrack[] | null = null): Promise<void> {
     if (newQueue) {
       this.originalQueue = [...newQueue];
       this.queue = this.isShuffle ? this._shuffleArray([...newQueue]) : [...newQueue];
@@ -172,9 +196,11 @@ class WebAudioPlayer {
         throw new Error('No se pudo resolver la URL de reproducción para la pista.');
       }
 
-      this.audio.src = audioUrl;
-      this.audio.load();
-      await this.audio.play();
+      if (this.audio) {
+        this.audio.src = audioUrl;
+        this.audio.load();
+        await this.audio.play();
+      }
     } catch (err) {
       console.error('[WebAudioPlayer] Error al cargar o reproducir:', err);
       this.isLoading = false;
@@ -183,14 +209,14 @@ class WebAudioPlayer {
     }
   }
 
-  async playIndex(index) {
+  async playIndex(index: number): Promise<void> {
     if (index >= 0 && index < this.queue.length) {
       this.currentIndex = index;
       await this.playTrack(this.queue[index]);
     }
   }
 
-  togglePlay() {
+  togglePlay(): void {
     if (!this.audio || !this.currentTrack) return;
     if (this.isPlaying) {
       this.audio.pause();
@@ -199,7 +225,7 @@ class WebAudioPlayer {
     }
   }
 
-  seek(seconds) {
+  seek(seconds: number): void {
     if (!this.audio) return;
     const clamped = Math.max(0, Math.min(seconds, this.duration || seconds));
     this.audio.currentTime = clamped;
@@ -207,7 +233,7 @@ class WebAudioPlayer {
     this._notify();
   }
 
-  setVolume(vol) {
+  setVolume(vol: number): void {
     if (!this.audio) return;
     const clamped = Math.max(0, Math.min(1, vol));
     this.volume = clamped;
@@ -216,14 +242,14 @@ class WebAudioPlayer {
     this._notify();
   }
 
-  toggleMute() {
+  toggleMute(): void {
     if (!this.audio) return;
     this.isMuted = !this.isMuted;
     this.audio.muted = this.isMuted;
     this._notify();
   }
 
-  next() {
+  next(): void {
     if (this.queue.length === 0) return;
     if (this.currentIndex < this.queue.length - 1) {
       this.playIndex(this.currentIndex + 1);
@@ -232,7 +258,7 @@ class WebAudioPlayer {
     }
   }
 
-  previous() {
+  previous(): void {
     if (!this.audio) return;
     // Si ya pasaron más de 3 segundos, reiniciar la pista actual
     if (this.currentTime > 3) {
@@ -246,7 +272,7 @@ class WebAudioPlayer {
     }
   }
 
-  toggleShuffle() {
+  toggleShuffle(): void {
     this.isShuffle = !this.isShuffle;
     if (this.isShuffle) {
       const current = this.currentTrack;
@@ -261,20 +287,20 @@ class WebAudioPlayer {
     this._notify();
   }
 
-  toggleRepeat() {
-    const modes = ['off', 'queue', 'track'];
+  toggleRepeat(): void {
+    const modes: WebRepeatMode[] = ['off', 'queue', 'track'];
     const nextIdx = (modes.indexOf(this.repeatMode) + 1) % modes.length;
     this.repeatMode = modes[nextIdx];
     this._notify();
   }
 
-  addToQueue(track) {
+  addToQueue(track: WebTrack): void {
     this.queue.push(track);
     this.originalQueue.push(track);
     this._notify();
   }
 
-  removeFromQueue(index) {
+  removeFromQueue(index: number): void {
     if (index >= 0 && index < this.queue.length) {
       const removed = this.queue.splice(index, 1)[0];
       this.originalQueue = this.originalQueue.filter((t) => t.id !== removed.id);
@@ -285,7 +311,7 @@ class WebAudioPlayer {
     }
   }
 
-  _shuffleArray(arr) {
+  private _shuffleArray<T>(arr: T[]): T[] {
     const copy = [...arr];
     for (let i = copy.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));

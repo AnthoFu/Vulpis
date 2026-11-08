@@ -1,37 +1,48 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   getWebStoredToken,
   saveWebStoredToken,
   clearWebToken,
   fetchWebDriveMp3Files,
   signInWebWithGoogle,
-  getWebGoogleConfig,
   saveWebGoogleConfig,
 } from '../services/webDrive';
 import webPlayer from '../services/webAudioPlayer';
+import { WebTrack } from '../types';
 
-const DEFAULT_COVER = '/assets/default-cover.jpg';
+export interface UseWebDriveReturn {
+  isDriveConnected: boolean;
+  token: string | null;
+  driveTracks: WebTrack[];
+  isLoading: boolean;
+  error: string | null;
+  folderName: string;
+  connectWithGoogle: (customClientId?: string) => Promise<boolean>;
+  connectWithManualToken: (manualToken: string) => Promise<boolean>;
+  disconnectDrive: () => void;
+  refreshTracks: () => void;
+}
 
-export default function useWebDrive() {
-  const [token, setToken] = useState(() => getWebStoredToken());
-  const [driveTracks, setDriveTracks] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [folderName, setFolderName] = useState('Vulpis');
+export default function useWebDrive(): UseWebDriveReturn {
+  const [token, setToken] = useState<string | null>(() => getWebStoredToken());
+  const [driveTracks, setDriveTracks] = useState<WebTrack[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [folderName] = useState<string>('Vulpis');
 
   // Configurar el getter del token en el reproductor de audio
   useEffect(() => {
     webPlayer.setDriveTokenGetter(() => token);
   }, [token]);
 
-  const loadTracks = useCallback(async (accessToken) => {
+  const loadTracks = useCallback(async (accessToken: string) => {
     if (!accessToken) return;
     setIsLoading(true);
     setError(null);
 
     try {
       const files = await fetchWebDriveMp3Files(accessToken);
-      const mapped = files.map((file, idx) => ({
+      const mapped: WebTrack[] = files.map((file, idx) => ({
         id: `drive-${file.id}`,
         mediaId: `drive-${file.id}`,
         driveFileId: file.id,
@@ -44,7 +55,7 @@ export default function useWebDrive() {
         index: idx,
       }));
       setDriveTracks(mapped);
-    } catch (err) {
+    } catch (err: any) {
       console.error('[useWebDrive] Error al cargar pistas:', err);
       if (err.message === 'AUTH_EXPIRED') {
         setToken(null);
@@ -64,7 +75,7 @@ export default function useWebDrive() {
     }
   }, [token, loadTracks]);
 
-  const connectWithGoogle = useCallback(async (customClientId) => {
+  const connectWithGoogle = useCallback(async (customClientId?: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     try {
@@ -75,7 +86,7 @@ export default function useWebDrive() {
       setToken(accessToken);
       await loadTracks(accessToken);
       return true;
-    } catch (err) {
+    } catch (err: any) {
       console.error('[useWebDrive] Error de conexión OAuth:', err);
       setError(err.message || 'Error al conectar con Google Drive.');
       return false;
@@ -84,7 +95,7 @@ export default function useWebDrive() {
     }
   }, [loadTracks]);
 
-  const connectWithManualToken = useCallback(async (manualToken) => {
+  const connectWithManualToken = useCallback(async (manualToken: string): Promise<boolean> => {
     if (!manualToken || !manualToken.trim()) return false;
     setIsLoading(true);
     setError(null);
@@ -94,7 +105,7 @@ export default function useWebDrive() {
       setToken(cleaned);
       await loadTracks(cleaned);
       return true;
-    } catch (err) {
+    } catch (err: any) {
       setError(err.message || 'El token ingresado no es válido.');
       return false;
     } finally {

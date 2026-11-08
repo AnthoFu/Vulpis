@@ -14,11 +14,12 @@ import WebTrackList from './components/WebTrackList';
 import WebPlayerBottomBar from './components/WebPlayerBottomBar';
 import WebLyricsPanel from './components/WebLyricsPanel';
 import WebDriveModal from './components/WebDriveModal';
+import { WebTrack } from './types';
 
-export default function WebApp() {
-  const [currentView, setCurrentView] = useState('drive'); // 'drive' | 'queue'
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isDriveModalOpen, setIsDriveModalOpen] = useState(false);
+export default function WebApp(): React.JSX.Element {
+  const [currentView, setCurrentView] = useState<'drive' | 'queue'>('drive');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [isDriveModalOpen, setIsDriveModalOpen] = useState<boolean>(false);
 
   // Hook del reproductor de audio web
   const {
@@ -68,7 +69,7 @@ export default function WebApp() {
   } = useWebLyrics(currentTrack, currentTime, seek);
 
   // Filtrado de canciones según el buscador
-  const displayedTracks = useMemo(() => {
+  const displayedTracks = useMemo<WebTrack[]>(() => {
     const sourceList = currentView === 'queue' ? queue : driveTracks;
     if (!searchQuery.trim()) return sourceList;
 

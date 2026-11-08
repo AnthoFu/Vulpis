@@ -2,8 +2,22 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import styles from '../styles/web.styles';
+import { WebTrack } from '../types';
 
 const DEFAULT_COVER = require('../../../assets/default-cover.jpg');
+
+export interface WebTrackListProps {
+  tracks?: WebTrack[];
+  activeTrack?: WebTrack | null;
+  isPlaying?: boolean;
+  isLoadingAudio?: boolean;
+  onPlayTrack: (track: WebTrack, queue: WebTrack[]) => void;
+  onAddToQueue?: (track: WebTrack) => void;
+  onRemoveFromQueue?: (index: number) => void;
+  isQueueView?: boolean;
+  isDriveConnected?: boolean;
+  onOpenDriveModal?: () => void;
+}
 
 export default function WebTrackList({
   tracks = [],
@@ -16,7 +30,7 @@ export default function WebTrackList({
   isQueueView = false,
   isDriveConnected,
   onOpenDriveModal,
-}) {
+}: WebTrackListProps): React.JSX.Element {
   if (tracks.length === 0) {
     return (
       <View style={styles.emptyContainer}>
@@ -35,7 +49,7 @@ export default function WebTrackList({
             ? 'No se encontraron archivos .mp3 en tu carpeta Vulpis de Google Drive. Sube música a tu Drive para verla aquí.'
             : 'Conecta tu cuenta de Google Drive para acceder a tu música en la nube privada.'}
         </Text>
-        {!isDriveConnected && !isQueueView && (
+        {!isDriveConnected && !isQueueView && onOpenDriveModal && (
           <TouchableOpacity style={[styles.btnPrimary, { marginTop: 12, paddingHorizontal: 20 }]} onPress={onOpenDriveModal}>
             <Text style={styles.btnText}>Conectar Google Drive</Text>
           </TouchableOpacity>
@@ -113,7 +127,6 @@ export default function WebTrackList({
                 <TouchableOpacity
                   style={styles.actionIconBtn}
                   onPress={() => onRemoveFromQueue && onRemoveFromQueue(idx)}
-                  title="Quitar de la cola"
                 >
                   <Feather name="trash-2" size={16} color="#EF4444" />
                 </TouchableOpacity>
@@ -122,14 +135,12 @@ export default function WebTrackList({
                   <TouchableOpacity
                     style={styles.actionIconBtn}
                     onPress={() => onAddToQueue && onAddToQueue(track)}
-                    title="Añadir a la cola"
                   >
                     <Feather name="plus-circle" size={16} color="#8E8F9E" />
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.actionIconBtn}
                     onPress={() => onPlayTrack(track, tracks)}
-                    title="Reproducir ahora"
                   >
                     <Feather name="play" size={16} color="#A78BFA" />
                   </TouchableOpacity>

@@ -523,6 +523,6 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     lineHeight: 20,
   },
-});
+} as any);
 
 export default styles;

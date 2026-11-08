@@ -2,15 +2,38 @@ import React, { useRef } from 'react';
 import { View, Text, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import styles from '../styles/web.styles';
+import { WebTrack, WebRepeatMode } from '../types';
 
 const DEFAULT_COVER = require('../../../assets/default-cover.jpg');
 
-const formatTime = (seconds) => {
+const formatTime = (seconds?: number): string => {
   if (!seconds || isNaN(seconds)) return '0:00';
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
 };
+
+export interface WebPlayerBottomBarProps {
+  currentTrack: WebTrack | null;
+  isPlaying: boolean;
+  isLoading: boolean;
+  currentTime?: number;
+  duration?: number;
+  volume?: number;
+  isMuted?: boolean;
+  isShuffle?: boolean;
+  repeatMode?: WebRepeatMode;
+  onTogglePlay: () => void;
+  onNext: () => void;
+  onPrevious: () => void;
+  onSeek: (seconds: number) => void;
+  onSetVolume: (volume: number) => void;
+  onToggleMute: () => void;
+  onToggleShuffle: () => void;
+  onToggleRepeat: () => void;
+  onToggleLyrics: () => void;
+  isLyricsOpen: boolean;
+}
 
 export default function WebPlayerBottomBar({
   currentTrack,
@@ -32,14 +55,14 @@ export default function WebPlayerBottomBar({
   onToggleRepeat,
   onToggleLyrics,
   isLyricsOpen,
-}) {
-  const scrubberRef = useRef(null);
-  const volumeRef = useRef(null);
+}: WebPlayerBottomBarProps): React.JSX.Element {
+  const scrubberRef = useRef<HTMLDivElement | null>(null);
+  const volumeRef = useRef<HTMLDivElement | null>(null);
 
   const progressPercent = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
   const volumePercent = isMuted ? 0 : Math.round(volume * 100);
 
-  const handleScrubberClick = (e) => {
+  const handleScrubberClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!duration || !onSeek) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
@@ -48,7 +71,7 @@ export default function WebPlayerBottomBar({
     onSeek(ratio * duration);
   };
 
-  const handleVolumeClick = (e) => {
+  const handleVolumeClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!onSetVolume) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
@@ -82,7 +105,6 @@ export default function WebPlayerBottomBar({
           <TouchableOpacity
             style={styles.controlBtn}
             onPress={onToggleShuffle}
-            title={isShuffle ? 'Desactivar aleatorio' : 'Activar aleatorio'}
           >
             <Feather
               name="shuffle"
@@ -95,7 +117,6 @@ export default function WebPlayerBottomBar({
           <TouchableOpacity
             style={styles.controlBtn}
             onPress={onPrevious}
-            title="Canción anterior"
           >
             <Ionicons name="play-skip-back" size={20} color="#FFFFFF" />
           </TouchableOpacity>
@@ -104,7 +125,6 @@ export default function WebPlayerBottomBar({
           <TouchableOpacity
             style={styles.playPauseBtn}
             onPress={onTogglePlay}
-            title={isPlaying ? 'Pausar' : 'Reproducir'}
           >
             {isLoading ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
@@ -122,7 +142,6 @@ export default function WebPlayerBottomBar({
           <TouchableOpacity
             style={styles.controlBtn}
             onPress={onNext}
-            title="Siguiente canción"
           >
             <Ionicons name="play-skip-forward" size={20} color="#FFFFFF" />
           </TouchableOpacity>
@@ -131,7 +150,6 @@ export default function WebPlayerBottomBar({
           <TouchableOpacity
             style={styles.controlBtn}
             onPress={onToggleRepeat}
-            title={`Modo de repetición: ${repeatMode}`}
           >
             <MaterialCommunityIcons
               name={
@@ -186,7 +204,6 @@ export default function WebPlayerBottomBar({
         <TouchableOpacity
           style={styles.actionIconBtn}
           onPress={onToggleLyrics}
-          title={isLyricsOpen ? 'Ocultar letras' : 'Ver letras sincronizadas'}
         >
           <MaterialCommunityIcons
             name="card-text-outline"
@@ -197,7 +214,7 @@ export default function WebPlayerBottomBar({
 
         {/* Control de Volumen */}
         <View style={styles.volumeControl}>
-          <TouchableOpacity onPress={onToggleMute} title="Silenciar">
+          <TouchableOpacity onPress={onToggleMute}>
             <Feather
               name={
                 isMuted || volume === 0

@@ -1,9 +1,10 @@
+import { StyleSheet } from 'react-native';
 import { Colors } from '../../constants/colors';
 
 /**
  * Estilos para las filas de pistas individuales, acciones locales y estados vacíos de la biblioteca.
  */
-export const trackItemStyles = {
+export const trackItemStyles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 20,
     paddingBottom: 40,
@@ -196,6 +197,6 @@ export const trackItemStyles = {
     marginTop: 6,
     paddingHorizontal: 20,
   },
-};
+});
 
 export default trackItemStyles;

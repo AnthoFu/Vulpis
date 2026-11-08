@@ -5,12 +5,12 @@ const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
   bottomSheetOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: 'flex-end',
     zIndex: 1000,
   },
   bottomSheetBackdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: Colors.overlayBgAlpha75,
   },
   bottomSheetContent: {

@@ -1,9 +1,10 @@
+import { StyleSheet } from 'react-native';
 import { Colors } from '../../constants/colors';
 
 /**
  * Estilos para las listas de reproducción (Playlists), vistas de detalle y tarjetas destacadas (Hero Card).
  */
-export const playlistsTabStyles = {
+export const playlistsTabStyles = StyleSheet.create({
   playlistDetailContainer: {
     flex: 1,
   },
@@ -260,6 +261,6 @@ export const playlistsTabStyles = {
     alignItems: 'center',
     marginLeft: 8,
   },
-};
+});
 
 export default playlistsTabStyles;

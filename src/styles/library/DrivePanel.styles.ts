@@ -1,9 +1,10 @@
+import { StyleSheet } from 'react-native';
 import { Colors } from '../../constants/colors';
 
 /**
  * Estilos para el panel de Google Drive (estado de conexión, subida, refresco y sincronización).
  */
-export const drivePanelStyles = {
+export const drivePanelStyles = StyleSheet.create({
   driveHeaderBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -142,6 +143,6 @@ export const drivePanelStyles = {
     fontSize: 15,
     fontWeight: '700',
   },
-};
+});
 
 export default drivePanelStyles;

@@ -170,6 +170,14 @@
   - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores) y empaquetado Expo (`npx expo export -p android --no-minify`, 826 módulos).
   - [x] Incremento de versión del proyecto a `0.5.21` en `app.config.js`.
 
+- [x] **Fase 7 de Migración a TypeScript — Hojas de Estilo (`src/styles/`):**
+  - [x] Migración de los 8 módulos de estilo de biblioteca en `src/styles/library/` (`Tabs`, `SearchBar`, `TrackItem`, `DrivePanel`, `PlaylistsTab`, `LibraryModals`, `ArtistsTab`, `AlbumsTab`).
+  - [x] Migración del compositor de biblioteca `QueueList.styles.ts`.
+  - [x] Migración de estilos de componentes y modales principales: `App.styles.ts`, `Header.styles.ts`, `MiniPlayer.styles.ts`, `Controls.styles.ts`, `ProgressBar.styles.ts`, `SidebarDrawer.styles.ts`, `PlayerCard.styles.ts`, `QueueSheet.styles.ts`, `SettingsModal.styles.ts`, `EditLyricsModal.styles.ts`, `SleepTimerModal.styles.ts`.
+  - [x] Corrección de tipado estricto para `StyleSheet.absoluteFill` en `QueueSheet.styles.ts`.
+  - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores) y empaquetado Expo (`npx expo export -p android --no-minify`, 826 módulos).
+  - [x] Incremento de versión del proyecto a `0.5.22` en `app.config.js`.
+
 ---
 
 # Mejoras por hacer

@@ -1,9 +1,10 @@
+import { StyleSheet } from 'react-native';
 import { Colors } from '../../constants/colors';
 
 /**
  * Estilos para los modales de la biblioteca (Opciones de pista y Selector de lista de reproducción).
  */
-export const libraryModalsStyles = {
+export const libraryModalsStyles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: Colors.overlayAlpha70,
@@ -199,6 +200,6 @@ export const libraryModalsStyles = {
     fontSize: 11,
     fontWeight: '700',
   },
-};
+});
 
 export default libraryModalsStyles;

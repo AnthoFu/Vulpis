@@ -1,9 +1,10 @@
+import { StyleSheet } from 'react-native';
 import { Colors } from '../../constants/colors';
 
 /**
  * Estilos para los botones y barra de pestañas de la biblioteca (Canciones, Artistas, Álbumes, Playlists).
  */
-export const tabsStyles = {
+export const tabsStyles = StyleSheet.create({
   tabsContainer: {
     marginTop: 10,
     marginBottom: 12,
@@ -58,6 +59,6 @@ export const tabsStyles = {
   tabCountTextActive: {
     color: Colors.white,
   },
-};
+});
 
 export default tabsStyles;

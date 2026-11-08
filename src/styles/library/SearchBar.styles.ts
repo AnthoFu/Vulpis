@@ -1,9 +1,10 @@
+import { StyleSheet } from 'react-native';
 import { Colors } from '../../constants/colors';
 
 /**
  * Estilos para la barra de búsqueda y el menú desplegable estilo Odoo en la biblioteca.
  */
-export const searchBarStyles = {
+export const searchBarStyles = StyleSheet.create({
   searchSection: {
     marginTop: 12,
     marginBottom: 16,
@@ -223,6 +224,6 @@ export const searchBarStyles = {
     fontSize: 12,
     fontWeight: '700',
   },
-};
+});
 
 export default searchBarStyles;

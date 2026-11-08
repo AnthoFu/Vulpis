@@ -1,10 +1,11 @@
+import { StyleSheet } from 'react-native';
 import { Colors } from '../../constants/colors';
 
 /**
- * Estilos para la pestaña de Álbumes, cuadrículas, tarjetas destacadas (Hero Card) e insignias de número de pista.
+ * Estilos para la pestaña de Artistas, avatares, tarjetas de detalle y árbol de canciones por álbum.
  */
-export const albumsTabStyles = {
-  albumRow: {
+export const artistsTabStyles = StyleSheet.create({
+  artistRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -15,48 +16,44 @@ export const albumsTabStyles = {
     borderWidth: 1,
     borderColor: Colors.borderWhiteAlpha04,
   },
-  albumRowMain: {
+  artistRowMain: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
-  albumArtworkContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 10,
+  artistAvatarContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     marginRight: 14,
     overflow: 'hidden',
     backgroundColor: Colors.bgPlaceholder,
   },
-  albumArtworkImage: {
+  artistAvatarImage: {
     width: '100%',
     height: '100%',
   },
-  albumArtworkFallback: {
+  artistAvatarFallback: {
     width: '100%',
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: Colors.bgPlaceholder,
   },
-  albumRowDetails: {
+  artistRowDetails: {
     flex: 1,
   },
-  albumRowTitle: {
+  artistRowName: {
     color: Colors.textSecondary,
     fontSize: 15,
     fontWeight: '700',
     marginBottom: 3,
   },
-  albumRowArtist: {
+  artistRowSub: {
     color: Colors.textTertiary,
     fontSize: 12,
-    marginBottom: 2,
   },
-  albumRowSub: {
-    color: Colors.textMuted,
-    fontSize: 11,
-  },
-  albumHeroCard: {
+  artistHeroCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.bgCard,
@@ -66,52 +63,56 @@ export const albumsTabStyles = {
     borderWidth: 1,
     borderColor: Colors.accentAlpha15,
   },
-  albumHeroArtworkContainer: {
-    width: 76,
-    height: 76,
-    borderRadius: 12,
+  artistHeroAvatarContainer: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     marginRight: 16,
     overflow: 'hidden',
     backgroundColor: Colors.bgPlaceholder,
   },
-  albumHeroArtworkImage: {
+  artistHeroAvatarImage: {
     width: '100%',
     height: '100%',
   },
-  albumHeroDetails: {
+  artistHeroDetails: {
     flex: 1,
   },
-  albumHeroTitle: {
+  artistHeroName: {
     color: Colors.white,
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: '800',
     marginBottom: 3,
   },
-  albumHeroArtist: {
-    color: Colors.accentLight,
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 3,
-  },
-  albumHeroCount: {
+  artistHeroCount: {
     color: Colors.textTertiary,
     fontSize: 12,
     marginBottom: 10,
   },
-  trackNumberBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: Colors.surfaceWhiteAlpha05,
-    justifyContent: 'center',
+  artistTreeSectionHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 12,
+    justifyContent: 'space-between',
+    marginTop: 14,
+    marginBottom: 8,
+    paddingHorizontal: 4,
   },
-  trackNumberText: {
-    color: Colors.textTertiary,
-    fontSize: 11,
+  artistTreeSectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  artistTreeSectionTitle: {
+    color: Colors.accentLight,
+    fontSize: 13,
     fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-};
+  artistTreeSectionCount: {
+    color: Colors.textMuted,
+    fontSize: 12,
+  },
+});
 
-export default albumsTabStyles;
+export default artistsTabStyles;

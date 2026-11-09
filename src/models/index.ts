@@ -11,5 +11,8 @@ export * from './Playlist';
 // Configuraciones Acústicas (ReplayGain, Crossfade, Letras)
 export * from './AudioSettings';
 
+// Configuración del Ecualizador de Audio
+export * from './EqualizerSettings';
+
 // Configuración de Ordenamiento Multicriterio
 export * from './SortOptions';

@@ -30,6 +30,8 @@ export * from './usePlaylists';
 // Efectos de audio y utilidades
 export { default as useAudioSettings } from './useAudioSettings';
 export * from './useAudioSettings';
+export { default as useEqualizer } from './useEqualizer';
+export * from './useEqualizer';
 export { default as useSleepTimer } from './useSleepTimer';
 export * from './useSleepTimer';
 export { default as useSyncedLyrics } from './useSyncedLyrics';

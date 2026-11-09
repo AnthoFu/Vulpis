@@ -189,6 +189,15 @@
   - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores), compilación web limpia (`npm run build:web`, 299 módulos) y empaquetado Expo nativo (`npx expo export -p android --no-minify`, 826 módulos).
   - [x] Incremento de versión del proyecto a `0.5.23` en `app.config.js`.
 
+- [x] **Ecualizador de Audio (EQ) — Modelo de Dominio e Interfaz Visual (Fase 1):**
+  - [x] Modelo de dominio `EqualizerSettings.ts` con 5 bandas estándar (60 Hz, 230 Hz, 910 Hz, 3.6 kHz, 14 kHz), refuerzo de graves (*Bass Boost*) y catálogo de 10 presets acústicos calibrados (Plano, Refuerzo de Graves, Rock, Pop, Jazz, Clásica, Electrónica/Dance, Vocal, Acústica, Personalizado).
+  - [x] Módulo de utilidades y persistencia `equalizer.ts` en AsyncStorage (`vulpis_equalizer_settings`) con validación defensiva de rangos (-10 dB a +10 dB) y detección automática de presets.
+  - [x] Custom hook reactivo `useEqualizer.ts` con control de ganancia por banda, alternador general, selección de preset y restablecimiento.
+  - [x] Interfaz modal interactiva `EqualizerModal.tsx` con sliders táctiles (`@react-native-community/slider`), badges de ganancia con código de color dinámico (boost/cut), selector horizontal de chips de presets y control de refuerzo de graves.
+  - [x] Sección modular `EqualizerSection.tsx` en `SettingsModal.tsx` para acceso rápido y conmutador directo.
+  - [x] Integración en `PlayerContext`, `useAppController.ts` y montaje en la vista raíz `App.tsx`.
+  - [x] Incremento de versión del proyecto a `0.5.24` en `app.config.js`.
+
 ---
 
 # Mejoras por hacer

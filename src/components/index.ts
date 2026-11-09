@@ -43,6 +43,8 @@ export { default as PlaylistPickerModal } from './modals/PlaylistPickerModal';
 export * from './modals/PlaylistPickerModal';
 export { default as SortModal } from './modals/SortModal';
 export * from './modals/SortModal';
+export { default as EqualizerModal } from './modals/EqualizerModal';
+export * from './modals/EqualizerModal';
 
 // Biblioteca musical
 export { default as QueueList } from './library/QueueList';

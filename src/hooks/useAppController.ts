@@ -14,6 +14,7 @@ import useLocalLibrary from './useLocalLibrary';
 import useGoogleDrive from './useGoogleDrive';
 import useSleepTimer, { SleepTimerMode } from './useSleepTimer';
 import useAudioSettings from './useAudioSettings';
+import useEqualizer from './useEqualizer';
 import usePlayerPersistence from './usePlayerPersistence';
 import useQueueController from './useQueueController';
 import useDrivePrefetch from './useDrivePrefetch';
@@ -23,6 +24,7 @@ import usePlayerStateSync, { ProgressState } from './usePlayerStateSync';
 import { Track } from '../models/Track';
 import { Playlist } from '../models/Playlist';
 import { CrossfadeSettings, ReplayGainSettings } from '../models/AudioSettings';
+import { EqualizerSettings, EqualizerPresetId } from '../models/EqualizerSettings';
 
 export type AudioSource = 'local' | 'private' | string;
 
@@ -94,6 +96,14 @@ export interface AppControllerResult {
   handleUpdateCrossfade: (newSettings: CrossfadeSettings) => Promise<void>;
   replayGainSettings: ReplayGainSettings;
   handleUpdateReplayGain: (newSettings: ReplayGainSettings) => Promise<void>;
+  equalizerSettings: EqualizerSettings;
+  isEqualizerOpen: boolean;
+  setIsEqualizerOpen: Dispatch<SetStateAction<boolean>>;
+  handleToggleEqualizer: (enabled: boolean) => Promise<void>;
+  handleSelectPreset: (presetId: EqualizerPresetId) => Promise<void>;
+  handleUpdateBandGain: (bandIndex: number, gain: number) => Promise<void>;
+  handleUpdateBassBoost: (bassBoost: number) => Promise<void>;
+  handleResetEqualizer: () => Promise<void>;
 }
 
 /**
@@ -160,6 +170,18 @@ export default function useAppController(): AppControllerResult {
     replayGainSettingsRef,
     handleUpdateReplayGain,
   } = useAudioSettings({ activeTrack, showToast });
+
+  // Hook de ecualizador acústico de 5 bandas
+  const {
+    equalizerSettings,
+    isEqualizerOpen,
+    setIsEqualizerOpen,
+    handleToggleEqualizer,
+    handleSelectPreset,
+    handleUpdateBandGain,
+    handleUpdateBassBoost,
+    handleResetEqualizer,
+  } = useEqualizer({ showToast });
 
   // Hook de temporizador de apagado (Sleep Timer)
   const {
@@ -498,5 +520,13 @@ export default function useAppController(): AppControllerResult {
     handleUpdateCrossfade,
     replayGainSettings,
     handleUpdateReplayGain,
+    equalizerSettings,
+    isEqualizerOpen,
+    setIsEqualizerOpen,
+    handleToggleEqualizer,
+    handleSelectPreset,
+    handleUpdateBandGain,
+    handleUpdateBassBoost,
+    handleResetEqualizer,
   };
 }

@@ -15,6 +15,7 @@ import {
   QueueList,
   SidebarDrawer,
   SettingsModal,
+  EqualizerModal,
 } from './src/components';
 import { PlayerProvider, usePlayer } from './src/context';
 
@@ -30,6 +31,14 @@ function MainApp(): React.JSX.Element {
     isFullPlayerVisible,
     setIsFullPlayerVisible,
     toast,
+    equalizerSettings,
+    isEqualizerOpen,
+    setIsEqualizerOpen,
+    handleToggleEqualizer,
+    handleSelectPreset,
+    handleUpdateBandGain,
+    handleUpdateBassBoost,
+    handleResetEqualizer,
   } = usePlayer();
 
   if (!isPlayerInitialized) {
@@ -81,6 +90,18 @@ function MainApp(): React.JSX.Element {
 
       {/* Modal de Ajustes generales */}
       <SettingsModal />
+
+      {/* Modal del Ecualizador de Audio */}
+      <EqualizerModal
+        visible={isEqualizerOpen}
+        onClose={() => setIsEqualizerOpen(false)}
+        settings={equalizerSettings}
+        onToggle={handleToggleEqualizer}
+        onSelectPreset={handleSelectPreset}
+        onUpdateBandGain={handleUpdateBandGain}
+        onUpdateBassBoost={handleUpdateBassBoost}
+        onReset={handleResetEqualizer}
+      />
     </View>
   );
 }

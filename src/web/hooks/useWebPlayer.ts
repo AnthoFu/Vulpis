@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import webPlayer from '../services/webAudioPlayer';
 import { WebTrack, WebPlayerState } from '../types';
+import { EqualizerPresetId } from '../../models/EqualizerSettings';
 
 export interface UseWebPlayerReturn extends WebPlayerState {
   playTrack: (track: WebTrack, queue?: WebTrack[] | null) => void;
@@ -14,6 +15,12 @@ export interface UseWebPlayerReturn extends WebPlayerState {
   toggleRepeat: () => void;
   addToQueue: (track: WebTrack) => void;
   removeFromQueue: (index: number) => void;
+  // Métodos del Ecualizador
+  handleToggleEqualizer: (enabled?: boolean) => Promise<void>;
+  handleSelectPreset: (presetId: EqualizerPresetId) => Promise<void>;
+  handleUpdateBandGain: (bandIndex: number, gain: number) => Promise<void>;
+  handleUpdateBassBoost: (bassBoost: number) => Promise<void>;
+  handleResetEqualizer: () => Promise<void>;
 }
 
 export default function useWebPlayer(): UseWebPlayerReturn {
@@ -70,6 +77,27 @@ export default function useWebPlayer(): UseWebPlayerReturn {
     webPlayer.removeFromQueue(index);
   }, []);
 
+  // Controladores acústicos del ecualizador
+  const handleToggleEqualizer = useCallback(async (enabled?: boolean) => {
+    await webPlayer.toggleEqualizer(enabled);
+  }, []);
+
+  const handleSelectPreset = useCallback(async (presetId: EqualizerPresetId) => {
+    await webPlayer.setEqualizerPreset(presetId);
+  }, []);
+
+  const handleUpdateBandGain = useCallback(async (bandIndex: number, gain: number) => {
+    await webPlayer.updateBandGain(bandIndex, gain);
+  }, []);
+
+  const handleUpdateBassBoost = useCallback(async (bassBoost: number) => {
+    await webPlayer.updateBassBoost(bassBoost);
+  }, []);
+
+  const handleResetEqualizer = useCallback(async () => {
+    await webPlayer.resetEqualizer();
+  }, []);
+
   return {
     ...state,
     playTrack,
@@ -83,5 +111,10 @@ export default function useWebPlayer(): UseWebPlayerReturn {
     toggleRepeat,
     addToQueue,
     removeFromQueue,
+    handleToggleEqualizer,
+    handleSelectPreset,
+    handleUpdateBandGain,
+    handleUpdateBassBoost,
+    handleResetEqualizer,
   };
 }

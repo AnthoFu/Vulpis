@@ -2,6 +2,8 @@
  * Definiciones de tipos e interfaces para la versión Web de Vulpis.
  */
 
+import { EqualizerSettings } from '../models/EqualizerSettings';
+
 export interface WebTrack {
   id: string;
   mediaId: string;
@@ -43,6 +45,7 @@ export interface WebPlayerState {
   isMuted: boolean;
   isShuffle: boolean;
   repeatMode: WebRepeatMode;
+  equalizerSettings: EqualizerSettings;
 }
 
 export interface WebGoogleConfig {

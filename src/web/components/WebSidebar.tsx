@@ -10,6 +10,8 @@ export interface WebSidebarProps {
   driveTrackCount?: number;
   onToggleLyrics: () => void;
   isLyricsOpen: boolean;
+  onToggleEqualizer?: () => void;
+  isEqualizerOpen?: boolean;
 }
 
 export default function WebSidebar({
@@ -19,6 +21,8 @@ export default function WebSidebar({
   driveTrackCount = 0,
   onToggleLyrics,
   isLyricsOpen,
+  onToggleEqualizer,
+  isEqualizerOpen = false,
 }: WebSidebarProps): React.JSX.Element {
   return (
     <View style={styles.sidebar}>
@@ -94,6 +98,31 @@ export default function WebSidebar({
           Letras Sincronizadas
         </Text>
       </TouchableOpacity>
+
+      {/* Ecualizador de Audio */}
+      {onToggleEqualizer && (
+        <TouchableOpacity
+          style={[
+            styles.sidebarItem,
+            isEqualizerOpen && styles.sidebarItemActive,
+          ]}
+          onPress={onToggleEqualizer}
+        >
+          <MaterialCommunityIcons
+            name="tune-vertical"
+            size={18}
+            color={isEqualizerOpen ? '#A78BFA' : '#8E8F9E'}
+          />
+          <Text
+            style={[
+              styles.sidebarItemText,
+              isEqualizerOpen && styles.sidebarItemTextActive,
+            ]}
+          >
+            Ecualizador
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }

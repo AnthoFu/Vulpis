@@ -14,12 +14,14 @@ import WebTrackList from './components/WebTrackList';
 import WebPlayerBottomBar from './components/WebPlayerBottomBar';
 import WebLyricsPanel from './components/WebLyricsPanel';
 import WebDriveModal from './components/WebDriveModal';
+import EqualizerModal from '../components/modals/EqualizerModal';
 import { WebTrack } from './types';
 
 export default function WebApp(): React.JSX.Element {
   const [currentView, setCurrentView] = useState<'drive' | 'queue'>('drive');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isDriveModalOpen, setIsDriveModalOpen] = useState<boolean>(false);
+  const [isEqualizerOpen, setIsEqualizerOpen] = useState<boolean>(false);
 
   // Hook del reproductor de audio web
   const {
@@ -33,6 +35,7 @@ export default function WebApp(): React.JSX.Element {
     isMuted,
     isShuffle,
     repeatMode,
+    equalizerSettings,
     playTrack,
     togglePlay,
     seek,
@@ -44,6 +47,11 @@ export default function WebApp(): React.JSX.Element {
     toggleRepeat,
     addToQueue,
     removeFromQueue,
+    handleToggleEqualizer,
+    handleSelectPreset,
+    handleUpdateBandGain,
+    handleUpdateBassBoost,
+    handleResetEqualizer,
   } = useWebPlayer();
 
   // Hook de Google Drive
@@ -102,6 +110,8 @@ export default function WebApp(): React.JSX.Element {
           driveTrackCount={driveTracks.length}
           onToggleLyrics={toggleLyrics}
           isLyricsOpen={isLyricsOpen}
+          onToggleEqualizer={() => setIsEqualizerOpen((prev) => !prev)}
+          isEqualizerOpen={isEqualizerOpen}
         />
 
         {/* Área Principal de Contenido */}
@@ -176,6 +186,9 @@ export default function WebApp(): React.JSX.Element {
         onToggleRepeat={toggleRepeat}
         onToggleLyrics={toggleLyrics}
         isLyricsOpen={isLyricsOpen}
+        onToggleEqualizer={() => setIsEqualizerOpen((prev) => !prev)}
+        isEqualizerOpen={isEqualizerOpen}
+        isEqualizerEnabled={equalizerSettings?.enabled ?? false}
       />
 
       {/* 5. Modal de Conexión de Google Drive */}
@@ -192,6 +205,18 @@ export default function WebApp(): React.JSX.Element {
         }}
         isLoading={isLoadingDrive}
         errorMessage={driveError}
+      />
+
+      {/* 6. Modal del Ecualizador de Audio */}
+      <EqualizerModal
+        visible={isEqualizerOpen}
+        onClose={() => setIsEqualizerOpen(false)}
+        settings={equalizerSettings}
+        onToggle={handleToggleEqualizer}
+        onSelectPreset={handleSelectPreset}
+        onUpdateBandGain={handleUpdateBandGain}
+        onUpdateBassBoost={handleUpdateBassBoost}
+        onReset={handleResetEqualizer}
       />
     </View>
   );

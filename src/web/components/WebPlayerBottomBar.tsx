@@ -33,6 +33,9 @@ export interface WebPlayerBottomBarProps {
   onToggleRepeat: () => void;
   onToggleLyrics: () => void;
   isLyricsOpen: boolean;
+  onToggleEqualizer?: () => void;
+  isEqualizerOpen?: boolean;
+  isEqualizerEnabled?: boolean;
 }
 
 export default function WebPlayerBottomBar({
@@ -55,6 +58,9 @@ export default function WebPlayerBottomBar({
   onToggleRepeat,
   onToggleLyrics,
   isLyricsOpen,
+  onToggleEqualizer,
+  isEqualizerOpen = false,
+  isEqualizerEnabled = false,
 }: WebPlayerBottomBarProps): React.JSX.Element {
   const scrubberRef = useRef<HTMLDivElement | null>(null);
   const volumeRef = useRef<HTMLDivElement | null>(null);
@@ -200,6 +206,20 @@ export default function WebPlayerBottomBar({
 
       {/* 3. Controles Laterales Derechos (Volumen y Letras) */}
       <View style={styles.playerRightControls}>
+        {/* Botón de Ecualizador */}
+        {onToggleEqualizer && (
+          <TouchableOpacity
+            style={styles.actionIconBtn}
+            onPress={onToggleEqualizer}
+          >
+            <MaterialCommunityIcons
+              name="tune-vertical"
+              size={20}
+              color={isEqualizerOpen || isEqualizerEnabled ? '#A78BFA' : '#8E8F9E'}
+            />
+          </TouchableOpacity>
+        )}
+
         {/* Botón de Letras */}
         <TouchableOpacity
           style={styles.actionIconBtn}

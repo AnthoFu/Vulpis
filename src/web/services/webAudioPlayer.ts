@@ -1,10 +1,22 @@
 /**
  * Motor de Audio para la versión Web de Vulpis.
  * Envuelve el elemento HTML5 <audio> con gestión completa de cola,
- * shuffle, repeat, buffering y notificaciones de estado.
+ * shuffle, repeat, buffering, notificaciones de estado y procesamiento
+ * acústico en tiempo real con Web Audio API (BiquadFilterNode para 5 bandas + Bass Boost).
  */
 
 import { WebTrack, WebPlayerState, WebRepeatMode } from '../types';
+import {
+  EqualizerSettings,
+  EqualizerPresetId,
+  DEFAULT_EQUALIZER_SETTINGS,
+} from '../../models/EqualizerSettings';
+import {
+  getEqualizerSettings,
+  saveEqualizerSettings,
+  applyPresetToBands,
+  detectPresetFromGains,
+} from '../../utils/equalizer';
 
 export class WebAudioPlayer {
   private audio: HTMLAudioElement | null;
@@ -22,6 +34,13 @@ export class WebAudioPlayer {
   private repeatMode: WebRepeatMode;
   private listeners: Set<(state: WebPlayerState) => void>;
   private driveTokenGetter: (() => string | null) | null;
+
+  // Nodos y contexto de la Web Audio API
+  private audioCtx: AudioContext | null = null;
+  private sourceNode: MediaElementAudioSourceNode | null = null;
+  private bassBoostNode: BiquadFilterNode | null = null;
+  private bandNodes: BiquadFilterNode[] = [];
+  private equalizerSettings: EqualizerSettings = DEFAULT_EQUALIZER_SETTINGS;
 
   constructor() {
     this.audio = typeof Audio !== 'undefined' ? new Audio() : null;
@@ -43,10 +62,90 @@ export class WebAudioPlayer {
     if (this.audio) {
       this._setupAudioListeners();
     }
+
+    // Cargar configuración guardada del ecualizador
+    if (typeof window !== 'undefined') {
+      getEqualizerSettings().then((loaded) => {
+        this.equalizerSettings = loaded;
+        this._applyEqualizerToNodes();
+        this._notify();
+      });
+    }
   }
 
   setDriveTokenGetter(fn: () => string | null): void {
     this.driveTokenGetter = fn;
+  }
+
+  /**
+   * Inicializa de forma perezosa el grafo de Web Audio API ante el primer gesto del usuario.
+   */
+  private _initAudioContext(): void {
+    if (typeof window === 'undefined' || !this.audio || this.audioCtx) return;
+
+    const AudioContextClass =
+      window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) return;
+
+    try {
+      this.audioCtx = new AudioContextClass();
+      this.sourceNode = this.audioCtx.createMediaElementSource(this.audio);
+
+      // Filtro de refuerzo de graves (lowshelf centrado en 80 Hz)
+      this.bassBoostNode = this.audioCtx.createBiquadFilter();
+      this.bassBoostNode.type = 'lowshelf';
+      this.bassBoostNode.frequency.value = 80;
+      this.bassBoostNode.gain.value = 0;
+
+      // 5 Bandas de frecuencia estándar: 60Hz, 230Hz, 910Hz, 3600Hz, 14000Hz
+      const freqs = [60, 230, 910, 3600, 14000];
+      this.bandNodes = freqs.map((freq, index) => {
+        const filter = this.audioCtx!.createBiquadFilter();
+        filter.type = index === 0 ? 'lowshelf' : index === 4 ? 'highshelf' : 'peaking';
+        filter.frequency.value = freq;
+        filter.Q.value = 1.0;
+        filter.gain.value = 0;
+        return filter;
+      });
+
+      // Conexión en cascada: source -> bassBoost -> band0 -> band1 -> band2 -> band3 -> band4 -> destination
+      let currentChain: AudioNode = this.sourceNode;
+      currentChain.connect(this.bassBoostNode);
+      currentChain = this.bassBoostNode;
+
+      for (const bandNode of this.bandNodes) {
+        currentChain.connect(bandNode);
+        currentChain = bandNode;
+      }
+
+      currentChain.connect(this.audioCtx.destination);
+      this._applyEqualizerToNodes();
+    } catch (err) {
+      console.warn('[WebAudioPlayer] Error al inicializar Web Audio API:', err);
+    }
+  }
+
+  /**
+   * Aplica las ganancias de las bandas y refuerzo de graves a los nodos de audio activos
+   * usando rampa suave exponencial (setTargetAtTime) para evitar chasquidos acústicos.
+   */
+  private _applyEqualizerToNodes(): void {
+    if (!this.audioCtx || this.bandNodes.length === 0) return;
+
+    const isEnabled = this.equalizerSettings.enabled;
+    const now = this.audioCtx.currentTime;
+
+    // 1. Refuerzo de graves (Bass Boost)
+    if (this.bassBoostNode) {
+      const targetBass = isEnabled ? this.equalizerSettings.bassBoost : 0;
+      this.bassBoostNode.gain.setTargetAtTime(targetBass, now, 0.05);
+    }
+
+    // 2. 5 Bandas de frecuencia
+    this.bandNodes.forEach((node, idx) => {
+      const targetGain = isEnabled ? (this.equalizerSettings.bands[idx]?.gain ?? 0) : 0;
+      node.gain.setTargetAtTime(targetGain, now, 0.05);
+    });
   }
 
   private _setupAudioListeners(): void {
@@ -149,6 +248,7 @@ export class WebAudioPlayer {
       isMuted: this.isMuted,
       isShuffle: this.isShuffle,
       repeatMode: this.repeatMode,
+      equalizerSettings: this.equalizerSettings,
     };
   }
 
@@ -199,6 +299,13 @@ export class WebAudioPlayer {
       if (this.audio) {
         this.audio.src = audioUrl;
         this.audio.load();
+
+        // Inicializar y reanudar Web Audio API
+        this._initAudioContext();
+        if (this.audioCtx && this.audioCtx.state === 'suspended') {
+          await this.audioCtx.resume();
+        }
+
         await this.audio.play();
       }
     } catch (err) {
@@ -218,6 +325,12 @@ export class WebAudioPlayer {
 
   togglePlay(): void {
     if (!this.audio || !this.currentTrack) return;
+
+    this._initAudioContext();
+    if (this.audioCtx && this.audioCtx.state === 'suspended') {
+      this.audioCtx.resume().catch(console.warn);
+    }
+
     if (this.isPlaying) {
       this.audio.pause();
     } else {
@@ -309,6 +422,77 @@ export class WebAudioPlayer {
       }
       this._notify();
     }
+  }
+
+  // ==========================================
+  // Métodos del Ecualizador de Audio (Web)
+  // ==========================================
+
+  getEqualizerSettings(): EqualizerSettings {
+    return this.equalizerSettings;
+  }
+
+  async setEqualizerSettings(settings: EqualizerSettings): Promise<void> {
+    this.equalizerSettings = settings;
+    this._applyEqualizerToNodes();
+    this._notify();
+    await saveEqualizerSettings(settings);
+  }
+
+  async toggleEqualizer(enabled?: boolean): Promise<void> {
+    const nextEnabled = enabled !== undefined ? enabled : !this.equalizerSettings.enabled;
+    const updated: EqualizerSettings = {
+      ...this.equalizerSettings,
+      enabled: nextEnabled,
+    };
+    await this.setEqualizerSettings(updated);
+  }
+
+  async setEqualizerPreset(presetId: EqualizerPresetId): Promise<void> {
+    const { bands, bassBoost } = applyPresetToBands(presetId);
+    const updated: EqualizerSettings = {
+      ...this.equalizerSettings,
+      presetId,
+      bands,
+      bassBoost,
+    };
+    await this.setEqualizerSettings(updated);
+  }
+
+  async updateBandGain(bandIndex: number, gain: number): Promise<void> {
+    const clamped = Math.round(Math.max(-10, Math.min(10, gain)));
+    const updatedBands = this.equalizerSettings.bands.map((b, idx) =>
+      idx === bandIndex ? { ...b, gain: clamped } : b
+    );
+    const detectedPreset = detectPresetFromGains(updatedBands, this.equalizerSettings.bassBoost);
+    const updated: EqualizerSettings = {
+      ...this.equalizerSettings,
+      bands: updatedBands,
+      presetId: detectedPreset,
+    };
+    await this.setEqualizerSettings(updated);
+  }
+
+  async updateBassBoost(bassBoost: number): Promise<void> {
+    const clamped = Math.round(Math.max(0, Math.min(10, bassBoost)));
+    const detectedPreset = detectPresetFromGains(this.equalizerSettings.bands, clamped);
+    const updated: EqualizerSettings = {
+      ...this.equalizerSettings,
+      bassBoost: clamped,
+      presetId: detectedPreset,
+    };
+    await this.setEqualizerSettings(updated);
+  }
+
+  async resetEqualizer(): Promise<void> {
+    const { bands, bassBoost } = applyPresetToBands('flat');
+    const updated: EqualizerSettings = {
+      ...this.equalizerSettings,
+      presetId: 'flat',
+      bands,
+      bassBoost,
+    };
+    await this.setEqualizerSettings(updated);
   }
 
   private _shuffleArray<T>(arr: T[]): T[] {

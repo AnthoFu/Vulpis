@@ -198,6 +198,14 @@
   - [x] Integración en `PlayerContext`, `useAppController.ts` y montaje en la vista raíz `App.tsx`.
   - [x] Incremento de versión del proyecto a `0.5.24` en `app.config.js`.
 
+- [x] **Ecualizador de Audio (EQ) — Procesamiento Acústico Web Audio API (Fase 2):**
+  - [x] Inicialización perezosa y segura del grafo de audio con `AudioContext` y `createMediaElementSource` sobre el elemento HTML5 `<audio>`.
+  - [x] Cadena de nodos `BiquadFilterNode` en serie: filtro `lowshelf` para Bass Boost a 80 Hz + 5 filtros (`lowshelf` a 60 Hz, `peaking` a 230 Hz, 910 Hz y 3600 Hz, `highshelf` a 14 kHz) conectados a `audioCtx.destination`.
+  - [x] Rampa de volumen y ganancia exponencial sin artefactos acústicos (`setTargetAtTime(target, now, 0.05)`).
+  - [x] Integración en `WebAudioPlayer.ts`, reactividad completa en `useWebPlayer.ts`, botón en `WebPlayerBottomBar.tsx`, acceso en `WebSidebar.tsx` y modal `EqualizerModal` en `App.tsx`.
+  - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores), compilación web limpia (`npm run build:web`, 462 módulos) y empaquetado Expo nativo (`npx expo export -p android --no-minify`, 832 módulos).
+  - [x] Incremento de versión del proyecto a `0.5.25` en `app.config.js`.
+
 ---
 
 # Mejoras por hacer

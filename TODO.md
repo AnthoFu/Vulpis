@@ -206,11 +206,21 @@
   - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores), compilación web limpia (`npm run build:web`, 462 módulos) y empaquetado Expo nativo (`npx expo export -p android --no-minify`, 832 módulos).
   - [x] Incremento de versión del proyecto a `0.5.25` en `app.config.js`.
 
+- [x] **Ecualizador de Audio (EQ) — Puente Nativo para Android con ExoPlayer (Fase 3):**
+  - [x] Script de postinstalación `scripts/patch-track-player.js` idempotente en `package.json` que expone `activeAudioSessionId` y `activeInstance` en `TrackPlayerPlaybackService.kt` de `@rntp/player` y emite broadcasts del sistema `ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION`.
+  - [x] Módulo nativo Kotlin `VulpisEqualizerModule.kt` que controla `android.media.audiofx.Equalizer` y `android.media.audiofx.BassBoost` con memoria de ajustes previa para acoplamiento automático sobre la sesión activa de ExoPlayer.
+  - [x] Apertura del panel de efectos del sistema con `ACTION_DISPLAY_AUDIO_EFFECT_CONTROL_PANEL` (compatible con Wavelet, Dolby Atmos, Samsung SoundAlive).
+  - [x] Plugin de configuración Expo `plugins/withVulpisEqualizer.js` para generación prebuild limpia y reproducible.
+  - [x] Adaptador TypeScript `src/services/audio/nativeEqualizer.ts` y barrel exports en `src/services/audio/index.ts` y `src/services/index.ts`.
+  - [x] Conexión reactiva en `useEqualizer.ts`, `usePlayerStateSync.ts`, `useAppController.ts`, `EqualizerModal.tsx` y `App.tsx`.
+  - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores), compilación web limpia (`npm run build:web`, 450 módulos) y empaquetado Expo nativo (`npx expo export -p android --no-minify`, 834 módulos).
+  - [x] Incremento de versión del proyecto a `0.5.26` en `app.config.js`.
+
 ---
 
 # Mejoras por hacer
 
-- [ ] **Ecualizador de Audio (EQ):** Ecualizador con presets integrados (Rock, Pop, Jazz, Bass Boost, etc.).
+- [x] **Ecualizador de Audio (EQ):** Ecualizador de 5 bandas, Bass Boost, presets calibrados, soporte Web Audio API y puente nativo Android ExoPlayer.
 - [x] **Ordenamiento Multicriterio:** Opción para ordenar listas por Nombre, Artista, Duración y Fecha de adición.
 - [ ] **Exportación e Importación de Playlists:** Respaldar y compartir listas de reproducción en formato `.m3u` o `.json`.
 - [ ] **Historial de Reproducción:** Sección para consultar las canciones escuchadas recientemente.

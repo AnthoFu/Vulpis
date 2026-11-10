@@ -99,11 +99,13 @@ export interface AppControllerResult {
   equalizerSettings: EqualizerSettings;
   isEqualizerOpen: boolean;
   setIsEqualizerOpen: Dispatch<SetStateAction<boolean>>;
+  isSystemEqualizerAvailable: boolean;
   handleToggleEqualizer: (enabled: boolean) => Promise<void>;
   handleSelectPreset: (presetId: EqualizerPresetId) => Promise<void>;
   handleUpdateBandGain: (bandIndex: number, gain: number) => Promise<void>;
   handleUpdateBassBoost: (bassBoost: number) => Promise<void>;
   handleResetEqualizer: () => Promise<void>;
+  handleOpenSystemEqualizer: () => Promise<void>;
 }
 
 /**
@@ -174,13 +176,16 @@ export default function useAppController(): AppControllerResult {
   // Hook de ecualizador acústico de 5 bandas
   const {
     equalizerSettings,
+    equalizerSettingsRef,
     isEqualizerOpen,
     setIsEqualizerOpen,
+    isSystemEqualizerAvailable,
     handleToggleEqualizer,
     handleSelectPreset,
     handleUpdateBandGain,
     handleUpdateBassBoost,
     handleResetEqualizer,
+    handleOpenSystemEqualizer,
   } = useEqualizer({ showToast });
 
   // Hook de temporizador de apagado (Sleep Timer)
@@ -323,6 +328,7 @@ export default function useAppController(): AppControllerResult {
     currentSourceRef,
     crossfadeSettingsRef,
     replayGainSettingsRef,
+    equalizerSettingsRef,
     savePlayerState,
   });
 
@@ -523,10 +529,12 @@ export default function useAppController(): AppControllerResult {
     equalizerSettings,
     isEqualizerOpen,
     setIsEqualizerOpen,
+    isSystemEqualizerAvailable,
     handleToggleEqualizer,
     handleSelectPreset,
     handleUpdateBandGain,
     handleUpdateBassBoost,
     handleResetEqualizer,
+    handleOpenSystemEqualizer,
   };
 }

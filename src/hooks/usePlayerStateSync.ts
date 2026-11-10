@@ -4,6 +4,8 @@ import { handleAutoCrossfadeProgress } from '../utils/crossfade';
 import { applyReplayGainToPlayer } from '../utils/replayGain';
 import { Track } from '../models/Track';
 import { CrossfadeSettings, ReplayGainSettings } from '../models/AudioSettings';
+import { EqualizerSettings } from '../models/EqualizerSettings';
+import { applyEqualizerSettingsToNative } from '../services/audio';
 import { SavePlayerStateParams } from './usePlayerPersistence';
 
 export interface ProgressState {
@@ -24,6 +26,7 @@ export interface PlayerStateSyncParams {
   currentSourceRef: MutableRefObject<string>;
   crossfadeSettingsRef: MutableRefObject<CrossfadeSettings>;
   replayGainSettingsRef: MutableRefObject<ReplayGainSettings>;
+  equalizerSettingsRef?: MutableRefObject<EqualizerSettings>;
   savePlayerState?: (params: SavePlayerStateParams) => Promise<void>;
 }
 
@@ -103,6 +106,7 @@ export default function usePlayerStateSync({
   currentSourceRef,
   crossfadeSettingsRef,
   replayGainSettingsRef,
+  equalizerSettingsRef,
   savePlayerState,
 }: PlayerStateSyncParams): void {
   useEffect(() => {
@@ -171,11 +175,14 @@ export default function usePlayerStateSync({
           };
         });
 
-        // 6. Normalización acústica ReplayGain al cambiar de pista activa
+        // 6. Normalización acústica ReplayGain y ecualización al cambiar de pista activa
         const activeTrackId = currentActive?.mediaId ?? null;
         if (activeTrackId && activeTrackId !== lastAppliedTrackId) {
           lastAppliedTrackId = activeTrackId;
           applyReplayGainToPlayer(currentActive, replayGainSettingsRef.current);
+          if (equalizerSettingsRef?.current) {
+            applyEqualizerSettingsToNative(equalizerSettingsRef.current).catch(() => {});
+          }
         }
 
         // 7. Gestión de rampa automática de fundido cruzado (Crossfade)

@@ -31,11 +31,13 @@ export interface EqualizerModalProps {
   visible: boolean;
   onClose: () => void;
   settings?: EqualizerSettings;
+  isSystemEqualizerAvailable?: boolean;
   onToggle?: (enabled: boolean) => void;
   onSelectPreset?: (presetId: EqualizerPresetId) => void;
   onUpdateBandGain?: (bandIndex: number, gain: number) => void;
   onUpdateBassBoost?: (bassBoost: number) => void;
   onReset?: () => void;
+  onOpenSystemEqualizer?: () => void;
 }
 
 /**
@@ -45,11 +47,13 @@ export default function EqualizerModal({
   visible,
   onClose,
   settings = DEFAULT_EQUALIZER_SETTINGS,
+  isSystemEqualizerAvailable = false,
   onToggle,
   onSelectPreset,
   onUpdateBandGain,
   onUpdateBassBoost,
   onReset,
+  onOpenSystemEqualizer,
 }: EqualizerModalProps): React.JSX.Element | null {
   if (!visible) return null;
 
@@ -183,6 +187,18 @@ export default function EqualizerModal({
                     <Text style={styles.sliderLimitText}>+10</Text>
                   </View>
                 </View>
+
+                {/* Acceso al ecualizador del sistema Android si está soportado */}
+                {isSystemEqualizerAvailable && onOpenSystemEqualizer && (
+                  <TouchableOpacity
+                    style={styles.systemEqButton}
+                    onPress={onOpenSystemEqualizer}
+                    activeOpacity={0.7}
+                  >
+                    <Feather name="external-link" size={14} color={Colors.textSecondary} />
+                    <Text style={styles.systemEqButtonText}>Abrir ecualizador del sistema</Text>
+                  </TouchableOpacity>
+                )}
 
                 {/* 5 Bandas de Frecuencia */}
                 <View style={styles.sectionTitleRow}>

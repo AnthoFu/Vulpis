@@ -34,11 +34,13 @@ function MainApp(): React.JSX.Element {
     equalizerSettings,
     isEqualizerOpen,
     setIsEqualizerOpen,
+    isSystemEqualizerAvailable,
     handleToggleEqualizer,
     handleSelectPreset,
     handleUpdateBandGain,
     handleUpdateBassBoost,
     handleResetEqualizer,
+    handleOpenSystemEqualizer,
   } = usePlayer();
 
   if (!isPlayerInitialized) {
@@ -96,11 +98,13 @@ function MainApp(): React.JSX.Element {
         visible={isEqualizerOpen}
         onClose={() => setIsEqualizerOpen(false)}
         settings={equalizerSettings}
+        isSystemEqualizerAvailable={isSystemEqualizerAvailable}
         onToggle={handleToggleEqualizer}
         onSelectPreset={handleSelectPreset}
         onUpdateBandGain={handleUpdateBandGain}
         onUpdateBassBoost={handleUpdateBassBoost}
         onReset={handleResetEqualizer}
+        onOpenSystemEqualizer={handleOpenSystemEqualizer}
       />
     </View>
   );

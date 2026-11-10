@@ -260,6 +260,24 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
   },
+  systemEqButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: Colors.surfaceWhiteAlpha05,
+    borderWidth: 1,
+    borderColor: Colors.borderSubtle,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginBottom: 14,
+  },
+  systemEqButtonText: {
+    color: Colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '600',
+  },
   // Pie y acciones
   footer: {
     flexDirection: 'row',

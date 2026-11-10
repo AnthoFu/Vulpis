@@ -10,6 +10,11 @@ import {
   applyPresetToBands,
   detectPresetFromGains,
 } from '../utils/equalizer';
+import {
+  applyEqualizerSettingsToNative,
+  isSystemEqualizerAvailable as checkSystemEqualizer,
+  openSystemEqualizer as launchSystemEqualizer,
+} from '../services/audio';
 
 export interface UseEqualizerParams {
   showToast?: (message: string) => void;
@@ -20,15 +25,18 @@ export interface UseEqualizerReturn {
   equalizerSettingsRef: MutableRefObject<EqualizerSettings>;
   isEqualizerOpen: boolean;
   setIsEqualizerOpen: Dispatch<SetStateAction<boolean>>;
+  isSystemEqualizerAvailable: boolean;
   handleToggleEqualizer: (enabled: boolean) => Promise<void>;
   handleSelectPreset: (presetId: EqualizerPresetId) => Promise<void>;
   handleUpdateBandGain: (bandIndex: number, gain: number) => Promise<void>;
   handleUpdateBassBoost: (bassBoost: number) => Promise<void>;
   handleResetEqualizer: () => Promise<void>;
+  handleOpenSystemEqualizer: () => Promise<void>;
 }
 
 /**
  * Hook para la gestión del estado, persistencia y presets del Ecualizador de Audio.
+ * Sincroniza los cambios con el almacenamiento local y el puente nativo de Android.
  */
 export default function useEqualizer({
   showToast,
@@ -36,15 +44,21 @@ export default function useEqualizer({
   const [equalizerSettings, setEqualizerSettings] = useState<EqualizerSettings>(DEFAULT_EQUALIZER_SETTINGS);
   const equalizerSettingsRef = useRef<EqualizerSettings>(equalizerSettings);
   const [isEqualizerOpen, setIsEqualizerOpen] = useState<boolean>(false);
+  const [isSystemEqualizerAvailable, setIsSystemEqualizerAvailable] = useState<boolean>(false);
 
   useEffect(() => {
     equalizerSettingsRef.current = equalizerSettings;
   }, [equalizerSettings]);
 
-  // Carga inicial desde almacenamiento persistente
+  // Carga inicial desde almacenamiento persistente y detección de capacidades del sistema
   useEffect(() => {
     getEqualizerSettings().then((loaded) => {
       setEqualizerSettings(loaded);
+      applyEqualizerSettingsToNative(loaded).catch(() => {});
+    });
+
+    checkSystemEqualizer().then((available) => {
+      setIsSystemEqualizerAvailable(available);
     });
   }, []);
 
@@ -55,6 +69,7 @@ export default function useEqualizer({
     };
     setEqualizerSettings(updated);
     await saveEqualizerSettings(updated);
+    await applyEqualizerSettingsToNative(updated);
     if (showToast) {
       showToast(enabled ? 'Ecualizador activado' : 'Ecualizador desactivado');
     }
@@ -70,6 +85,7 @@ export default function useEqualizer({
     };
     setEqualizerSettings(updated);
     await saveEqualizerSettings(updated);
+    await applyEqualizerSettingsToNative(updated);
   };
 
   const handleUpdateBandGain = async (bandIndex: number, gain: number): Promise<void> => {
@@ -86,6 +102,7 @@ export default function useEqualizer({
     };
     setEqualizerSettings(updated);
     await saveEqualizerSettings(updated);
+    await applyEqualizerSettingsToNative(updated);
   };
 
   const handleUpdateBassBoost = async (bassBoost: number): Promise<void> => {
@@ -99,6 +116,7 @@ export default function useEqualizer({
     };
     setEqualizerSettings(updated);
     await saveEqualizerSettings(updated);
+    await applyEqualizerSettingsToNative(updated);
   };
 
   const handleResetEqualizer = async (): Promise<void> => {
@@ -111,8 +129,16 @@ export default function useEqualizer({
     };
     setEqualizerSettings(updated);
     await saveEqualizerSettings(updated);
+    await applyEqualizerSettingsToNative(updated);
     if (showToast) {
       showToast('Ecualizador restablecido a plano');
+    }
+  };
+
+  const handleOpenSystemEqualizer = async (): Promise<void> => {
+    const success = await launchSystemEqualizer();
+    if (!success && showToast) {
+      showToast('No se encontró ecualizador del sistema');
     }
   };
 
@@ -121,10 +147,12 @@ export default function useEqualizer({
     equalizerSettingsRef,
     isEqualizerOpen,
     setIsEqualizerOpen,
+    isSystemEqualizerAvailable,
     handleToggleEqualizer,
     handleSelectPreset,
     handleUpdateBandGain,
     handleUpdateBassBoost,
     handleResetEqualizer,
+    handleOpenSystemEqualizer,
   };
 }

@@ -34,7 +34,8 @@
     "build:web": "expo export -p web --output-dir dist",
     "deploy:web": "npm run build:web && firebase deploy --only hosting",
     "apk:debug": "cd android && ./gradlew assembleDebug",
-    "apk:release": "cd android && ./gradlew assembleRelease"
+    "apk:release": "cd android && ./gradlew assembleRelease",
+    "postinstall": "node scripts/patch-track-player.js"
   },
   "private": true,
   "devDependencies": {

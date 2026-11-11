@@ -16,3 +16,7 @@ export * from './EqualizerSettings';
 
 // Configuración de Ordenamiento Multicriterio
 export * from './SortOptions';
+
+// Historial de Reproducción
+export * from './History';
+

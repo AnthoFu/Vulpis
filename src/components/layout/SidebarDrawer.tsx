@@ -22,6 +22,7 @@ export interface SidebarDrawerProps {
   currentSource?: string;
   onSelectSource?: (source: string) => void;
   onOpenSettings?: () => void;
+  onOpenHistory?: () => void;
 }
 
 interface MenuItem {
@@ -43,6 +44,7 @@ export default function SidebarDrawer(props: SidebarDrawerProps): React.JSX.Elem
   const currentSource = props.currentSource || player?.currentSource || 'local';
   const onSelectSource = props.onSelectSource || player?.handleSourceChange;
   const onOpenSettings = props.onOpenSettings || (() => player?.setIsSettingsOpen?.(true));
+  const onOpenHistory = props.onOpenHistory || (() => player?.setIsHistoryOpen?.(true));
 
   const insets = useSafeAreaInsets();
   const { visible, slideAnim, fadeAnim } = useSidebarDrawer({ isOpen });
@@ -145,6 +147,31 @@ export default function SidebarDrawer(props: SidebarDrawerProps): React.JSX.Elem
                   </TouchableOpacity>
                 );
               })}
+            </View>
+
+            {/* Actividad */}
+            <View style={[styles.menuList, { marginTop: 14 }]}>
+              <Text style={styles.sectionHeader}>ACTIVIDAD</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  onClose();
+                  onOpenHistory();
+                }}
+                style={styles.menuItem}
+                activeOpacity={0.8}
+              >
+                <View style={styles.menuItemContent}>
+                  <MaterialCommunityIcons
+                    name="history"
+                    size={22}
+                    color="#8E8F9E"
+                  />
+                  <View style={styles.menuItemTextCol}>
+                    <Text style={styles.menuItemLabel}>Historial</Text>
+                    <Text style={styles.menuItemDesc}>Canciones escuchadas recientemente</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
             </View>
           </View>
 

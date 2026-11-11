@@ -54,3 +54,6 @@ export { default as useSheetAnimation } from './useSheetAnimation';
 export * from './useSheetAnimation';
 export { default as useSidebarDrawer } from './useSidebarDrawer';
 export * from './useSidebarDrawer';
+export { default as usePlaybackHistory } from './usePlaybackHistory';
+export * from './usePlaybackHistory';
+

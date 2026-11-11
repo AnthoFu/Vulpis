@@ -4,10 +4,11 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import styles from '../styles/web.styles';
 
 export interface WebSidebarProps {
-  currentView: 'drive' | 'queue';
-  onSelectView: (view: 'drive' | 'queue') => void;
+  currentView: 'drive' | 'queue' | 'history';
+  onSelectView: (view: 'drive' | 'queue' | 'history') => void;
   queueCount?: number;
   driveTrackCount?: number;
+  historyCount?: number;
   onToggleLyrics: () => void;
   isLyricsOpen: boolean;
   onToggleEqualizer?: () => void;
@@ -19,6 +20,7 @@ export default function WebSidebar({
   onSelectView,
   queueCount = 0,
   driveTrackCount = 0,
+  historyCount = 0,
   onToggleLyrics,
   isLyricsOpen,
   onToggleEqualizer,
@@ -71,6 +73,29 @@ export default function WebSidebar({
           ]}
         >
           Cola ({queueCount})
+        </Text>
+      </TouchableOpacity>
+
+      {/* Pestaña: Historial de Reproducción */}
+      <TouchableOpacity
+        style={[
+          styles.sidebarItem,
+          currentView === 'history' && styles.sidebarItemActive,
+        ]}
+        onPress={() => onSelectView('history')}
+      >
+        <MaterialCommunityIcons
+          name="history"
+          size={18}
+          color={currentView === 'history' ? '#A78BFA' : '#8E8F9E'}
+        />
+        <Text
+          style={[
+            styles.sidebarItemText,
+            currentView === 'history' && styles.sidebarItemTextActive,
+          ]}
+        >
+          Historial ({historyCount})
         </Text>
       </TouchableOpacity>
 

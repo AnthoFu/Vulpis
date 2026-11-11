@@ -15,6 +15,7 @@ import useGoogleDrive from './useGoogleDrive';
 import useSleepTimer, { SleepTimerMode } from './useSleepTimer';
 import useAudioSettings from './useAudioSettings';
 import useEqualizer from './useEqualizer';
+import usePlaybackHistory from './usePlaybackHistory';
 import usePlayerPersistence from './usePlayerPersistence';
 import useQueueController from './useQueueController';
 import useDrivePrefetch from './useDrivePrefetch';
@@ -25,6 +26,7 @@ import { Track } from '../models/Track';
 import { Playlist } from '../models/Playlist';
 import { CrossfadeSettings, ReplayGainSettings } from '../models/AudioSettings';
 import { EqualizerSettings, EqualizerPresetId } from '../models/EqualizerSettings';
+import { PlaybackHistoryItem } from '../models/History';
 
 export type AudioSource = 'local' | 'private' | string;
 
@@ -106,6 +108,12 @@ export interface AppControllerResult {
   handleUpdateBassBoost: (bassBoost: number) => Promise<void>;
   handleResetEqualizer: () => Promise<void>;
   handleOpenSystemEqualizer: () => Promise<void>;
+  historyItems: PlaybackHistoryItem[];
+  isHistoryOpen: boolean;
+  setIsHistoryOpen: Dispatch<SetStateAction<boolean>>;
+  recordPlayback: (track: Track, duration?: number) => Promise<void>;
+  handleRemoveHistoryItem: (id: string) => Promise<void>;
+  handleClearHistory: () => Promise<void>;
 }
 
 /**
@@ -199,6 +207,21 @@ export default function useAppController(): AppControllerResult {
   } = useSleepTimer({
     isPlaying,
     activeTrack,
+    showToast,
+  });
+
+  // Hook de historial de reproducción y scrobbling automático
+  const {
+    historyItems,
+    isHistoryOpen,
+    setIsHistoryOpen,
+    recordPlayback,
+    handleRemoveHistoryItem,
+    handleClearHistory,
+  } = usePlaybackHistory({
+    activeTrack,
+    isPlaying,
+    position: progress.position,
     showToast,
   });
 
@@ -536,5 +559,11 @@ export default function useAppController(): AppControllerResult {
     handleUpdateBassBoost,
     handleResetEqualizer,
     handleOpenSystemEqualizer,
+    historyItems,
+    isHistoryOpen,
+    setIsHistoryOpen,
+    recordPlayback,
+    handleRemoveHistoryItem,
+    handleClearHistory,
   };
 }

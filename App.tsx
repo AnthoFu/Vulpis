@@ -16,6 +16,7 @@ import {
   SidebarDrawer,
   SettingsModal,
   EqualizerModal,
+  HistoryModal,
 } from './src/components';
 import { PlayerProvider, usePlayer } from './src/context';
 
@@ -41,6 +42,13 @@ function MainApp(): React.JSX.Element {
     handleUpdateBassBoost,
     handleResetEqualizer,
     handleOpenSystemEqualizer,
+    historyItems,
+    isHistoryOpen,
+    setIsHistoryOpen,
+    handleClearHistory,
+    handleRemoveHistoryItem,
+    handleSelectTrack,
+    handleAddToQueue,
   } = usePlayer();
 
   if (!isPlayerInitialized) {
@@ -105,6 +113,18 @@ function MainApp(): React.JSX.Element {
         onUpdateBassBoost={handleUpdateBassBoost}
         onReset={handleResetEqualizer}
         onOpenSystemEqualizer={handleOpenSystemEqualizer}
+      />
+
+      {/* Modal del Historial de Reproducción */}
+      <HistoryModal
+        visible={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        historyItems={historyItems}
+        activeTrack={activeTrack}
+        onSelectTrack={handleSelectTrack}
+        onRemoveItem={handleRemoveHistoryItem}
+        onClearHistory={handleClearHistory}
+        onAddToQueue={handleAddToQueue}
       />
     </View>
   );

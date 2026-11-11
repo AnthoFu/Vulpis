@@ -6,6 +6,8 @@ import styles from './styles/web.styles';
 import useWebPlayer from './hooks/useWebPlayer';
 import useWebDrive from './hooks/useWebDrive';
 import useWebLyrics from './hooks/useWebLyrics';
+import usePlaybackHistory from '../hooks/usePlaybackHistory';
+import { Track } from '../models/Track';
 
 // Componentes
 import WebNavbar from './components/WebNavbar';
@@ -18,7 +20,7 @@ import EqualizerModal from '../components/modals/EqualizerModal';
 import { WebTrack } from './types';
 
 export default function WebApp(): React.JSX.Element {
-  const [currentView, setCurrentView] = useState<'drive' | 'queue'>('drive');
+  const [currentView, setCurrentView] = useState<'drive' | 'queue' | 'history'>('drive');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isDriveModalOpen, setIsDriveModalOpen] = useState<boolean>(false);
   const [isEqualizerOpen, setIsEqualizerOpen] = useState<boolean>(false);
@@ -76,9 +78,50 @@ export default function WebApp(): React.JSX.Element {
     handleLineClick: handleLyricSeek,
   } = useWebLyrics(currentTrack, currentTime, seek);
 
+  // Conversión defensiva de la pista activa para el hook de historial
+  const activeTrackForHistory = useMemo<Track | null>(() => {
+    if (!currentTrack) return null;
+    return {
+      mediaId: currentTrack.mediaId || currentTrack.id,
+      title: currentTrack.title,
+      artist: currentTrack.artist,
+      album: currentTrack.album,
+      duration: currentTrack.duration,
+      artworkUrl: currentTrack.artwork,
+      url: currentTrack.url || '',
+    };
+  }, [currentTrack]);
+
+  // Hook de historial de reproducción web
+  const { historyItems } = usePlaybackHistory({
+    activeTrack: activeTrackForHistory,
+    isPlaying,
+    position: currentTime,
+  });
+
+  const historyWebTracks = useMemo<WebTrack[]>(() => {
+    return historyItems.map((h) => ({
+      id: h.track.mediaId,
+      mediaId: h.track.mediaId,
+      title: h.track.title,
+      artist: h.track.artist,
+      album: h.track.album || '',
+      duration: h.track.duration,
+      artwork: h.track.artworkUrl,
+      source: 'history',
+      url: h.track.url,
+    }));
+  }, [historyItems]);
+
   // Filtrado de canciones según el buscador
   const displayedTracks = useMemo<WebTrack[]>(() => {
-    const sourceList = currentView === 'queue' ? queue : driveTracks;
+    let sourceList = driveTracks;
+    if (currentView === 'queue') {
+      sourceList = queue;
+    } else if (currentView === 'history') {
+      sourceList = historyWebTracks;
+    }
+
     if (!searchQuery.trim()) return sourceList;
 
     const q = searchQuery.toLowerCase().trim();
@@ -87,7 +130,7 @@ export default function WebApp(): React.JSX.Element {
         (t.title && t.title.toLowerCase().includes(q)) ||
         (t.artist && t.artist.toLowerCase().includes(q))
     );
-  }, [currentView, queue, driveTracks, searchQuery]);
+  }, [currentView, queue, driveTracks, historyWebTracks, searchQuery]);
 
   return (
     <View style={styles.appContainer}>
@@ -108,6 +151,7 @@ export default function WebApp(): React.JSX.Element {
           onSelectView={setCurrentView}
           queueCount={queue.length}
           driveTrackCount={driveTracks.length}
+          historyCount={historyItems.length}
           onToggleLyrics={toggleLyrics}
           isLyricsOpen={isLyricsOpen}
           onToggleEqualizer={() => setIsEqualizerOpen((prev) => !prev)}
@@ -119,11 +163,17 @@ export default function WebApp(): React.JSX.Element {
           <View style={styles.contentHeader}>
             <View>
               <Text style={styles.contentTitle}>
-                {currentView === 'queue' ? 'Cola de Reproducción' : 'Música en Google Drive'}
+                {currentView === 'queue'
+                  ? 'Cola de Reproducción'
+                  : currentView === 'history'
+                  ? 'Historial de Reproducción'
+                  : 'Música en Google Drive'}
               </Text>
               <Text style={styles.contentSubtitle}>
                 {currentView === 'queue'
                   ? `${queue.length} canción(es) en cola`
+                  : currentView === 'history'
+                  ? `${historyItems.length} canción(es) escuchadas recientemente`
                   : isDriveConnected
                   ? `${driveTracks.length} archivo(s) disponibles en tu nube privada`
                   : 'Conecta tu cuenta de Google Drive para cargar tu música'}
@@ -148,6 +198,7 @@ export default function WebApp(): React.JSX.Element {
             onAddToQueue={addToQueue}
             onRemoveFromQueue={removeFromQueue}
             isQueueView={currentView === 'queue'}
+            isHistoryView={currentView === 'history'}
             isDriveConnected={isDriveConnected}
             onOpenDriveModal={() => setIsDriveModalOpen(true)}
           />

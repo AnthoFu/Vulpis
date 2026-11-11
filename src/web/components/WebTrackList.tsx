@@ -15,6 +15,7 @@ export interface WebTrackListProps {
   onAddToQueue?: (track: WebTrack) => void;
   onRemoveFromQueue?: (index: number) => void;
   isQueueView?: boolean;
+  isHistoryView?: boolean;
   isDriveConnected?: boolean;
   onOpenDriveModal?: () => void;
 }
@@ -28,6 +29,7 @@ export default function WebTrackList({
   onAddToQueue,
   onRemoveFromQueue,
   isQueueView = false,
+  isHistoryView = false,
   isDriveConnected,
   onOpenDriveModal,
 }: WebTrackListProps): React.JSX.Element {
@@ -35,21 +37,27 @@ export default function WebTrackList({
     return (
       <View style={styles.emptyContainer}>
         <Ionicons
-          name={isQueueView ? 'list-outline' : 'cloud-offline-outline'}
+          name={isHistoryView ? 'time-outline' : isQueueView ? 'list-outline' : 'cloud-offline-outline'}
           size={54}
           color="#3B3E5B"
         />
         <Text style={styles.emptyTitle}>
-          {isQueueView ? 'La cola de reproducción está vacía' : 'No hay canciones disponibles'}
+          {isHistoryView
+            ? 'Sin reproducciones recientes'
+            : isQueueView
+            ? 'La cola de reproducción está vacía'
+            : 'No hay canciones disponibles'}
         </Text>
         <Text style={styles.emptySubtitle}>
-          {isQueueView
+          {isHistoryView
+            ? 'Las canciones que reproduzcas durante al menos 10 segundos aparecerán automáticamente aquí.'
+            : isQueueView
             ? 'Selecciona una canción de tu biblioteca de Google Drive para empezar a reproducir.'
             : isDriveConnected
             ? 'No se encontraron archivos .mp3 en tu carpeta Vulpis de Google Drive. Sube música a tu Drive para verla aquí.'
             : 'Conecta tu cuenta de Google Drive para acceder a tu música en la nube privada.'}
         </Text>
-        {!isDriveConnected && !isQueueView && onOpenDriveModal && (
+        {!isDriveConnected && !isQueueView && !isHistoryView && onOpenDriveModal && (
           <TouchableOpacity style={[styles.btnPrimary, { marginTop: 12, paddingHorizontal: 20 }]} onPress={onOpenDriveModal}>
             <Text style={styles.btnText}>Conectar Google Drive</Text>
           </TouchableOpacity>

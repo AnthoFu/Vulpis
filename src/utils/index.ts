@@ -13,3 +13,6 @@ export * from './metadata';
 export * from './replayGain';
 export * from './trackFilter';
 export * from './trackSort';
+export * from './equalizer';
+export * from './history';
+

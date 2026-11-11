@@ -216,6 +216,16 @@
   - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores), compilación web limpia (`npm run build:web`, 450 módulos) y empaquetado Expo nativo (`npx expo export -p android --no-minify`, 834 módulos).
   - [x] Incremento de versión del proyecto a `0.5.26` en `app.config.js`.
 
+- [x] **Historial de Reproducción (Recently Played):**
+  - [x] Modelo de dominio `PlaybackHistoryItem` en `src/models/History.ts` con límite rotativo (`MAX_HISTORY_ITEMS = 100`) y umbral de scrobbling acústico (`MIN_PLAY_TIME_FOR_HISTORY_SEC = 10`).
+  - [x] Módulo de persistencia defensiva `src/utils/history.ts` protegido contra desbordes de CursorWindow en SQLite y formateador de tiempo relativo en español.
+  - [x] Custom hook reactivo `usePlaybackHistory.ts` con auto-registro libre de condiciones de carrera y operaciones de eliminación/vaciado.
+  - [x] Modal interactivo `HistoryModal.tsx` con búsqueda interna, reproducción al toque, agregar a cola, sanitización de portadas y confirmación destructiva.
+  - [x] Acceso directo desde el encabezado superior `Header.tsx` y desde el cajón lateral `SidebarDrawer.tsx`.
+  - [x] Soporte multiplataforma en la versión web (`src/web/`) con pestaña en `WebSidebar.tsx`, estado vacío en `WebTrackList.tsx` y filtrado reactivo.
+  - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores), compilación web limpia (`npm run build:web`, 465 módulos) y empaquetado Expo nativo (`npx expo export -p android --no-minify`, 839 módulos).
+  - [x] Incremento de versión del proyecto a `0.5.27` en `app.config.js`.
+
 ---
 
 # Mejoras por hacer
@@ -223,7 +233,7 @@
 - [x] **Ecualizador de Audio (EQ):** Ecualizador de 5 bandas, Bass Boost, presets calibrados, soporte Web Audio API y puente nativo Android ExoPlayer.
 - [x] **Ordenamiento Multicriterio:** Opción para ordenar listas por Nombre, Artista, Duración y Fecha de adición.
 - [ ] **Exportación e Importación de Playlists:** Respaldar y compartir listas de reproducción en formato `.m3u` o `.json`.
-- [ ] **Historial de Reproducción:** Sección para consultar las canciones escuchadas recientemente.
+- [x] **Historial de Reproducción:** Sección para consultar las canciones escuchadas recientemente.
 - [ ] **Búsqueda Manual Interactiva de Letras:** Permitir al usuario buscar y seleccionar manualmente la letra en LRCLIB si la búsqueda automática no coincide.
 - [ ] **Editor de Etiquetas ID3 (Tag Editor):** Editar título, artista, álbum y género directamente sobre los archivos MP3 locales.
 - [ ] **Descargador de Carátulas (Album Art Fetcher):** Búsqueda y descarga automática de portadas en alta resolución desde servicios abiertos (Cover Art Archive / MusicBrainz).

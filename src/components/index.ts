@@ -45,6 +45,9 @@ export { default as SortModal } from './modals/SortModal';
 export * from './modals/SortModal';
 export { default as EqualizerModal } from './modals/EqualizerModal';
 export * from './modals/EqualizerModal';
+export { default as HistoryModal } from './modals/HistoryModal';
+export * from './modals/HistoryModal';
+
 
 // Biblioteca musical
 export { default as QueueList } from './library/QueueList';

@@ -110,6 +110,13 @@ export async function scanDeviceAudio({
         mediaId: asset.id || cached.mediaId,
         url: asset.uri,
         duration: asset.duration || cached.duration || 0,
+        addedAt:
+          cached.addedAt ||
+          ((asset as any).modificationTime
+            ? (asset as any).modificationTime * 1000
+            : asset.creationTime
+            ? asset.creationTime * 1000
+            : Date.now()),
       });
     } else {
       // Nueva pista detectada para extracción de metadatos
@@ -136,6 +143,12 @@ export async function scanDeviceAudio({
             lyrics: meta?.lyrics || null,
             duration: asset.duration || 0,
             replayGain: meta?.replayGain || null,
+            addedAt:
+              (asset as any).modificationTime
+                ? (asset as any).modificationTime * 1000
+                : asset.creationTime
+                ? asset.creationTime * 1000
+                : Date.now(),
           });
         })
       );

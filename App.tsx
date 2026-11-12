@@ -15,6 +15,8 @@ import {
   QueueList,
   SidebarDrawer,
   SettingsModal,
+  EqualizerModal,
+  HistoryModal,
 } from './src/components';
 import { PlayerProvider, usePlayer } from './src/context';
 
@@ -30,6 +32,23 @@ function MainApp(): React.JSX.Element {
     isFullPlayerVisible,
     setIsFullPlayerVisible,
     toast,
+    equalizerSettings,
+    isEqualizerOpen,
+    setIsEqualizerOpen,
+    isSystemEqualizerAvailable,
+    handleToggleEqualizer,
+    handleSelectPreset,
+    handleUpdateBandGain,
+    handleUpdateBassBoost,
+    handleResetEqualizer,
+    handleOpenSystemEqualizer,
+    historyItems,
+    isHistoryOpen,
+    setIsHistoryOpen,
+    handleClearHistory,
+    handleRemoveHistoryItem,
+    handleSelectTrack,
+    handleAddToQueue,
   } = usePlayer();
 
   if (!isPlayerInitialized) {
@@ -81,6 +100,32 @@ function MainApp(): React.JSX.Element {
 
       {/* Modal de Ajustes generales */}
       <SettingsModal />
+
+      {/* Modal del Ecualizador de Audio */}
+      <EqualizerModal
+        visible={isEqualizerOpen}
+        onClose={() => setIsEqualizerOpen(false)}
+        settings={equalizerSettings}
+        isSystemEqualizerAvailable={isSystemEqualizerAvailable}
+        onToggle={handleToggleEqualizer}
+        onSelectPreset={handleSelectPreset}
+        onUpdateBandGain={handleUpdateBandGain}
+        onUpdateBassBoost={handleUpdateBassBoost}
+        onReset={handleResetEqualizer}
+        onOpenSystemEqualizer={handleOpenSystemEqualizer}
+      />
+
+      {/* Modal del Historial de Reproducción */}
+      <HistoryModal
+        visible={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        historyItems={historyItems}
+        activeTrack={activeTrack}
+        onSelectTrack={handleSelectTrack}
+        onRemoveItem={handleRemoveHistoryItem}
+        onClearHistory={handleClearHistory}
+        onAddToQueue={handleAddToQueue}
+      />
     </View>
   );
 }

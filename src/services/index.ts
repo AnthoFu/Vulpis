@@ -11,3 +11,7 @@ export * from './lyrics/lyricsService';
 
 // Servicios de Escaneo Multimedia del Dispositivo
 export * from './scanner/mediaScanner';
+
+// Servicios de Audio y Efectos Acústicos
+export * from './audio';
+

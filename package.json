@@ -1,7 +1,7 @@
 {
   "name": "vulpis",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "index",
   "dependencies": {
     "@expo/metro-runtime": "~56.0.21",
     "@expo/vector-icons": "^15.0.2",
@@ -34,7 +34,8 @@
     "build:web": "expo export -p web --output-dir dist",
     "deploy:web": "npm run build:web && firebase deploy --only hosting",
     "apk:debug": "cd android && ./gradlew assembleDebug",
-    "apk:release": "cd android && ./gradlew assembleRelease"
+    "apk:release": "cd android && ./gradlew assembleRelease",
+    "postinstall": "node scripts/patch-track-player.js"
   },
   "private": true,
   "devDependencies": {

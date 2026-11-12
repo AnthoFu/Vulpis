@@ -16,6 +16,7 @@ import PlaylistDetailView from './PlaylistDetailView';
 import { Playlist } from '../../models/Playlist';
 import { Track } from '../../models/Track';
 import { AudioSource } from '../../hooks/useAppController';
+import { SortConfig } from '../../models/SortOptions';
 
 export { renderPlaylistArtwork };
 
@@ -24,6 +25,7 @@ export interface PlaylistsTabProps {
   selectedPlaylistId?: string | null;
   searchQuery?: string;
   searchFilter?: string;
+  sortConfig?: SortConfig;
   showCreateInput?: boolean;
   newPlaylistName?: string;
   activeTrack?: Track | null;
@@ -55,6 +57,7 @@ export default function PlaylistsTab({
   selectedPlaylistId = null,
   searchQuery = '',
   searchFilter = 'all',
+  sortConfig,
   showCreateInput = false,
   newPlaylistName = '',
   activeTrack = null,
@@ -86,6 +89,7 @@ export default function PlaylistsTab({
         playlist={selectedPlaylist}
         searchQuery={searchQuery}
         searchFilter={searchFilter}
+        sortConfig={sortConfig}
         activeTrack={activeTrack}
         isProcessing={isProcessing}
         defaultArtwork={defaultArtwork}

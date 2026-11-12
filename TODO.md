@@ -154,14 +154,86 @@
   - [x] Eliminación completa de archivos `.js` de componentes y vistas.
   - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores) y empaquetado Expo (`npx expo export -p android --no-minify`, 823 módulos).
 
+- [x] **Ordenamiento Multicriterio en la Biblioteca:**
+  - [x] Modelo de dominio `SortOptions.ts` con tipos (`SortField`, `SortOrder`, `SortConfig`) y configuración por defecto.
+  - [x] Extensión de `Track` con `addedAt` y captura de marcas de tiempo en el escáner de medios (`mediaScanner.ts`).
+  - [x] Utilidad pura `trackSort.ts` para ordenamiento insensible a acentos/mayúsculas (A-Z / Z-A por Título, Artista, Álbum; más corta/larga por Duración; más reciente/antigua por Fecha de adición) y persistencia en AsyncStorage (`vulpis_library_sort_config`).
+  - [x] Modal interactivo `SortModal.tsx` con cambio de dirección interactivo (ascendente/descendente) e indicadores visuales activos.
+  - [x] Integración de botón de ordenamiento en `LibrarySearchBar.tsx`, conexión reactiva en `useQueueList.ts` y propagación a `QueueList.tsx`, `PlaylistsTab.tsx` y `PlaylistDetailView.tsx`.
+  - [x] Incremento de versión del proyecto a `0.5.20` en `app.config.js`.
+
+- [x] **Fase 6 de Migración a TypeScript — Constantes, Barrel Export y Entrypoints Nativos (`src/constants/`, `index.ts`, `service.ts`):**
+  - [x] Migración de `animations.ts`, `colors.ts`, `config.ts` y `tracks.ts` con tipado estricto de tokens de animación, paleta de colores, credenciales OAuth y pistas de fallback.
+  - [x] Creación de `src/constants/index.ts` como barrel export centralizado.
+  - [x] Migración de `service.ts` implementando `playbackService` con la firma nativa `BackgroundEventHandler` y tipado de `BackgroundEvent` de `@rntp/player`.
+  - [x] Migración del punto de entrada principal `index.ts` con registro síncrono de eventos remotos para iOS/primer plano y enlace de `package.json` a `index.ts`.
+  - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores) y empaquetado Expo (`npx expo export -p android --no-minify`, 826 módulos).
+  - [x] Incremento de versión del proyecto a `0.5.21` en `app.config.js`.
+
+- [x] **Fase 7 de Migración a TypeScript — Hojas de Estilo (`src/styles/`):**
+  - [x] Migración de los 8 módulos de estilo de biblioteca en `src/styles/library/` (`Tabs`, `SearchBar`, `TrackItem`, `DrivePanel`, `PlaylistsTab`, `LibraryModals`, `ArtistsTab`, `AlbumsTab`).
+  - [x] Migración del compositor de biblioteca `QueueList.styles.ts`.
+  - [x] Migración de estilos de componentes y modales principales: `App.styles.ts`, `Header.styles.ts`, `MiniPlayer.styles.ts`, `Controls.styles.ts`, `ProgressBar.styles.ts`, `SidebarDrawer.styles.ts`, `PlayerCard.styles.ts`, `QueueSheet.styles.ts`, `SettingsModal.styles.ts`, `EditLyricsModal.styles.ts`, `SleepTimerModal.styles.ts`.
+  - [x] Corrección de tipado estricto para `StyleSheet.absoluteFill` en `QueueSheet.styles.ts`.
+  - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores) y empaquetado Expo (`npx expo export -p android --no-minify`, 826 módulos).
+  - [x] Incremento de versión del proyecto a `0.5.22` en `app.config.js`.
+
+- [x] **Fase 8 de Migración a TypeScript — Versión Web Completa y 100% Cobertura del Proyecto (`src/web/`, `index.web.ts`):**
+  - [x] Tipado de dominio web en `src/web/types.ts` (`WebTrack`, `WebLrcLine`, `WebLyricsData`, `WebRepeatMode`, `WebPlayerState`, `WebGoogleConfig`, `WebDriveFile`).
+  - [x] Migración de estilos web en `src/web/styles/web.styles.ts`.
+  - [x] Migración de servicios web: `webCache.ts`, `webLyrics.ts`, `webDrive.ts` y motor de audio HTML5 `webAudioPlayer.ts`.
+  - [x] Migración de custom hooks web: `useWebPlayer.ts`, `useWebDrive.ts` y `useWebLyrics.ts`.
+  - [x] Migración de componentes web UI: `WebNavbar.tsx`, `WebSidebar.tsx`, `WebTrackList.tsx`, `WebPlayerBottomBar.tsx`, `WebLyricsPanel.tsx`, `WebDriveModal.tsx` y contenedor `App.tsx`.
+  - [x] Migración del punto de entrada web `index.web.ts` y ajuste de resolución agnóstica de plataforma en `package.json` (`"main": "index"`).
+  - [x] Erradicación del 100% de archivos JavaScript del código fuente (cero archivos `.js`/`.jsx` en `src/`).
+  - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores), compilación web limpia (`npm run build:web`, 299 módulos) y empaquetado Expo nativo (`npx expo export -p android --no-minify`, 826 módulos).
+  - [x] Incremento de versión del proyecto a `0.5.23` en `app.config.js`.
+
+- [x] **Ecualizador de Audio (EQ) — Modelo de Dominio e Interfaz Visual (Fase 1):**
+  - [x] Modelo de dominio `EqualizerSettings.ts` con 5 bandas estándar (60 Hz, 230 Hz, 910 Hz, 3.6 kHz, 14 kHz), refuerzo de graves (*Bass Boost*) y catálogo de 10 presets acústicos calibrados (Plano, Refuerzo de Graves, Rock, Pop, Jazz, Clásica, Electrónica/Dance, Vocal, Acústica, Personalizado).
+  - [x] Módulo de utilidades y persistencia `equalizer.ts` en AsyncStorage (`vulpis_equalizer_settings`) con validación defensiva de rangos (-10 dB a +10 dB) y detección automática de presets.
+  - [x] Custom hook reactivo `useEqualizer.ts` con control de ganancia por banda, alternador general, selección de preset y restablecimiento.
+  - [x] Interfaz modal interactiva `EqualizerModal.tsx` con sliders táctiles (`@react-native-community/slider`), badges de ganancia con código de color dinámico (boost/cut), selector horizontal de chips de presets y control de refuerzo de graves.
+  - [x] Sección modular `EqualizerSection.tsx` en `SettingsModal.tsx` para acceso rápido y conmutador directo.
+  - [x] Integración en `PlayerContext`, `useAppController.ts` y montaje en la vista raíz `App.tsx`.
+  - [x] Incremento de versión del proyecto a `0.5.24` en `app.config.js`.
+
+- [x] **Ecualizador de Audio (EQ) — Procesamiento Acústico Web Audio API (Fase 2):**
+  - [x] Inicialización perezosa y segura del grafo de audio con `AudioContext` y `createMediaElementSource` sobre el elemento HTML5 `<audio>`.
+  - [x] Cadena de nodos `BiquadFilterNode` en serie: filtro `lowshelf` para Bass Boost a 80 Hz + 5 filtros (`lowshelf` a 60 Hz, `peaking` a 230 Hz, 910 Hz y 3600 Hz, `highshelf` a 14 kHz) conectados a `audioCtx.destination`.
+  - [x] Rampa de volumen y ganancia exponencial sin artefactos acústicos (`setTargetAtTime(target, now, 0.05)`).
+  - [x] Integración en `WebAudioPlayer.ts`, reactividad completa en `useWebPlayer.ts`, botón en `WebPlayerBottomBar.tsx`, acceso en `WebSidebar.tsx` y modal `EqualizerModal` en `App.tsx`.
+  - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores), compilación web limpia (`npm run build:web`, 462 módulos) y empaquetado Expo nativo (`npx expo export -p android --no-minify`, 832 módulos).
+  - [x] Incremento de versión del proyecto a `0.5.25` en `app.config.js`.
+
+- [x] **Ecualizador de Audio (EQ) — Puente Nativo para Android con ExoPlayer (Fase 3):**
+  - [x] Script de postinstalación `scripts/patch-track-player.js` idempotente en `package.json` que expone `activeAudioSessionId` y `activeInstance` en `TrackPlayerPlaybackService.kt` de `@rntp/player` y emite broadcasts del sistema `ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION`.
+  - [x] Módulo nativo Kotlin `VulpisEqualizerModule.kt` que controla `android.media.audiofx.Equalizer` y `android.media.audiofx.BassBoost` con memoria de ajustes previa para acoplamiento automático sobre la sesión activa de ExoPlayer.
+  - [x] Apertura del panel de efectos del sistema con `ACTION_DISPLAY_AUDIO_EFFECT_CONTROL_PANEL` (compatible con Wavelet, Dolby Atmos, Samsung SoundAlive).
+  - [x] Plugin de configuración Expo `plugins/withVulpisEqualizer.js` para generación prebuild limpia y reproducible.
+  - [x] Adaptador TypeScript `src/services/audio/nativeEqualizer.ts` y barrel exports en `src/services/audio/index.ts` y `src/services/index.ts`.
+  - [x] Conexión reactiva en `useEqualizer.ts`, `usePlayerStateSync.ts`, `useAppController.ts`, `EqualizerModal.tsx` y `App.tsx`.
+  - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores), compilación web limpia (`npm run build:web`, 450 módulos) y empaquetado Expo nativo (`npx expo export -p android --no-minify`, 834 módulos).
+  - [x] Incremento de versión del proyecto a `0.5.26` en `app.config.js`.
+
+- [x] **Historial de Reproducción (Recently Played):**
+  - [x] Modelo de dominio `PlaybackHistoryItem` en `src/models/History.ts` con límite rotativo (`MAX_HISTORY_ITEMS = 100`) y umbral de scrobbling acústico (`MIN_PLAY_TIME_FOR_HISTORY_SEC = 10`).
+  - [x] Módulo de persistencia defensiva `src/utils/history.ts` protegido contra desbordes de CursorWindow en SQLite y formateador de tiempo relativo en español.
+  - [x] Custom hook reactivo `usePlaybackHistory.ts` con auto-registro libre de condiciones de carrera y operaciones de eliminación/vaciado.
+  - [x] Modal interactivo `HistoryModal.tsx` con búsqueda interna, reproducción al toque, agregar a cola, sanitización de portadas y confirmación destructiva.
+  - [x] Acceso directo desde el encabezado superior `Header.tsx` y desde el cajón lateral `SidebarDrawer.tsx`.
+  - [x] Soporte multiplataforma en la versión web (`src/web/`) con pestaña en `WebSidebar.tsx`, estado vacío en `WebTrackList.tsx` y filtrado reactivo.
+  - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores), compilación web limpia (`npm run build:web`, 465 módulos) y empaquetado Expo nativo (`npx expo export -p android --no-minify`, 839 módulos).
+  - [x] Incremento de versión del proyecto a `0.5.27` en `app.config.js`.
+
 ---
 
 # Mejoras por hacer
 
-- [ ] **Ecualizador de Audio (EQ):** Ecualizador con presets integrados (Rock, Pop, Jazz, Bass Boost, etc.).
-- [ ] **Ordenamiento Multicriterio:** Opción para ordenar listas por Nombre, Artista, Duración, Fecha de adición o Número de reproducciones.
+- [x] **Ecualizador de Audio (EQ):** Ecualizador de 5 bandas, Bass Boost, presets calibrados, soporte Web Audio API y puente nativo Android ExoPlayer.
+- [x] **Ordenamiento Multicriterio:** Opción para ordenar listas por Nombre, Artista, Duración y Fecha de adición.
 - [ ] **Exportación e Importación de Playlists:** Respaldar y compartir listas de reproducción en formato `.m3u` o `.json`.
-- [ ] **Historial de Reproducción:** Sección para consultar las canciones escuchadas recientemente.
+- [x] **Historial de Reproducción:** Sección para consultar las canciones escuchadas recientemente.
 - [ ] **Búsqueda Manual Interactiva de Letras:** Permitir al usuario buscar y seleccionar manualmente la letra en LRCLIB si la búsqueda automática no coincide.
 - [ ] **Editor de Etiquetas ID3 (Tag Editor):** Editar título, artista, álbum y género directamente sobre los archivos MP3 locales.
 - [ ] **Descargador de Carátulas (Album Art Fetcher):** Búsqueda y descarga automática de portadas en alta resolución desde servicios abiertos (Cover Art Archive / MusicBrainz).

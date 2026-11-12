@@ -6,6 +6,7 @@ import { PlayerContext } from '../../context/PlayerContext';
 
 export interface HeaderProps {
   onMenuPress?: () => void;
+  onHistoryPress?: () => void;
   currentSource?: string;
   tracksCount?: number;
   playlistsCount?: number;
@@ -21,6 +22,7 @@ export default function Header(props: HeaderProps): React.JSX.Element {
   const player = React.useContext(PlayerContext);
 
   const onMenuPress = props.onMenuPress || (() => player?.setIsDrawerOpen?.(true));
+  const onHistoryPress = props.onHistoryPress || (() => player?.setIsHistoryOpen?.(true));
   const currentSource = props.currentSource || player?.currentSource || 'local';
   const isLoading = props.isLoading !== undefined ? props.isLoading : (player?.isSourceChanging || player?.isDriveLoading || false);
 
@@ -49,13 +51,18 @@ export default function Header(props: HeaderProps): React.JSX.Element {
         <Text style={styles.headerTitle}>{title}</Text>
       </View>
 
-      <View style={styles.iconButtonPlaceholder}>
+      <TouchableOpacity
+        style={styles.iconButton}
+        onPress={onHistoryPress}
+        disabled={isLoading}
+        activeOpacity={0.7}
+      >
         {isLoading ? (
           <ActivityIndicator size="small" color="#8B5CF6" />
         ) : (
-          <MaterialCommunityIcons name="music-note" size={20} color="#4E4F62" />
+          <MaterialCommunityIcons name="history" size={22} color="#FFFFFF" />
         )}
-      </View>
+      </TouchableOpacity>
     </View>
   );
 }

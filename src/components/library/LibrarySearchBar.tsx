@@ -3,6 +3,8 @@ import { View, Text, TextInput, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import styles from '../../styles/QueueList.styles';
 import { OdooFilterCounts } from '../../utils/trackFilter';
+import { SortConfig } from '../../models/SortOptions';
+import { getSortIcon } from '../../utils/trackSort';
 
 export interface SearchFilterOption {
   id: string;
@@ -27,6 +29,8 @@ export interface LibrarySearchBarProps {
   onToggleDropdown?: () => void;
   onSelectFilter?: (filterId: string) => void;
   onCloseDropdown?: () => void;
+  onOpenSort?: () => void;
+  currentSortConfig?: SortConfig;
 }
 
 /**
@@ -49,54 +53,79 @@ export default function LibrarySearchBar({
   onToggleDropdown,
   onSelectFilter,
   onCloseDropdown,
+  onOpenSort,
+  currentSortConfig,
 }: LibrarySearchBarProps): React.JSX.Element {
   const isTyping = searchQuery.trim().length > 0;
   const activeFilterObj = searchFilters.find((f) => f.id === searchFilter);
   const showFieldFilter = activeTab === 'songs' || selectedPlaylistId !== null;
+  const isCustomSort = Boolean(
+    currentSortConfig &&
+      (currentSortConfig.field !== 'title' || currentSortConfig.order !== 'asc')
+  );
+  const sortIcon = currentSortConfig ? getSortIcon(currentSortConfig) : 'sort-variant';
 
   return (
     <View style={styles.searchSection}>
-      <View style={styles.searchContainer}>
-        <MaterialCommunityIcons
-          name="magnify"
-          size={20}
-          color="#8B5CF6"
-          style={styles.searchIcon}
-        />
-        <TextInput
-          placeholder={searchPlaceholder}
-          placeholderTextColor="#5F6070"
-          value={searchQuery}
-          onChangeText={onChangeText}
-          style={styles.searchInput}
-          returnKeyType="search"
-          clearButtonMode="never"
-        />
+      <View style={styles.searchRow}>
+        <View style={[styles.searchContainer, { flex: 1 }]}>
+          <MaterialCommunityIcons
+            name="magnify"
+            size={20}
+            color="#8B5CF6"
+            style={styles.searchIcon}
+          />
+          <TextInput
+            placeholder={searchPlaceholder}
+            placeholderTextColor="#5F6070"
+            value={searchQuery}
+            onChangeText={onChangeText}
+            style={styles.searchInput}
+            returnKeyType="search"
+            clearButtonMode="never"
+          />
 
-        {/* Botón de limpiar texto */}
-        {isTyping && (
-          <TouchableOpacity
-            onPress={onClearSearch}
-            style={styles.searchClearBtn}
-            hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
-            activeOpacity={0.7}
-          >
-            <MaterialCommunityIcons name="close-circle" size={18} color="#8E8F9E" />
-          </TouchableOpacity>
-        )}
+          {/* Botón de limpiar texto */}
+          {isTyping && (
+            <TouchableOpacity
+              onPress={onClearSearch}
+              style={styles.searchClearBtn}
+              hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
+              activeOpacity={0.7}
+            >
+              <MaterialCommunityIcons name="close-circle" size={18} color="#8E8F9E" />
+            </TouchableOpacity>
+          )}
 
-        {/* Botón chevron estilo Odoo para abrir/cerrar sugerencias */}
-        {isTyping && showFieldFilter && (
+          {/* Botón chevron estilo Odoo para abrir/cerrar sugerencias */}
+          {isTyping && showFieldFilter && (
+            <TouchableOpacity
+              onPress={onToggleDropdown}
+              style={styles.searchChevronBtn}
+              hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
+              activeOpacity={0.7}
+            >
+              <MaterialCommunityIcons
+                name={isDropdownOpen ? 'menu-up' : 'menu-down'}
+                size={22}
+                color="#A78BFA"
+              />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Botón de ordenamiento multicriterio */}
+        {onOpenSort && (
           <TouchableOpacity
-            onPress={onToggleDropdown}
-            style={styles.searchChevronBtn}
-            hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
+            onPress={onOpenSort}
+            style={[styles.sortButton, isCustomSort && styles.sortButtonActive]}
             activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
           >
             <MaterialCommunityIcons
-              name={isDropdownOpen ? 'menu-up' : 'menu-down'}
-              size={22}
-              color="#A78BFA"
+              name={sortIcon}
+              size={20}
+              color={isCustomSort ? '#A78BFA' : '#8E8F9E'}
             />
           </TouchableOpacity>
         )}

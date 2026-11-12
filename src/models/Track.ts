@@ -41,6 +41,8 @@ export interface Track {
   headers?: Record<string, string>;
   /** Clave interna opcional usada para renderizado reactivo estable en listas drag & drop */
   queueId?: string;
+  /** Marca de tiempo de adición o modificación (milisegundos) para ordenamiento cronológico */
+  addedAt?: number;
 }
 
 /**
@@ -63,6 +65,7 @@ export function createTrack(
     lyrics: params.lyrics ?? null,
     duration: typeof params.duration === 'number' && !isNaN(params.duration) ? params.duration : 0,
     replayGain: params.replayGain ?? null,
+    addedAt: typeof params.addedAt === 'number' ? params.addedAt : Date.now(),
     ...(params.headers ? { headers: params.headers } : {}),
     ...(params.queueId ? { queueId: params.queueId } : {}),
   };

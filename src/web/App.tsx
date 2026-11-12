@@ -1,0 +1,274 @@
+import React, { useState, useMemo } from 'react';
+import { View, Text, ActivityIndicator } from 'react-native';
+import styles from './styles/web.styles';
+
+// Hooks
+import useWebPlayer from './hooks/useWebPlayer';
+import useWebDrive from './hooks/useWebDrive';
+import useWebLyrics from './hooks/useWebLyrics';
+import usePlaybackHistory from '../hooks/usePlaybackHistory';
+import { Track } from '../models/Track';
+
+// Componentes
+import WebNavbar from './components/WebNavbar';
+import WebSidebar from './components/WebSidebar';
+import WebTrackList from './components/WebTrackList';
+import WebPlayerBottomBar from './components/WebPlayerBottomBar';
+import WebLyricsPanel from './components/WebLyricsPanel';
+import WebDriveModal from './components/WebDriveModal';
+import EqualizerModal from '../components/modals/EqualizerModal';
+import { WebTrack } from './types';
+
+export default function WebApp(): React.JSX.Element {
+  const [currentView, setCurrentView] = useState<'drive' | 'queue' | 'history'>('drive');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [isDriveModalOpen, setIsDriveModalOpen] = useState<boolean>(false);
+  const [isEqualizerOpen, setIsEqualizerOpen] = useState<boolean>(false);
+
+  // Hook del reproductor de audio web
+  const {
+    currentTrack,
+    queue,
+    isPlaying,
+    isLoading: isLoadingAudio,
+    currentTime,
+    duration,
+    volume,
+    isMuted,
+    isShuffle,
+    repeatMode,
+    equalizerSettings,
+    playTrack,
+    togglePlay,
+    seek,
+    setVolume,
+    toggleMute,
+    next,
+    previous,
+    toggleShuffle,
+    toggleRepeat,
+    addToQueue,
+    removeFromQueue,
+    handleToggleEqualizer,
+    handleSelectPreset,
+    handleUpdateBandGain,
+    handleUpdateBassBoost,
+    handleResetEqualizer,
+  } = useWebPlayer();
+
+  // Hook de Google Drive
+  const {
+    isDriveConnected,
+    driveTracks,
+    isLoading: isLoadingDrive,
+    error: driveError,
+    connectWithGoogle,
+    connectWithManualToken,
+    disconnectDrive,
+    refreshTracks,
+  } = useWebDrive();
+
+  // Hook de Letras Sincronizadas
+  const {
+    lyricsData,
+    isLoading: isLoadingLyrics,
+    isPanelOpen: isLyricsOpen,
+    activeLineIndex,
+    togglePanel: toggleLyrics,
+    handleLineClick: handleLyricSeek,
+  } = useWebLyrics(currentTrack, currentTime, seek);
+
+  // Conversión defensiva de la pista activa para el hook de historial
+  const activeTrackForHistory = useMemo<Track | null>(() => {
+    if (!currentTrack) return null;
+    return {
+      mediaId: currentTrack.mediaId || currentTrack.id,
+      title: currentTrack.title,
+      artist: currentTrack.artist,
+      album: currentTrack.album,
+      duration: currentTrack.duration,
+      artworkUrl: currentTrack.artwork,
+      url: currentTrack.url || '',
+    };
+  }, [currentTrack]);
+
+  // Hook de historial de reproducción web
+  const { historyItems } = usePlaybackHistory({
+    activeTrack: activeTrackForHistory,
+    isPlaying,
+    position: currentTime,
+  });
+
+  const historyWebTracks = useMemo<WebTrack[]>(() => {
+    return historyItems.map((h) => ({
+      id: h.track.mediaId,
+      mediaId: h.track.mediaId,
+      title: h.track.title,
+      artist: h.track.artist,
+      album: h.track.album || '',
+      duration: h.track.duration,
+      artwork: h.track.artworkUrl,
+      source: 'history',
+      url: h.track.url,
+    }));
+  }, [historyItems]);
+
+  // Filtrado de canciones según el buscador
+  const displayedTracks = useMemo<WebTrack[]>(() => {
+    let sourceList = driveTracks;
+    if (currentView === 'queue') {
+      sourceList = queue;
+    } else if (currentView === 'history') {
+      sourceList = historyWebTracks;
+    }
+
+    if (!searchQuery.trim()) return sourceList;
+
+    const q = searchQuery.toLowerCase().trim();
+    return sourceList.filter(
+      (t) =>
+        (t.title && t.title.toLowerCase().includes(q)) ||
+        (t.artist && t.artist.toLowerCase().includes(q))
+    );
+  }, [currentView, queue, driveTracks, historyWebTracks, searchQuery]);
+
+  return (
+    <View style={styles.appContainer}>
+      {/* 1. Barra de Navegación Superior */}
+      <WebNavbar
+        isDriveConnected={isDriveConnected}
+        onOpenDriveModal={() => setIsDriveModalOpen(true)}
+        onRefreshDrive={refreshTracks}
+        onDisconnectDrive={disconnectDrive}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+      />
+
+      {/* 2. Cuerpo Central (Sidebar + Lista de Contenido) */}
+      <View style={styles.mainLayout}>
+        <WebSidebar
+          currentView={currentView}
+          onSelectView={setCurrentView}
+          queueCount={queue.length}
+          driveTrackCount={driveTracks.length}
+          historyCount={historyItems.length}
+          onToggleLyrics={toggleLyrics}
+          isLyricsOpen={isLyricsOpen}
+          onToggleEqualizer={() => setIsEqualizerOpen((prev) => !prev)}
+          isEqualizerOpen={isEqualizerOpen}
+        />
+
+        {/* Área Principal de Contenido */}
+        <View style={styles.contentArea}>
+          <View style={styles.contentHeader}>
+            <View>
+              <Text style={styles.contentTitle}>
+                {currentView === 'queue'
+                  ? 'Cola de Reproducción'
+                  : currentView === 'history'
+                  ? 'Historial de Reproducción'
+                  : 'Música en Google Drive'}
+              </Text>
+              <Text style={styles.contentSubtitle}>
+                {currentView === 'queue'
+                  ? `${queue.length} canción(es) en cola`
+                  : currentView === 'history'
+                  ? `${historyItems.length} canción(es) escuchadas recientemente`
+                  : isDriveConnected
+                  ? `${driveTracks.length} archivo(s) disponibles en tu nube privada`
+                  : 'Conecta tu cuenta de Google Drive para cargar tu música'}
+              </Text>
+            </View>
+
+            {isLoadingDrive && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <ActivityIndicator size="small" color="#8B5CF6" />
+                <Text style={{ color: '#8E8F9E', fontSize: 13 }}>Sincronizando Drive...</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Tabla de canciones */}
+          <WebTrackList
+            tracks={displayedTracks}
+            activeTrack={currentTrack}
+            isPlaying={isPlaying}
+            isLoadingAudio={isLoadingAudio}
+            onPlayTrack={playTrack}
+            onAddToQueue={addToQueue}
+            onRemoveFromQueue={removeFromQueue}
+            isQueueView={currentView === 'queue'}
+            isHistoryView={currentView === 'history'}
+            isDriveConnected={isDriveConnected}
+            onOpenDriveModal={() => setIsDriveModalOpen(true)}
+          />
+        </View>
+
+        {/* 3. Panel Lateral Desplegable de Letras */}
+        {isLyricsOpen && (
+          <WebLyricsPanel
+            lyricsData={lyricsData}
+            isLoading={isLoadingLyrics}
+            activeLineIndex={activeLineIndex}
+            onLineClick={handleLyricSeek}
+            onClose={toggleLyrics}
+          />
+        )}
+      </View>
+
+      {/* 4. Barra de Reproducción Inferior Fija */}
+      <WebPlayerBottomBar
+        currentTrack={currentTrack}
+        isPlaying={isPlaying}
+        isLoading={isLoadingAudio}
+        currentTime={currentTime}
+        duration={duration}
+        volume={volume}
+        isMuted={isMuted}
+        isShuffle={isShuffle}
+        repeatMode={repeatMode}
+        onTogglePlay={togglePlay}
+        onNext={next}
+        onPrevious={previous}
+        onSeek={seek}
+        onSetVolume={setVolume}
+        onToggleMute={toggleMute}
+        onToggleShuffle={toggleShuffle}
+        onToggleRepeat={toggleRepeat}
+        onToggleLyrics={toggleLyrics}
+        isLyricsOpen={isLyricsOpen}
+        onToggleEqualizer={() => setIsEqualizerOpen((prev) => !prev)}
+        isEqualizerOpen={isEqualizerOpen}
+        isEqualizerEnabled={equalizerSettings?.enabled ?? false}
+      />
+
+      {/* 5. Modal de Conexión de Google Drive */}
+      <WebDriveModal
+        isOpen={isDriveModalOpen}
+        onClose={() => setIsDriveModalOpen(false)}
+        onConnectGoogle={async (clientId) => {
+          const ok = await connectWithGoogle(clientId);
+          if (ok) setIsDriveModalOpen(false);
+        }}
+        onConnectToken={async (token) => {
+          const ok = await connectWithManualToken(token);
+          if (ok) setIsDriveModalOpen(false);
+        }}
+        isLoading={isLoadingDrive}
+        errorMessage={driveError}
+      />
+
+      {/* 6. Modal del Ecualizador de Audio */}
+      <EqualizerModal
+        visible={isEqualizerOpen}
+        onClose={() => setIsEqualizerOpen(false)}
+        settings={equalizerSettings}
+        onToggle={handleToggleEqualizer}
+        onSelectPreset={handleSelectPreset}
+        onUpdateBandGain={handleUpdateBandGain}
+        onUpdateBassBoost={handleUpdateBassBoost}
+        onReset={handleResetEqualizer}
+      />
+    </View>
+  );
+}

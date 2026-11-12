@@ -15,11 +15,14 @@ import { formatDuration } from './TrackItem';
 import { renderPlaylistArtwork } from './PlaylistArtwork';
 import { Playlist } from '../../models/Playlist';
 import { Track } from '../../models/Track';
+import { SortConfig } from '../../models/SortOptions';
+import { sortTracks } from '../../utils/trackSort';
 
 export interface PlaylistDetailViewProps {
   playlist: Playlist;
   searchQuery?: string;
   searchFilter?: string;
+  sortConfig?: SortConfig;
   activeTrack?: Track | null;
   isProcessing?: boolean;
   defaultArtwork?: string;
@@ -53,16 +56,21 @@ export default function PlaylistDetailView({
   onRemoveTrackFromPlaylist,
   onSelectTrack,
   onClearSearch,
+  sortConfig,
 }: PlaylistDetailViewProps): React.JSX.Element {
   const filteredPlaylistTracks = playlist.tracks
     ? filterTrackList(playlist.tracks, searchQuery, searchFilter)
     : [];
 
+  const displayPlaylistTracks = sortConfig
+    ? sortTracks(filteredPlaylistTracks, sortConfig)
+    : filteredPlaylistTracks;
+
   const isFavPlaylist = playlist.id === 'favorites' || playlist.isFavorites;
 
   return (
     <FlatList
-      data={filteredPlaylistTracks}
+      data={displayPlaylistTracks}
       keyExtractor={(item, index) => `${item.mediaId}-${index}`}
       contentContainerStyle={[styles.listContent, contentContainerStyle]}
       showsVerticalScrollIndicator={false}

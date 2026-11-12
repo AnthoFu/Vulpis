@@ -16,8 +16,11 @@ import SleepTimerModal from './SleepTimerModal';
 import OnlineLyricsSection from './settings/OnlineLyricsSection';
 import ReplayGainSection from './settings/ReplayGainSection';
 import CrossfadeSection from './settings/CrossfadeSection';
+import EqualizerSection from './settings/EqualizerSection';
 import { PlayerContext } from '../../context/PlayerContext';
 import { CrossfadeSettings, ReplayGainSettings } from '../../models/AudioSettings';
+import { EqualizerSettings } from '../../models/EqualizerSettings';
+import { DEFAULT_EQUALIZER_SETTINGS } from '../../utils/equalizer';
 import { SleepTimerMode } from '../../hooks/useSleepTimer';
 
 export interface SettingsModalProps {
@@ -33,6 +36,9 @@ export interface SettingsModalProps {
   onUpdateCrossfade?: (settings: CrossfadeSettings) => void;
   replayGainSettings?: ReplayGainSettings;
   onUpdateReplayGain?: (settings: ReplayGainSettings) => void;
+  equalizerSettings?: EqualizerSettings;
+  onToggleEqualizer?: (enabled: boolean) => void;
+  onOpenEqualizer?: () => void;
 }
 
 /**
@@ -54,6 +60,9 @@ export default function SettingsModal(props: SettingsModalProps): React.JSX.Elem
   const onUpdateCrossfade = props.onUpdateCrossfade || player?.handleUpdateCrossfade;
   const replayGainSettings = props.replayGainSettings || player?.replayGainSettings || DEFAULT_REPLAYGAIN_SETTINGS;
   const onUpdateReplayGain = props.onUpdateReplayGain || player?.handleUpdateReplayGain;
+  const equalizerSettings = props.equalizerSettings || player?.equalizerSettings || DEFAULT_EQUALIZER_SETTINGS;
+  const onToggleEqualizer = props.onToggleEqualizer || player?.handleToggleEqualizer;
+  const onOpenEqualizer = props.onOpenEqualizer || (() => player?.setIsEqualizerOpen?.(true));
 
   const [isSleepTimerVisible, setIsSleepTimerVisible] = useState<boolean>(false);
   const [settings, setSettingsState] = useState<{
@@ -166,6 +175,13 @@ export default function SettingsModal(props: SettingsModalProps): React.JSX.Elem
                 <CrossfadeSection
                   settings={crossfadeSettings}
                   onUpdate={onUpdateCrossfade}
+                />
+
+                {/* Sección modular: Ecualizador de Audio */}
+                <EqualizerSection
+                  settings={equalizerSettings}
+                  onToggle={onToggleEqualizer}
+                  onOpenModal={onOpenEqualizer}
                 />
 
                 {/* Temporizador de apagado */}

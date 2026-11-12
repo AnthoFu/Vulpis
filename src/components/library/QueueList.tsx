@@ -3,6 +3,7 @@ import { StyleProp, ViewStyle } from 'react-native';
 import useQueueList from '../../hooks/useQueueList';
 import TrackOptionsModal from '../modals/TrackOptionsModal';
 import PlaylistPickerModal from '../modals/PlaylistPickerModal';
+import SortModal from '../modals/SortModal';
 
 // Subcomponentes modulares de la biblioteca
 import TrackItem from './TrackItem';
@@ -145,6 +146,10 @@ export default function QueueList(props: QueueListProps): React.JSX.Element {
     handleCreateAndAdd,
     displayTracks,
     defaultArtwork,
+    sortConfig,
+    handleSortChange,
+    isSortModalVisible,
+    setIsSortModalVisible,
   } = useQueueList({
     tracks,
     playlists,
@@ -200,6 +205,8 @@ export default function QueueList(props: QueueListProps): React.JSX.Element {
       onToggleDropdown={toggleDropdown}
       onSelectFilter={handleSelectFilter}
       onCloseDropdown={() => setIsDropdownOpen(false)}
+      onOpenSort={() => setIsSortModalVisible(true)}
+      currentSortConfig={sortConfig}
     />
   );
 
@@ -263,6 +270,7 @@ export default function QueueList(props: QueueListProps): React.JSX.Element {
         selectedPlaylistId={selectedPlaylistId}
         searchQuery={searchQuery}
         searchFilter={searchFilter}
+        sortConfig={sortConfig}
         showCreateInput={showCreateInput}
         newPlaylistName={newPlaylistName}
         activeTrack={activeTrack}
@@ -341,6 +349,14 @@ export default function QueueList(props: QueueListProps): React.JSX.Element {
         inlineNewPlaylistName={inlineNewPlaylistName}
         setInlineNewPlaylistName={setInlineNewPlaylistName}
         handleCreateAndAdd={handleCreateAndAdd}
+      />
+
+      {/* Modal de ordenamiento multicriterio */}
+      <SortModal
+        visible={isSortModalVisible}
+        onClose={() => setIsSortModalVisible(false)}
+        currentConfig={sortConfig}
+        onSelectConfig={handleSortChange}
       />
     </>
   );

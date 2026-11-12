@@ -10,3 +10,7 @@ declare module 'jsmediatags/dist/jsmediatags.min.js' {
   };
   export default jsmediatags;
 }
+
+interface Window {
+  google?: any;
+}

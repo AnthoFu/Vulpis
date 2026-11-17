@@ -244,6 +244,15 @@
   - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores), compilación web limpia (`npm run build:web`, 465 módulos) y empaquetado Expo nativo (`npx expo export -p android --no-minify`, 846 módulos).
   - [x] Incremento de versión del proyecto a `0.5.29` en `app.config.js`.
 
+- [x] **Búsqueda Manual Interactiva de Letras en LRCLIB:**
+  - [x] Motor de búsqueda de candidatos `searchLrclibManual` en `src/services/lyrics/lyricsService.ts` con clasificación heurística (letras sincronizadas, texto plano e instrumentales).
+  - [x] Modal interactivo `LyricsSearchModal.tsx` con input reactivo, contador de resultados, insignias de tipo (.lrc, texto plano, instrumental), comparación de duración y visor de previsualización desplegable.
+  - [x] Acceso directo desde la cabecera de `LyricsSheet.tsx` (icono de búsqueda de texto), desde el estado vacío y desde `EditLyricsModal.tsx`.
+  - [x] Persistencia instantánea de la letra seleccionada en `vulpis_custom_lyrics` y en la caché de letras `vulpis_online_lyrics_cache`.
+  - [x] Soporte de búsqueda manual de candidatos en la versión Web (`searchWebLyricsCandidates`).
+  - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores), compilación web limpia (`npm run build:web`, 465 módulos) y empaquetado Expo nativo (`npx expo export -p android --no-minify`, 849 módulos).
+  - [x] Incremento de versión del proyecto a `0.5.30` en `app.config.js`.
+
 ---
 
 # Mejoras por hacer
@@ -252,7 +261,7 @@
 - [x] **Ordenamiento Multicriterio:** Opción para ordenar listas por Nombre, Artista, Duración y Fecha de adición.
 - [x] **Exportación e Importación de Playlists:** Respaldar y compartir listas de reproducción en formato `.m3u` o `.json`.
 - [x] **Historial de Reproducción:** Sección para consultar las canciones escuchadas recientemente.
-- [ ] **Búsqueda Manual Interactiva de Letras:** Permitir al usuario buscar y seleccionar manualmente la letra en LRCLIB si la búsqueda automática no coincide.
+- [x] **Búsqueda Manual Interactiva de Letras:** Permitir al usuario buscar y seleccionar manualmente la letra en LRCLIB si la búsqueda automática no coincide.
 - [ ] **Editor de Etiquetas ID3 (Tag Editor):** Editar título, artista, álbum y género directamente sobre los archivos MP3 locales.
 - [ ] **Descargador de Carátulas (Album Art Fetcher):** Búsqueda y descarga automática de portadas en alta resolución desde servicios abiertos (Cover Art Archive / MusicBrainz).
 - [ ] **Descarga Offline de Playlists Completas:** Permitir descargar de Google Drive todos los archivos de una lista de reproducción con un solo toque.

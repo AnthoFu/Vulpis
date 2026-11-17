@@ -22,6 +22,7 @@ export interface EditLyricsModalProps {
   onSave?: (lyrics: string) => void;
   onReset?: () => void;
   onFetchOnline?: () => Promise<boolean>;
+  onOpenSearchManual?: () => void;
 }
 
 /**
@@ -36,6 +37,7 @@ export default function EditLyricsModal({
   onSave,
   onReset,
   onFetchOnline,
+  onOpenSearchManual,
 }: EditLyricsModalProps): React.JSX.Element | null {
   const [lyricsInput, setLyricsInput] = useState<string>('');
   const [isSearchingApi, setIsSearchingApi] = useState<boolean>(false);
@@ -138,29 +140,59 @@ export default function EditLyricsModal({
 
                 <View style={styles.divider} />
 
-                {/* Botón para forzar reemplazo desde la API */}
-                <TouchableOpacity
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                    paddingVertical: 10,
-                    borderRadius: 10,
-                    backgroundColor: 'rgba(139, 92, 246, 0.12)',
-                    borderWidth: 1,
-                    borderColor: 'rgba(139, 92, 246, 0.25)',
-                    marginBottom: 14,
-                  }}
-                  onPress={handleFetchFromApi}
-                  disabled={isSearchingApi}
-                  activeOpacity={0.8}
-                >
-                  <MaterialCommunityIcons name="cloud-sync-outline" size={18} color="#A78BFA" />
-                  <Text style={{ color: '#A78BFA', fontSize: 13, fontWeight: '700' }}>
-                    {isSearchingApi ? 'Buscando en la API...' : 'Reemplazar con letra de la API (LRCLIB)'}
-                  </Text>
-                </TouchableOpacity>
+                {/* Botones de búsqueda en LRCLIB */}
+                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+                  {onOpenSearchManual && (
+                    <TouchableOpacity
+                      style={{
+                        flex: 1,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 6,
+                        paddingVertical: 10,
+                        paddingHorizontal: 8,
+                        borderRadius: 10,
+                        backgroundColor: '#8B5CF6',
+                      }}
+                      onPress={() => {
+                        onClose();
+                        onOpenSearchManual();
+                      }}
+                      activeOpacity={0.8}
+                    >
+                      <MaterialCommunityIcons name="text-search" size={17} color="#FFFFFF" />
+                      <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>
+                        Buscar en LRCLIB
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                  {onFetchOnline && (
+                    <TouchableOpacity
+                      style={{
+                        flex: 1,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 6,
+                        paddingVertical: 10,
+                        paddingHorizontal: 8,
+                        borderRadius: 10,
+                        backgroundColor: 'rgba(139, 92, 246, 0.12)',
+                        borderWidth: 1,
+                        borderColor: 'rgba(139, 92, 246, 0.25)',
+                      }}
+                      onPress={handleFetchFromApi}
+                      disabled={isSearchingApi}
+                      activeOpacity={0.8}
+                    >
+                      <MaterialCommunityIcons name="cloud-sync-outline" size={17} color="#A78BFA" />
+                      <Text style={{ color: '#A78BFA', fontSize: 12, fontWeight: '700' }}>
+                        {isSearchingApi ? 'Buscando...' : 'Reemplazo rápido'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
 
                 <Text style={styles.inputLabel}>
                   Escribe o pega la letra (soporta texto plano o formato sincronizado .lrc):

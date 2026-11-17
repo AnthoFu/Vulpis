@@ -23,6 +23,7 @@ import LyricsSheet from './LyricsSheet';
 
 // Modales complementarios
 import EditLyricsModal from '../modals/EditLyricsModal';
+import LyricsSearchModal from '../modals/LyricsSearchModal';
 import SleepTimerModal from '../modals/SleepTimerModal';
 
 // Hooks y animaciones
@@ -111,6 +112,8 @@ export default function PlayerCard(props: PlayerCardProps): React.JSX.Element {
     setIsQueueVisible,
     isLyricsVisible,
     setIsLyricsVisible,
+    isLyricsSearchVisible,
+    setIsLyricsSearchVisible,
     lyricsText,
     rawLyrics,
     isLoadingLyrics,
@@ -125,6 +128,7 @@ export default function PlayerCard(props: PlayerCardProps): React.JSX.Element {
     handleSaveCustomLyrics,
     handleResetCustomLyrics,
     handleFetchOnlineLyricsForce,
+    handleApplyCandidateLyrics,
   } = usePlayerCard({
     activeTrack,
     tracks,
@@ -322,6 +326,7 @@ export default function PlayerCard(props: PlayerCardProps): React.JSX.Element {
         handleManualSyncPress={handleManualSyncPress}
         handleLyricLinePress={handleLyricLinePress}
         onOpenEditLyrics={() => setIsEditLyricsVisible(true)}
+        onOpenSearchLyrics={() => setIsLyricsSearchVisible(true)}
       />
 
       {/* 5. Modal de edición de letras */}
@@ -334,6 +339,20 @@ export default function PlayerCard(props: PlayerCardProps): React.JSX.Element {
         onSave={handleSaveCustomLyrics}
         onReset={handleResetCustomLyrics}
         onFetchOnline={handleFetchOnlineLyricsForce}
+        onOpenSearchManual={() => setIsLyricsSearchVisible(true)}
+      />
+
+      {/* 5b. Modal de búsqueda interactiva en LRCLIB */}
+      <LyricsSearchModal
+        visible={isLyricsSearchVisible}
+        onClose={() => setIsLyricsSearchVisible(false)}
+        trackTitle={currentTrackTitle}
+        trackArtist={currentTrackArtist}
+        trackDuration={activeTrack?.duration || 0}
+        onSelectCandidate={async (candidate) => {
+          const success = await handleApplyCandidateLyrics(candidate);
+          return success;
+        }}
       />
 
       {/* 6. Modal de temporizador de apagado */}

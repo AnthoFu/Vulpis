@@ -34,6 +34,7 @@ export interface LyricsSheetProps {
   handleManualSyncPress?: () => void;
   handleLyricLinePress?: (time: number | null) => void;
   onOpenEditLyrics?: () => void;
+  onOpenSearchLyrics?: () => void;
 }
 
 /**
@@ -59,6 +60,7 @@ export default function LyricsSheet({
   handleManualSyncPress,
   handleLyricLinePress,
   onOpenEditLyrics,
+  onOpenSearchLyrics,
 }: LyricsSheetProps): React.JSX.Element | null {
   const {
     visible: sheetVisible,
@@ -105,6 +107,16 @@ export default function LyricsSheet({
             </Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            {onOpenSearchLyrics && (
+              <TouchableOpacity
+                onPress={onOpenSearchLyrics}
+                style={styles.lyricsCloseBtn}
+                activeOpacity={0.7}
+                accessibilityLabel="Buscar letra en LRCLIB"
+              >
+                <MaterialCommunityIcons name="text-search" size={22} color="#A78BFA" />
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               onPress={onOpenEditLyrics}
               style={styles.lyricsCloseBtn}
@@ -186,14 +198,26 @@ export default function LyricsSheet({
               <Text style={styles.emptyLyricsSub}>
                 No se encontraron letras integradas en los metadatos de esta canción ni en línea.
               </Text>
-              <TouchableOpacity
-                style={styles.addLyricsBtn}
-                onPress={onOpenEditLyrics}
-                activeOpacity={0.8}
-              >
-                <MaterialCommunityIcons name="pencil" size={18} color="#FFFFFF" />
-                <Text style={styles.addLyricsBtnText}>Escribir o editar letra</Text>
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+                {onOpenSearchLyrics && (
+                  <TouchableOpacity
+                    style={[styles.addLyricsBtn, { backgroundColor: '#8B5CF6' }]}
+                    onPress={onOpenSearchLyrics}
+                    activeOpacity={0.8}
+                  >
+                    <MaterialCommunityIcons name="text-search" size={18} color="#FFFFFF" />
+                    <Text style={styles.addLyricsBtnText}>Buscar en LRCLIB</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={[styles.addLyricsBtn, onOpenSearchLyrics && { backgroundColor: 'rgba(255, 255, 255, 0.08)' }]}
+                  onPress={onOpenEditLyrics}
+                  activeOpacity={0.8}
+                >
+                  <MaterialCommunityIcons name="pencil" size={18} color="#FFFFFF" />
+                  <Text style={styles.addLyricsBtnText}>Escribir o editar letra</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           )}
         </ScrollView>

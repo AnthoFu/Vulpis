@@ -9,6 +9,8 @@ import {
   getCustomLyrics,
   saveCustomLyrics,
   removeCustomLyrics,
+  setCachedLyrics,
+  LyricCandidate,
 } from '../services/lyrics/lyricsService';
 import { smoothTrackTransition, getCrossfadeSettings } from '../utils/crossfade';
 import { DEFAULT_LYRICS_SETTINGS } from '../models/AudioSettings';
@@ -25,6 +27,8 @@ export interface UsePlayerCardReturn {
   setIsQueueVisible: Dispatch<SetStateAction<boolean>>;
   isLyricsVisible: boolean;
   setIsLyricsVisible: Dispatch<SetStateAction<boolean>>;
+  isLyricsSearchVisible: boolean;
+  setIsLyricsSearchVisible: Dispatch<SetStateAction<boolean>>;
   lyricsText: string | null;
   rawLyrics: string | null;
   isLoadingLyrics: boolean;
@@ -41,6 +45,7 @@ export interface UsePlayerCardReturn {
   handleSaveCustomLyrics: (newLyrics: string) => Promise<void>;
   handleResetCustomLyrics: () => Promise<void>;
   handleFetchOnlineLyricsForce: () => Promise<boolean>;
+  handleApplyCandidateLyrics: (candidate: LyricCandidate) => Promise<boolean>;
 }
 
 export default function usePlayerCard({
@@ -50,6 +55,7 @@ export default function usePlayerCard({
 }: UsePlayerCardParams): UsePlayerCardReturn {
   const [isQueueVisible, setIsQueueVisible] = useState(initialQueueVisible);
   const [isLyricsVisible, setIsLyricsVisible] = useState(false);
+  const [isLyricsSearchVisible, setIsLyricsSearchVisible] = useState(false);
   const [lyricsText, setLyricsText] = useState<string | null>(null);
   const [rawLyrics, setRawLyrics] = useState<string | null>(null);
   const [isLoadingLyrics, setIsLoadingLyrics] = useState(false);
@@ -325,11 +331,35 @@ export default function usePlayerCard({
     }
   }, []);
 
+  const handleApplyCandidateLyrics = async (candidate: LyricCandidate): Promise<boolean> => {
+    if (!activeTrack) return false;
+    const lyrics = candidate.syncedLyrics || candidate.plainLyrics || null;
+    if (!lyrics) return false;
+
+    try {
+      const trackKey = activeTrack.mediaId || activeTrack.url;
+      await saveCustomLyrics(trackKey, lyrics);
+      if (activeTrack.title) {
+        await setCachedLyrics(activeTrack.title, activeTrack.artist || '', lyrics);
+      }
+      activeTrack.lyrics = lyrics;
+      (activeTrack as any).customLyrics = lyrics;
+      setRawLyrics(lyrics);
+      setLyricsText(formatLyricsText(lyrics));
+      return true;
+    } catch (e) {
+      console.error('[usePlayerCard] Error al aplicar candidato de letra:', e);
+      return false;
+    }
+  };
+
   return {
     isQueueVisible,
     setIsQueueVisible,
     isLyricsVisible,
     setIsLyricsVisible,
+    isLyricsSearchVisible,
+    setIsLyricsSearchVisible,
     lyricsText,
     rawLyrics,
     isLoadingLyrics,
@@ -346,5 +376,6 @@ export default function usePlayerCard({
     handleSaveCustomLyrics,
     handleResetCustomLyrics,
     handleFetchOnlineLyricsForce,
+    handleApplyCandidateLyrics,
   };
 }

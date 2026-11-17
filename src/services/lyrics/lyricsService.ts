@@ -24,10 +24,12 @@ const REQUEST_HEADERS = {
  * Representación de un candidato de letra obtenido de APIs públicas.
  */
 export interface LyricCandidate {
+  id?: number;
   trackName?: string;
   artistName?: string;
   albumName?: string;
   duration?: number;
+  instrumental?: boolean;
   plainLyrics?: string | null;
   syncedLyrics?: string | null;
 }
@@ -200,6 +202,52 @@ async function searchLrclib(cleanT: string, cleanA: string): Promise<LyricCandid
     } catch (err: any) {
       console.warn('[LyricsService] Fallo en intento LRCLIB:', url, err?.message);
     }
+  }
+
+  return [];
+}
+
+/**
+ * Realiza una búsqueda manual e interactiva en la API pública de LRCLIB
+ * retornando todos los candidatos encontrados ordenados por relevancia y disponibilidad de letras.
+ *
+ * @param query Texto de búsqueda ingresado por el usuario (título, artista o ambos)
+ * @returns Lista de candidatos de letras disponibles
+ */
+export async function searchLrclibManual(query: string): Promise<LyricCandidate[]> {
+  const cleanQ = query.trim();
+  if (!cleanQ) return [];
+
+  const url = `https://lrclib.net/api/search?q=${encodeURIComponent(cleanQ)}`;
+  try {
+    console.log('[LyricsService] Búsqueda manual LRCLIB:', url);
+    const res = await fetch(url, { headers: REQUEST_HEADERS });
+    if (res.ok) {
+      const items = await res.json();
+      if (Array.isArray(items)) {
+        // Ordenar candidatos: primero los que tienen letras sincronizadas, luego texto plano, luego instrumentales
+        const mapped: LyricCandidate[] = items.map((item) => ({
+          id: item.id,
+          trackName: item.trackName || item.name || 'Sin título',
+          artistName: item.artistName || 'Artista desconocido',
+          albumName: item.albumName || '',
+          duration: typeof item.duration === 'number' ? item.duration : 0,
+          instrumental: Boolean(item.instrumental),
+          plainLyrics: item.plainLyrics || null,
+          syncedLyrics: item.syncedLyrics || null,
+        }));
+
+        mapped.sort((a, b) => {
+          const aScore = a.syncedLyrics ? 3 : a.plainLyrics ? 2 : a.instrumental ? 1 : 0;
+          const bScore = b.syncedLyrics ? 3 : b.plainLyrics ? 2 : b.instrumental ? 1 : 0;
+          return bScore - aScore;
+        });
+
+        return mapped;
+      }
+    }
+  } catch (err: any) {
+    console.warn('[LyricsService] Error en búsqueda manual LRCLIB:', err?.message);
   }
 
   return [];

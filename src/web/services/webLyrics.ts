@@ -150,3 +150,43 @@ export async function fetchWebLyrics(
 
   return null;
 }
+
+export interface WebLyricCandidate {
+  id?: number;
+  trackName: string;
+  artistName: string;
+  albumName?: string;
+  duration?: number;
+  syncedLyrics?: string | null;
+  plainLyrics?: string | null;
+}
+
+/**
+ * Búsqueda manual interactiva de candidatos de letras en LRCLIB para la versión Web.
+ */
+export async function searchWebLyricsCandidates(query: string): Promise<WebLyricCandidate[]> {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+  try {
+    const res = await fetch(`https://lrclib.net/api/search?q=${encodeURIComponent(trimmed)}`, {
+      headers: { 'User-Agent': 'Vulpis-Web/1.0' },
+    });
+    if (res.ok) {
+      const results = await res.json();
+      if (Array.isArray(results)) {
+        return results.map((item) => ({
+          id: item.id,
+          trackName: item.trackName || item.name || 'Sin título',
+          artistName: item.artistName || 'Artista desconocido',
+          albumName: item.albumName || '',
+          duration: item.duration || 0,
+          syncedLyrics: item.syncedLyrics || null,
+          plainLyrics: item.plainLyrics || null,
+        }));
+      }
+    }
+  } catch (err) {
+    console.warn('[WebLyrics] Error en búsqueda de candidatos:', err);
+  }
+  return [];
+}

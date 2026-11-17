@@ -35,6 +35,8 @@ export { default as SettingsModal } from './modals/SettingsModal';
 export * from './modals/SettingsModal';
 export { default as EditLyricsModal } from './modals/EditLyricsModal';
 export * from './modals/EditLyricsModal';
+export { default as LyricsSearchModal } from './modals/LyricsSearchModal';
+export * from './modals/LyricsSearchModal';
 export { default as SleepTimerModal } from './modals/SleepTimerModal';
 export * from './modals/SleepTimerModal';
 export { default as TrackOptionsModal } from './modals/TrackOptionsModal';

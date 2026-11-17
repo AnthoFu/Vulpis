@@ -17,6 +17,7 @@ export interface TrackOptionsModalProps {
   onDeleteDriveTrack?: (track: Track) => void;
   onDeleteLocalTrack?: (track: Track) => void;
   onEditTagsPress?: (track: Track) => void;
+  onChangeArtworkPress?: (track: Track) => void;
 }
 
 /**
@@ -35,6 +36,7 @@ export default function TrackOptionsModal({
   onDeleteDriveTrack,
   onDeleteLocalTrack,
   onEditTagsPress,
+  onChangeArtworkPress,
 }: TrackOptionsModalProps): React.JSX.Element | null {
   if (!track) return null;
 
@@ -146,6 +148,20 @@ export default function TrackOptionsModal({
             >
               <MaterialCommunityIcons name="tag-edit-outline" size={22} color="#A78BFA" />
               <Text style={styles.modalOptionText}>Editar información / etiquetas</Text>
+            </TouchableOpacity>
+          )}
+
+          {onChangeArtworkPress && (
+            <TouchableOpacity
+              onPress={() => {
+                onClose();
+                onChangeArtworkPress(track);
+              }}
+              style={styles.modalOption}
+              activeOpacity={0.7}
+            >
+              <MaterialCommunityIcons name="image-search-outline" size={22} color="#A78BFA" />
+              <Text style={styles.modalOptionText}>Cambiar / buscar carátula</Text>
             </TouchableOpacity>
           )}
 

@@ -4,7 +4,17 @@
  * imágenes binarias a archivos locales físicos en lugar de cadenas base64.
  */
 
-import * as FileSystem from 'expo-file-system/legacy';
+let fileSystemModule: typeof import('expo-file-system/legacy') | null = null;
+function getFileSystem() {
+  if (!fileSystemModule) {
+    try {
+      fileSystemModule = require('expo-file-system/legacy');
+    } catch {
+      fileSystemModule = null;
+    }
+  }
+  return fileSystemModule;
+}
 
 let isCoversDirReady = false;
 
@@ -30,6 +40,8 @@ export function simpleHash(str?: string | null): string {
 export async function ensureCoversDirExists(): Promise<void> {
   if (isCoversDirReady) return;
   try {
+    const FileSystem = getFileSystem();
+    if (!FileSystem || !FileSystem.cacheDirectory) return;
     const coversDir = `${FileSystem.cacheDirectory}covers/`;
     const info = await FileSystem.getInfoAsync(coversDir);
     if (!info.exists) {
@@ -132,6 +144,9 @@ export async function saveArtworkToCache(
     }
 
     if (!base64) return null;
+
+    const FileSystem = getFileSystem();
+    if (!FileSystem || !FileSystem.cacheDirectory) return null;
 
     const mime = format || 'image/jpeg';
     const ext = mime.toLowerCase().includes('png') ? 'png' : 'jpg';

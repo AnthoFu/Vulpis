@@ -18,4 +18,7 @@ export * from './audio';
 // Servicios de Importación y Exportación de Playlists
 export * from './playlist';
 
+// Servicios de Búsqueda y Descarga de Carátulas (Album Art Fetcher)
+export * from './artwork';
+
 

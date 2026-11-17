@@ -120,6 +120,10 @@ export interface AppControllerResult {
     track: Track,
     newTags: { title: string; artist: string; album: string; genre: string }
   ) => Promise<boolean>;
+  handleUpdateTrackArtwork: (
+    track: Track,
+    newArtworkUrl: string
+  ) => Promise<boolean>;
 }
 
 /**
@@ -259,6 +263,7 @@ export default function useAppController(): AppControllerResult {
     handleResetLocal,
     handleDeleteLocalTrack,
     handleUpdateLocalTrackMetadata,
+    handleUpdateLocalTrackArtwork,
   } = useLocalLibrary({
     currentSource,
     setTracks,
@@ -509,6 +514,20 @@ export default function useAppController(): AppControllerResult {
     [handleUpdateLocalTrackMetadata, handleUpdateTrackInPlaylists]
   );
 
+  /**
+   * Actualiza la carátula de una pista en la biblioteca local y en todas las listas de reproducción.
+   */
+  const handleUpdateTrackArtwork = useCallback(
+    async (track: Track, newArtworkUrl: string): Promise<boolean> => {
+      const success = await handleUpdateLocalTrackArtwork(track, newArtworkUrl);
+      if (success) {
+        await handleUpdateTrackInPlaylists(track.mediaId, { artworkUrl: newArtworkUrl });
+      }
+      return success;
+    },
+    [handleUpdateLocalTrackArtwork, handleUpdateTrackInPlaylists]
+  );
+
   return {
     insets,
     defaultCover,
@@ -596,5 +615,6 @@ export default function useAppController(): AppControllerResult {
     handleRemoveHistoryItem,
     handleClearHistory,
     handleUpdateTrackTags,
+    handleUpdateTrackArtwork,
   };
 }

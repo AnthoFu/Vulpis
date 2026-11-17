@@ -5,6 +5,7 @@ import TrackOptionsModal from '../modals/TrackOptionsModal';
 import PlaylistPickerModal from '../modals/PlaylistPickerModal';
 import SortModal from '../modals/SortModal';
 import TagEditorModal from '../modals/TagEditorModal';
+import ArtworkPickerModal from '../modals/ArtworkPickerModal';
 
 // Subcomponentes modulares de la biblioteca
 import TrackItem from './TrackItem';
@@ -61,6 +62,10 @@ export interface QueueListProps {
     track: Track,
     newTags: { title: string; artist: string; album: string; genre: string }
   ) => Promise<boolean>;
+  onUpdateTrackArtwork?: (
+    track: Track,
+    newArtworkUrl: string
+  ) => Promise<boolean>;
 }
 
 /**
@@ -107,8 +112,10 @@ export default function QueueList(props: QueueListProps): React.JSX.Element {
   const onExportPlaylist = props.onExportPlaylist || player?.handleExportPlaylist;
   const onImportPlaylist = props.onImportPlaylist || player?.handleImportPlaylist;
   const onUpdateTrackTags = props.onUpdateTrackTags || player?.handleUpdateTrackTags;
+  const onUpdateTrackArtwork = props.onUpdateTrackArtwork || player?.handleUpdateTrackArtwork;
 
   const [trackForTagEditing, setTrackForTagEditing] = React.useState<Track | null>(null);
+  const [trackForArtworkPicker, setTrackForArtworkPicker] = React.useState<Track | null>(null);
 
   const {
     activeTab,
@@ -349,6 +356,7 @@ export default function QueueList(props: QueueListProps): React.JSX.Element {
         onDeleteDriveTrack={onDeleteDriveTrack}
         onDeleteLocalTrack={onDeleteLocalTrack}
         onEditTagsPress={onUpdateTrackTags ? (t) => setTrackForTagEditing(t) : undefined}
+        onChangeArtworkPress={onUpdateTrackArtwork ? (t) => setTrackForArtworkPicker(t) : undefined}
       />
 
       {/* Modal de edición de etiquetas ID3 */}
@@ -357,6 +365,23 @@ export default function QueueList(props: QueueListProps): React.JSX.Element {
         track={trackForTagEditing}
         onClose={() => setTrackForTagEditing(null)}
         onSaveTags={onUpdateTrackTags || (async () => false)}
+        onOpenArtworkPicker={
+          onUpdateTrackArtwork
+            ? () => {
+                const target = trackForTagEditing;
+                setTrackForTagEditing(null);
+                setTrackForArtworkPicker(target);
+              }
+            : undefined
+        }
+      />
+
+      {/* Modal de búsqueda y selección de carátulas */}
+      <ArtworkPickerModal
+        visible={trackForArtworkPicker !== null}
+        track={trackForArtworkPicker}
+        onClose={() => setTrackForArtworkPicker(null)}
+        onSelectArtwork={onUpdateTrackArtwork || (async () => false)}
       />
 
       {/* Modal de selección de playlist */}

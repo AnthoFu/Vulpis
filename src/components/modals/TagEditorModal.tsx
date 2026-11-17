@@ -25,6 +25,7 @@ export interface TagEditorModalProps {
     track: Track,
     newTags: { title: string; artist: string; album: string; genre: string }
   ) => Promise<boolean>;
+  onOpenArtworkPicker?: () => void;
 }
 
 const COMMON_GENRES = [
@@ -50,6 +51,7 @@ export default function TagEditorModal({
   track,
   onClose,
   onSaveTags,
+  onOpenArtworkPicker,
 }: TagEditorModalProps): React.JSX.Element | null {
   const [title, setTitle] = useState<string>('');
   const [artist, setArtist] = useState<string>('');
@@ -179,6 +181,20 @@ export default function TagEditorModal({
                     <MaterialCommunityIcons name="swap-horizontal" size={16} color="#A78BFA" />
                     <Text style={styles.helperBtnText}>Título ⇄ Artista</Text>
                   </TouchableOpacity>
+
+                  {onOpenArtworkPicker && (
+                    <TouchableOpacity
+                      style={styles.helperBtn}
+                      onPress={() => {
+                        onClose();
+                        onOpenArtworkPicker();
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <MaterialCommunityIcons name="image-search-outline" size={16} color="#A78BFA" />
+                      <Text style={styles.helperBtnText}>Carátula</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
 
                 {/* Campos del formulario */}

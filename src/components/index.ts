@@ -51,6 +51,8 @@ export { default as HistoryModal } from './modals/HistoryModal';
 export * from './modals/HistoryModal';
 export { default as TagEditorModal } from './modals/TagEditorModal';
 export * from './modals/TagEditorModal';
+export { default as ArtworkPickerModal } from './modals/ArtworkPickerModal';
+export * from './modals/ArtworkPickerModal';
 
 
 // Biblioteca musical

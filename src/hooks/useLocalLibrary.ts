@@ -37,6 +37,10 @@ export interface UseLocalLibraryReturn {
     track: Track,
     newTags: { title: string; artist: string; album: string; genre: string }
   ) => Promise<boolean>;
+  handleUpdateLocalTrackArtwork: (
+    track: Track,
+    newArtworkUrl: string
+  ) => Promise<boolean>;
 }
 
 export default function useLocalLibrary({
@@ -377,6 +381,50 @@ export default function useLocalLibrary({
     }
   };
 
+  const handleUpdateLocalTrackArtwork = async (
+    track: Track,
+    newArtworkUrl: string
+  ): Promise<boolean> => {
+    try {
+      const updatedTrack: Track = {
+        ...track,
+        artworkUrl: newArtworkUrl,
+      };
+
+      // 1. Actualizar en la lista de pistas locales
+      const updatedList = localLibraryTracks.map((t) =>
+        t.mediaId === track.mediaId ? updatedTrack : t
+      );
+      await saveLocalTracks(updatedList, false);
+
+      // 2. Actualizar la cola si la pista está presente
+      if (playQueue && setPlayQueue) {
+        const updatedQueue = playQueue.map((t) =>
+          t.mediaId === track.mediaId ? updatedTrack : t
+        );
+        setPlayQueue(updatedQueue);
+      }
+
+      // 3. Actualizar la pista activa si coincide
+      if (setActiveTrack) {
+        const active = TrackPlayer.getActiveMediaItem() as Track | null;
+        if (active && active.mediaId === track.mediaId) {
+          setActiveTrack(updatedTrack);
+        }
+      }
+
+      if (showToast) {
+        showToast('Carátula actualizada con éxito');
+      }
+
+      return true;
+    } catch (err) {
+      console.error('[useLocalLibrary] Error actualizando carátula:', err);
+      Alert.alert('Error', 'No se pudo actualizar la carátula de la canción.');
+      return false;
+    }
+  };
+
   return {
     localLibraryTracks,
     setLocalLibraryTracks,
@@ -388,5 +436,6 @@ export default function useLocalLibrary({
     handleResetLocal,
     handleDeleteLocalTrack,
     handleUpdateLocalTrackMetadata,
+    handleUpdateLocalTrackArtwork,
   };
 }

@@ -3,7 +3,7 @@ import { View, TouchableOpacity } from 'react-native';
 import styles from '../../styles/Controls.styles';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { RepeatMode } from '@rntp/player';
-import useControls from '../../hooks/useControls';
+import useControls, { UseControlsReturn } from '../../hooks/useControls';
 import { Track } from '../../models/Track';
 import { CrossfadeSettings } from '../../models/AudioSettings';
 
@@ -16,30 +16,26 @@ export interface ControlsProps {
   activeTrack?: Track | null;
   onSelectTrack?: (track: Track, index: number) => Promise<void> | void;
   crossfadeSettings?: CrossfadeSettings;
+  controls?: UseControlsReturn;
 }
 
 /**
  * Controles de reproducción principales: Anterior, Play/Pausa, Siguiente, Aleatorio y Repetición.
  */
-export default function Controls({
-  isPlaying,
-  repeatMode,
-  isShuffleActive,
-  tracks = [],
-  playQueue = [],
-  activeTrack,
-  onSelectTrack,
-  crossfadeSettings,
-}: ControlsProps): React.JSX.Element {
+export default function Controls(props: ControlsProps): React.JSX.Element {
   const {
-    isProcessing,
-    togglePlayback,
-    playNext,
-    playPrevious,
-    toggleShuffle,
-    cycleRepeatMode,
-    isRepeatActive,
-  } = useControls({
+    isPlaying,
+    repeatMode,
+    isShuffleActive,
+    tracks = [],
+    playQueue = [],
+    activeTrack,
+    onSelectTrack,
+    crossfadeSettings,
+    controls,
+  } = props;
+
+  const fallbackControls = useControls({
     isPlaying,
     repeatMode,
     isShuffleActive,
@@ -49,6 +45,16 @@ export default function Controls({
     onSelectTrack,
     crossfadeSettings,
   });
+
+  const {
+    isProcessing,
+    togglePlayback,
+    playNext,
+    playPrevious,
+    toggleShuffle,
+    cycleRepeatMode,
+    isRepeatActive,
+  } = controls || fallbackControls;
 
   return (
     <View style={[styles.controlsRow, isProcessing && styles.controlsDisabled]}>

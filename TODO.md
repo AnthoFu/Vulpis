@@ -226,6 +226,15 @@
   - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores), compilación web limpia (`npm run build:web`, 465 módulos) y empaquetado Expo nativo (`npx expo export -p android --no-minify`, 839 módulos).
   - [x] Incremento de versión del proyecto a `0.5.27` en `app.config.js`.
 
+- [x] **Gestos Táctiles Avanzados en el Reproductor:**
+  - [x] Soporte de `PanResponder` nativo con `useNativeDriver: true` en `PlayerArtwork.tsx` para deslizamiento horizontal fluido.
+  - [x] Física de arrastre en tiempo real con interpolación de rotación tipo vinilo (-12° a +12°), escala (0.94 a 1.0) y opacidad (0.65 a 1.0).
+  - [x] Umbrales de activación configurados (`SWIPE_THRESHOLD = 60px`, `VELOCITY_THRESHOLD = 0.35`) con animación de salida off-screen e ingreso elástico de la siguiente portada.
+  - [x] Gesto vertical hacia abajo (Swipe-down) en `PlayerArtwork.tsx` y `PlayerHeader.tsx` para arrastrar y minimizar `PlayerCard` interactivamente.
+  - [x] Integración unificada con `useControls.ts` en `PlayerCard.tsx` y paso de `controls` a `Controls.tsx`.
+  - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores), compilación web limpia (`npm run build:web`, 465 módulos) y empaquetado Expo nativo (`npx expo export -p android --no-minify`, 839 módulos).
+  - [x] Incremento de versión del proyecto a `0.5.28` en `app.config.js`.
+
 ---
 
 # Mejoras por hacer
@@ -241,7 +250,7 @@
 - [ ] **Gestor de Almacenamiento y Caché:** Pantalla en Ajustes que muestre el espacio ocupado por la caché de Drive/Letras con opción de limpieza rápida.
 - [ ] **Soporte para Nuevas Fuentes en la Nube:** Opción para conectar servidores WebDAV, Nextcloud o OneDrive.
 - [ ] **Selector de Temas Visuales:** Opciones de personalización como Tema AMOLED Black, Cyberpunk, Violeta Vulpis o Tema Dinámico que se adapta al color dominante de la carátula de la canción.
-- [ ] **Gestos Táctiles Avanzados en el Reproductor:** Deslizar horizontalmente la carátula para cambiar de pista (anterior/siguiente) y deslizar hacia abajo para minimizar `PlayerCard`.
+- [x] **Gestos Táctiles Avanzados en el Reproductor:** Deslizar horizontalmente la carátula para cambiar de pista (anterior/siguiente) y deslizar hacia abajo para minimizar `PlayerCard`.
 - [ ] **Soporte de Widget para Android:** Widget de pantalla de inicio con controles de reproducción y carátula.
 - [ ] **Atajos y Controles Multimedia Avanzados:** Soporte extendido para eventos de auriculares Bluetooth (doble toque, triple toque).
 - [ ] **Migración a `@shopify/flash-list`:** Reemplazar `FlatList` tradicional por `FlashList` para optimizar el rendimiento y la fluidez del scroll con miles de canciones.

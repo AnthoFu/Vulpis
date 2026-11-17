@@ -28,6 +28,7 @@ import SleepTimerModal from '../modals/SleepTimerModal';
 // Hooks y animaciones
 import usePlayerCard from '../../hooks/usePlayerCard';
 import useSyncedLyrics from '../../hooks/useSyncedLyrics';
+import useControls from '../../hooks/useControls';
 import { SPRING, DURATION } from '../../constants/animations';
 import { PlayerContext } from '../../context/PlayerContext';
 import { Track } from '../../models/Track';
@@ -174,6 +175,37 @@ export default function PlayerCard(props: PlayerCardProps): React.JSX.Element {
     });
   }, [playerSlideAnim, SCREEN_HEIGHT, onClose]);
 
+  // Hook de controles unificados para la tarjeta y gestos táctiles
+  const controls = useControls({
+    isPlaying,
+    repeatMode,
+    isShuffleActive,
+    tracks,
+    playQueue,
+    activeTrack,
+    onSelectTrack,
+    crossfadeSettings,
+  });
+
+  // Manejo de arrastre hacia abajo para minimizar la tarjeta (Swipe-down)
+  const handleSwipeDown = useCallback((dy: number) => {
+    if (dy > 0) {
+      playerSlideAnim.setValue(dy);
+    }
+  }, [playerSlideAnim]);
+
+  const handleSwipeDownRelease = useCallback((dy: number, vy: number) => {
+    if (dy > 110 || vy > 0.45) {
+      handleClose();
+    } else {
+      Animated.spring(playerSlideAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        ...SPRING.gentle,
+      }).start();
+    }
+  }, [playerSlideAnim, handleClose]);
+
   const handleCloseQueue = useCallback(() => {
     setIsQueueVisible(false);
   }, [setIsQueueVisible]);
@@ -215,11 +247,21 @@ export default function PlayerCard(props: PlayerCardProps): React.JSX.Element {
     >
       {renderBackground()}
 
-      {/* 1. Encabezado superior */}
-      <PlayerHeader onClose={handleClose} />
+      {/* 1. Encabezado superior con soporte para deslizamiento hacia abajo */}
+      <PlayerHeader
+        onClose={handleClose}
+        onSwipeDown={handleSwipeDown}
+        onSwipeDownRelease={handleSwipeDownRelease}
+      />
 
-      {/* 2. Portada con marco de sombra */}
-      <PlayerArtwork artworkUrl={currentTrackArtwork} />
+      {/* 2. Portada con marco de sombra y gestos de swipe (Horizontal: cambiar pista | Vertical: minimizar) */}
+      <PlayerArtwork
+        artworkUrl={currentTrackArtwork}
+        onNext={controls.playNext}
+        onPrevious={controls.playPrevious}
+        onSwipeDown={handleSwipeDown}
+        onSwipeDownRelease={handleSwipeDownRelease}
+      />
 
       {/* 3. Sección inferior: Detalles, progreso, controles y acciones */}
       <View style={styles.bottomSection}>
@@ -247,6 +289,7 @@ export default function PlayerCard(props: PlayerCardProps): React.JSX.Element {
           activeTrack={activeTrack}
           onSelectTrack={onSelectTrack}
           crossfadeSettings={crossfadeSettings}
+          controls={controls}
         />
 
         <PlayerFooterActions

@@ -235,13 +235,22 @@
   - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores), compilación web limpia (`npm run build:web`, 465 módulos) y empaquetado Expo nativo (`npx expo export -p android --no-minify`, 839 módulos).
   - [x] Incremento de versión del proyecto a `0.5.28` en `app.config.js`.
 
+- [x] **Exportación e Importación de Playlists (.m3u / .json):**
+  - [x] Utilidad pura de serialización y parseo `src/utils/playlistIO.ts` para Extended M3U (`#EXTM3U`, `#PLAYLIST:`, `#EXTINF:`) y formato JSON de Vulpis.
+  - [x] Servicio multiplataforma `src/services/playlist/playlistExportService.ts` con soporte para hoja de compartir nativa (`expo-sharing`) y descarga/subida de archivos en Web (`Blob` / `<input type="file">`).
+  - [x] Acciones asíncronas `handleExportPlaylist` y `handleImportPlaylist` en `usePlaylists.ts` con sanitización de nombres, prevención de duplicados y toasts informativos.
+  - [x] Botón "Importar" en el encabezado de `PlaylistsTab.tsx` junto a "Nueva", y botón de exportar en cada fila de lista de reproducción.
+  - [x] Botón "Exportar" con selector modal de formato (.m3u / .json) en la tarjeta destacada de `PlaylistDetailView.tsx`.
+  - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores), compilación web limpia (`npm run build:web`, 465 módulos) y empaquetado Expo nativo (`npx expo export -p android --no-minify`, 846 módulos).
+  - [x] Incremento de versión del proyecto a `0.5.29` en `app.config.js`.
+
 ---
 
 # Mejoras por hacer
 
 - [x] **Ecualizador de Audio (EQ):** Ecualizador de 5 bandas, Bass Boost, presets calibrados, soporte Web Audio API y puente nativo Android ExoPlayer.
 - [x] **Ordenamiento Multicriterio:** Opción para ordenar listas por Nombre, Artista, Duración y Fecha de adición.
-- [ ] **Exportación e Importación de Playlists:** Respaldar y compartir listas de reproducción en formato `.m3u` o `.json`.
+- [x] **Exportación e Importación de Playlists:** Respaldar y compartir listas de reproducción en formato `.m3u` o `.json`.
 - [x] **Historial de Reproducción:** Sección para consultar las canciones escuchadas recientemente.
 - [ ] **Búsqueda Manual Interactiva de Letras:** Permitir al usuario buscar y seleccionar manualmente la letra en LRCLIB si la búsqueda automática no coincide.
 - [ ] **Editor de Etiquetas ID3 (Tag Editor):** Editar título, artista, álbum y género directamente sobre los archivos MP3 locales.

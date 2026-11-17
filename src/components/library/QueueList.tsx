@@ -54,6 +54,8 @@ export interface QueueListProps {
   onDeleteDriveTrack?: (track: Track) => void;
   onDownloadDriveTrack?: (track: Track) => void;
   onDeleteLocalTrack?: (track: Track) => void;
+  onExportPlaylist?: (playlist: Playlist, format: 'm3u' | 'json') => Promise<boolean>;
+  onImportPlaylist?: () => Promise<Playlist | null | boolean>;
 }
 
 /**
@@ -97,6 +99,8 @@ export default function QueueList(props: QueueListProps): React.JSX.Element {
   const onDeleteDriveTrack = props.onDeleteDriveTrack || player?.handleDeleteDriveTrack;
   const onDownloadDriveTrack = props.onDownloadDriveTrack || player?.handleDownloadDriveTrack;
   const onDeleteLocalTrack = props.onDeleteLocalTrack || player?.handleDeleteLocalTrack;
+  const onExportPlaylist = props.onExportPlaylist || player?.handleExportPlaylist;
+  const onImportPlaylist = props.onImportPlaylist || player?.handleImportPlaylist;
 
   const {
     activeTab,
@@ -292,6 +296,8 @@ export default function QueueList(props: QueueListProps): React.JSX.Element {
         onSelectTrack={selectTrack}
         onClearSearch={handleClearSearch}
         currentSource={currentSource}
+        onExportPlaylist={onExportPlaylist}
+        onImportPlaylist={onImportPlaylist}
       />
     );
   } else {

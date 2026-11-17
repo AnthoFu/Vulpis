@@ -8,6 +8,11 @@ import {
   sanitizePlaylistsForStorage,
 } from '../models/Playlist';
 import { Track, sanitizeTrackForStorage } from '../models/Track';
+import {
+  exportPlaylistFile,
+  importPlaylistFile,
+  PlaylistExportFormat,
+} from '../services/playlist';
 
 export { FAVORITES_PLAYLIST_ID, FAVORITES_PLAYLIST_NAME };
 
@@ -21,6 +26,8 @@ export interface UsePlaylistsReturn {
   handleDeletePlaylist: (id: string) => Promise<void>;
   handleAddTrackToPlaylist: (playlistId: string, track: Track) => Promise<void>;
   handleRemoveTrackFromPlaylist: (playlistId: string, trackId: string) => Promise<void>;
+  handleExportPlaylist: (playlist: Playlist, format: PlaylistExportFormat) => Promise<boolean>;
+  handleImportPlaylist: () => Promise<Playlist | null>;
 }
 
 export default function usePlaylists(showToast?: (message: string) => void): UsePlaylistsReturn {
@@ -198,6 +205,64 @@ export default function usePlaylists(showToast?: (message: string) => void): Use
     }
   };
 
+  const handleExportPlaylist = async (
+    playlist: Playlist,
+    format: PlaylistExportFormat = 'm3u'
+  ): Promise<boolean> => {
+    if (!playlist || !playlist.tracks || playlist.tracks.length === 0) {
+      if (showToast) showToast('No se puede exportar una lista vacía');
+      return false;
+    }
+    const result = await exportPlaylistFile(playlist, format);
+    if (result.success) {
+      if (showToast) showToast(`Playlist "${playlist.name}" exportada (${format.toUpperCase()})`);
+      return true;
+    } else {
+      if (showToast) showToast(result.error || 'Error al exportar playlist');
+      return false;
+    }
+  };
+
+  const handleImportPlaylist = async (): Promise<Playlist | null> => {
+    try {
+      const imported = await importPlaylistFile();
+      if (!imported) return null;
+
+      if (!imported.tracks || imported.tracks.length === 0) {
+        if (showToast) showToast('El archivo no contiene canciones válidas');
+        return null;
+      }
+
+      // Evitar colisiones de nombres con listas existentes
+      let finalName = imported.name;
+      let counter = 1;
+      while (playlists.some((p) => p.name.toLowerCase() === finalName.toLowerCase())) {
+        finalName = `${imported.name} (${counter++})`;
+      }
+
+      const newPlaylist: Playlist = {
+        id: `playlist-${Date.now()}`,
+        name: finalName,
+        tracks: imported.tracks,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+
+      const updated = [...playlists, newPlaylist];
+      setPlaylists(updated);
+      await AsyncStorage.setItem('vulpis_playlists', JSON.stringify(sanitizePlaylistsForStorage(updated)));
+
+      if (showToast) {
+        showToast(`Playlist "${finalName}" importada (${imported.tracks.length} canciones)`);
+      }
+      return newPlaylist;
+    } catch (err) {
+      console.error('[usePlaylists] Error al importar playlist:', err);
+      if (showToast) showToast('Error al importar la lista de reproducción');
+      return null;
+    }
+  };
+
   return {
     playlists,
     setPlaylists,
@@ -208,5 +273,7 @@ export default function usePlaylists(showToast?: (message: string) => void): Use
     handleDeletePlaylist,
     handleAddTrackToPlaylist,
     handleRemoveTrackFromPlaylist,
+    handleExportPlaylist,
+    handleImportPlaylist,
   };
 }

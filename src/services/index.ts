@@ -15,3 +15,7 @@ export * from './scanner/mediaScanner';
 // Servicios de Audio y Efectos Acústicos
 export * from './audio';
 
+// Servicios de Importación y Exportación de Playlists
+export * from './playlist';
+
+

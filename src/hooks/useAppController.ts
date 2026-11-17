@@ -61,6 +61,8 @@ export interface AppControllerResult {
   handleDeletePlaylist: (id: string) => Promise<void>;
   handleAddTrackToPlaylist: (playlistId: string, track: Track) => Promise<void>;
   handleRemoveTrackFromPlaylist: (playlistId: string, trackId: string) => Promise<void>;
+  handleExportPlaylist: (playlist: Playlist, format: 'm3u' | 'json') => Promise<boolean>;
+  handleImportPlaylist: () => Promise<Playlist | null>;
   hasCustomLocalTracks: boolean;
   handleScanLocal: (options?: { silent?: boolean }) => Promise<Track[]>;
   handleImportMp3: () => Promise<void>;
@@ -236,6 +238,8 @@ export default function useAppController(): AppControllerResult {
     handleDeletePlaylist,
     handleAddTrackToPlaylist,
     handleRemoveTrackFromPlaylist,
+    handleExportPlaylist,
+    handleImportPlaylist,
   } = usePlaylists(showToast);
 
   // Hook de biblioteca local (escaneo de almacenamiento y archivos MP3)
@@ -512,6 +516,8 @@ export default function useAppController(): AppControllerResult {
     handleDeletePlaylist,
     handleAddTrackToPlaylist,
     handleRemoveTrackFromPlaylist,
+    handleExportPlaylist,
+    handleImportPlaylist,
     hasCustomLocalTracks,
     handleScanLocal,
     handleImportMp3,

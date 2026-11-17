@@ -47,6 +47,8 @@ export interface PlaylistsTabProps {
   onSelectTrack?: (item: Track, index: number, tracks?: Track[]) => void;
   onClearSearch?: () => void;
   currentSource?: AudioSource;
+  onExportPlaylist?: (playlist: Playlist, format: 'm3u' | 'json') => Promise<boolean>;
+  onImportPlaylist?: () => Promise<Playlist | null | boolean>;
 }
 
 /**
@@ -79,6 +81,8 @@ export default function PlaylistsTab({
   onSelectTrack,
   onClearSearch,
   currentSource,
+  onExportPlaylist,
+  onImportPlaylist,
 }: PlaylistsTabProps): React.JSX.Element {
   const selectedPlaylist = playlists.find((p) => p.id === selectedPlaylistId);
 
@@ -102,11 +106,32 @@ export default function PlaylistsTab({
         onRemoveTrackFromPlaylist={onRemoveTrackFromPlaylist}
         onSelectTrack={onSelectTrack}
         onClearSearch={onClearSearch}
+        onExportPlaylist={onExportPlaylist}
       />
     );
   }
 
-  // 2. Vista general de listado de Playlists
+  // 2. Diálogo para seleccionar formato de exportación
+  const promptExportFormat = (item: Playlist) => {
+    if (!onExportPlaylist) return;
+    Alert.alert(
+      'Exportar playlist',
+      `¿En qué formato deseas exportar "${item.name}"?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'M3U (.m3u)',
+          onPress: () => onExportPlaylist(item, 'm3u'),
+        },
+        {
+          text: 'JSON (.json)',
+          onPress: () => onExportPlaylist(item, 'json'),
+        },
+      ]
+    );
+  };
+
+  // 3. Vista general de listado de Playlists
   const filteredPlaylists = playlists.filter((p) => {
     if (!searchQuery) return true;
     return p.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -133,23 +158,39 @@ export default function PlaylistsTab({
           {/* Selector de pestañas */}
           {renderTabs && renderTabs()}
 
-          {/* Título de Playlists y botón Nueva */}
+          {/* Título de Playlists y botones Nueva / Importar */}
           <View style={[styles.playlistsHeaderRow, { paddingHorizontal: 0 }]}>
             <Text style={styles.playlistsTitle}>MIS LISTAS</Text>
-            <TouchableOpacity
-              onPress={onToggleCreateInput}
-              style={styles.createPlaylistToggleBtn}
-              activeOpacity={0.7}
-            >
-              <MaterialCommunityIcons
-                name={showCreateInput ? 'close' : 'plus'}
-                size={22}
-                color="#A78BFA"
-              />
-              <Text style={styles.createPlaylistToggleText}>
-                {showCreateInput ? 'Cancelar' : 'Nueva'}
-              </Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              {onImportPlaylist && (
+                <TouchableOpacity
+                  onPress={onImportPlaylist}
+                  style={styles.importPlaylistToggleBtn}
+                  activeOpacity={0.7}
+                >
+                  <MaterialCommunityIcons
+                    name="folder-download-outline"
+                    size={18}
+                    color="#A78BFA"
+                  />
+                  <Text style={styles.createPlaylistToggleText}>Importar</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                onPress={onToggleCreateInput}
+                style={styles.createPlaylistToggleBtn}
+                activeOpacity={0.7}
+              >
+                <MaterialCommunityIcons
+                  name={showCreateInput ? 'close' : 'plus'}
+                  size={20}
+                  color="#A78BFA"
+                />
+                <Text style={styles.createPlaylistToggleText}>
+                  {showCreateInput ? 'Cancelar' : 'Nueva'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Campo para crear nueva playlist */}
@@ -232,6 +273,16 @@ export default function PlaylistsTab({
                   color={item.tracks.length === 0 ? '#5F6070' : '#FFFFFF'}
                 />
               </TouchableOpacity>
+              {onExportPlaylist && (
+                <TouchableOpacity
+                  onPress={() => promptExportFormat(item)}
+                  style={styles.playlistExportRowBtn}
+                  activeOpacity={0.7}
+                  accessibilityLabel={`Exportar lista ${item.name}`}
+                >
+                  <MaterialCommunityIcons name="export-variant" size={18} color="#A78BFA" />
+                </TouchableOpacity>
+              )}
               {!isFav && (
                 <TouchableOpacity
                   onPress={() => {

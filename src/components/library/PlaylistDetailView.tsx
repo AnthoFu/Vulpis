@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   Image,
   FlatList,
+  Alert,
   StyleProp,
   ViewStyle,
 } from 'react-native';
@@ -35,6 +36,7 @@ export interface PlaylistDetailViewProps {
   onRemoveTrackFromPlaylist?: (playlistId: string, mediaId: string) => void;
   onSelectTrack?: (item: Track, index: number, tracks?: Track[]) => void;
   onClearSearch?: () => void;
+  onExportPlaylist?: (playlist: Playlist, format: 'm3u' | 'json') => Promise<boolean>;
 }
 
 /**
@@ -56,6 +58,7 @@ export default function PlaylistDetailView({
   onRemoveTrackFromPlaylist,
   onSelectTrack,
   onClearSearch,
+  onExportPlaylist,
   sortConfig,
 }: PlaylistDetailViewProps): React.JSX.Element {
   const filteredPlaylistTracks = playlist.tracks
@@ -67,6 +70,25 @@ export default function PlaylistDetailView({
     : filteredPlaylistTracks;
 
   const isFavPlaylist = playlist.id === 'favorites' || playlist.isFavorites;
+
+  const handleExportPress = () => {
+    if (!onExportPlaylist) return;
+    Alert.alert(
+      'Exportar playlist',
+      `¿En qué formato deseas exportar "${playlist.name}"?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'M3U (.m3u)',
+          onPress: () => onExportPlaylist(playlist, 'm3u'),
+        },
+        {
+          text: 'JSON (.json)',
+          onPress: () => onExportPlaylist(playlist, 'json'),
+        },
+      ]
+    );
+  };
 
   return (
     <FlatList
@@ -108,23 +130,41 @@ export default function PlaylistDetailView({
                 {playlist.tracks.length === 1 ? 'canción' : 'canciones'}
               </Text>
 
-              <TouchableOpacity
-                onPress={() => onPlayPlaylist && onPlayPlaylist(playlist)}
-                disabled={playlist.tracks.length === 0}
-                style={[
-                  styles.playlistHeroPlayBtn,
-                  playlist.tracks.length === 0 && styles.playlistHeroPlayBtnDisabled,
-                ]}
-                activeOpacity={0.8}
-              >
-                <MaterialCommunityIcons
-                  name="play"
-                  size={18}
-                  color="#FFFFFF"
-                  style={{ marginRight: 4 }}
-                />
-                <Text style={styles.playlistHeroPlayBtnText}>Reproducir Lista</Text>
-              </TouchableOpacity>
+              <View style={styles.playlistHeroActionsRow}>
+                <TouchableOpacity
+                  onPress={() => onPlayPlaylist && onPlayPlaylist(playlist)}
+                  disabled={playlist.tracks.length === 0}
+                  style={[
+                    styles.playlistHeroPlayBtn,
+                    playlist.tracks.length === 0 && styles.playlistHeroPlayBtnDisabled,
+                  ]}
+                  activeOpacity={0.8}
+                >
+                  <MaterialCommunityIcons
+                    name="play"
+                    size={18}
+                    color="#FFFFFF"
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text style={styles.playlistHeroPlayBtnText}>Reproducir Lista</Text>
+                </TouchableOpacity>
+
+                {onExportPlaylist && (
+                  <TouchableOpacity
+                    onPress={handleExportPress}
+                    style={styles.playlistHeroExportBtn}
+                    activeOpacity={0.8}
+                  >
+                    <MaterialCommunityIcons
+                      name="export-variant"
+                      size={18}
+                      color="#A78BFA"
+                      style={{ marginRight: 4 }}
+                    />
+                    <Text style={styles.playlistHeroExportBtnText}>Exportar</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
           </View>
 

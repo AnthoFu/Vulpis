@@ -9,6 +9,7 @@ import { extractMetadata } from '../utils/metadata';
 import { scanDeviceAudio } from '../services/scanner/mediaScanner';
 import { localTracks } from '../constants/tracks';
 import { Track } from '../models/Track';
+import { writePhysicalId3v1Tag } from '../utils/tagEditor';
 
 export interface UseLocalLibraryParams {
   currentSource: string;
@@ -32,6 +33,10 @@ export interface UseLocalLibraryReturn {
   handleImportMp3: () => Promise<void>;
   handleResetLocal: () => Promise<void>;
   handleDeleteLocalTrack: (track: Track) => Promise<void>;
+  handleUpdateLocalTrackMetadata: (
+    track: Track,
+    newTags: { title: string; artist: string; album: string; genre: string }
+  ) => Promise<boolean>;
 }
 
 export default function useLocalLibrary({
@@ -315,6 +320,63 @@ export default function useLocalLibrary({
     }
   };
 
+  const handleUpdateLocalTrackMetadata = async (
+    track: Track,
+    newTags: { title: string; artist: string; album: string; genre: string }
+  ): Promise<boolean> => {
+    try {
+      const updatedTrack: Track = {
+        ...track,
+        title: newTags.title,
+        artist: newTags.artist,
+        album: newTags.album || null,
+        genre: newTags.genre || null,
+      };
+
+      // 1. Intentar escribir etiqueta física ID3v1 si es un archivo local en disco
+      if (track.url && track.url.startsWith('file://')) {
+        await writePhysicalId3v1Tag(track.url, {
+          title: newTags.title,
+          artist: newTags.artist,
+          album: newTags.album,
+          genre: newTags.genre,
+        });
+      }
+
+      // 2. Actualizar en la lista de pistas locales
+      const updatedList = localLibraryTracks.map((t) =>
+        t.mediaId === track.mediaId ? updatedTrack : t
+      );
+      await saveLocalTracks(updatedList, false);
+
+      // 3. Actualizar la cola si la pista está presente
+      if (playQueue && setPlayQueue) {
+        const updatedQueue = playQueue.map((t) =>
+          t.mediaId === track.mediaId ? updatedTrack : t
+        );
+        setPlayQueue(updatedQueue);
+      }
+
+      // 4. Actualizar la pista activa si coincide
+      if (setActiveTrack) {
+        const active = TrackPlayer.getActiveMediaItem() as Track | null;
+        if (active && active.mediaId === track.mediaId) {
+          setActiveTrack(updatedTrack);
+        }
+      }
+
+      if (showToast) {
+        showToast('Etiquetas actualizadas con éxito');
+      }
+
+      return true;
+    } catch (err) {
+      console.error('[useLocalLibrary] Error actualizando etiquetas:', err);
+      Alert.alert('Error', 'No se pudieron actualizar las etiquetas de la canción.');
+      return false;
+    }
+  };
+
   return {
     localLibraryTracks,
     setLocalLibraryTracks,
@@ -325,5 +387,6 @@ export default function useLocalLibrary({
     handleImportMp3,
     handleResetLocal,
     handleDeleteLocalTrack,
+    handleUpdateLocalTrackMetadata,
   };
 }

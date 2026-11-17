@@ -116,6 +116,10 @@ export interface AppControllerResult {
   recordPlayback: (track: Track, duration?: number) => Promise<void>;
   handleRemoveHistoryItem: (id: string) => Promise<void>;
   handleClearHistory: () => Promise<void>;
+  handleUpdateTrackTags: (
+    track: Track,
+    newTags: { title: string; artist: string; album: string; genre: string }
+  ) => Promise<boolean>;
 }
 
 /**
@@ -238,6 +242,7 @@ export default function useAppController(): AppControllerResult {
     handleDeletePlaylist,
     handleAddTrackToPlaylist,
     handleRemoveTrackFromPlaylist,
+    handleUpdateTrackInPlaylists,
     handleExportPlaylist,
     handleImportPlaylist,
   } = usePlaylists(showToast);
@@ -253,6 +258,7 @@ export default function useAppController(): AppControllerResult {
     handleImportMp3,
     handleResetLocal,
     handleDeleteLocalTrack,
+    handleUpdateLocalTrackMetadata,
   } = useLocalLibrary({
     currentSource,
     setTracks,
@@ -485,6 +491,24 @@ export default function useAppController(): AppControllerResult {
     }
   }, [tracks, showToast, downloadDriveFile, playlists, setPlaylists, crossfadeSettingsRef]);
 
+  /**
+   * Actualiza los metadatos y etiquetas de una pista en la biblioteca local,
+   * listas de reproducción asociadas y archivo físico si está disponible.
+   */
+  const handleUpdateTrackTags = useCallback(
+    async (
+      track: Track,
+      newTags: { title: string; artist: string; album: string; genre: string }
+    ): Promise<boolean> => {
+      const success = await handleUpdateLocalTrackMetadata(track, newTags);
+      if (success) {
+        await handleUpdateTrackInPlaylists(track.mediaId, newTags);
+      }
+      return success;
+    },
+    [handleUpdateLocalTrackMetadata, handleUpdateTrackInPlaylists]
+  );
+
   return {
     insets,
     defaultCover,
@@ -571,5 +595,6 @@ export default function useAppController(): AppControllerResult {
     recordPlayback,
     handleRemoveHistoryItem,
     handleClearHistory,
+    handleUpdateTrackTags,
   };
 }

@@ -253,6 +253,15 @@
   - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores), compilación web limpia (`npm run build:web`, 465 módulos) y empaquetado Expo nativo (`npx expo export -p android --no-minify`, 849 módulos).
   - [x] Incremento de versión del proyecto a `0.5.30` en `app.config.js`.
 
+- [x] **Editor de Etiquetas ID3 (Tag Editor):**
+  - [x] Módulo puro de serialización y utilidades `src/utils/tagEditor.ts` para construcción binaria de bloques estándar ID3v1.1 (128 bytes) y limpieza automática de títulos `cleanTrackTitle`.
+  - [x] Mapeo de géneros ID3 canónicos en `src/constants/genres.ts` (148 géneros estándar).
+  - [x] Modal interactivo `TagEditorModal.tsx` con campos para Título, Artista, Álbum, Género, chips de géneros frecuentes y atajos de "Limpiar formato" e "Intercambiar Título ⇄ Artista".
+  - [x] Opción "Editar información / etiquetas" en el menú contextual de pista `TrackOptionsModal.tsx`.
+  - [x] Sincronización atómica reactiva en `useLocalLibrary.ts`, `usePlaylists.ts` y `useAppController.ts` actualizando biblioteca local, listas de reproducción, cola activa, reproductor nativo y archivo físico.
+  - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores), compilación web limpia (`npm run build:web`, 465 módulos) y empaquetado Expo nativo (`npx expo export -p android --no-minify`, 853 módulos).
+  - [x] Incremento de versión del proyecto a `0.5.31` en `app.config.js`.
+
 ---
 
 # Mejoras por hacer
@@ -262,7 +271,7 @@
 - [x] **Exportación e Importación de Playlists:** Respaldar y compartir listas de reproducción en formato `.m3u` o `.json`.
 - [x] **Historial de Reproducción:** Sección para consultar las canciones escuchadas recientemente.
 - [x] **Búsqueda Manual Interactiva de Letras:** Permitir al usuario buscar y seleccionar manualmente la letra en LRCLIB si la búsqueda automática no coincide.
-- [ ] **Editor de Etiquetas ID3 (Tag Editor):** Editar título, artista, álbum y género directamente sobre los archivos MP3 locales.
+- [x] **Editor de Etiquetas ID3 (Tag Editor):** Editar título, artista, álbum y género directamente sobre los archivos MP3 locales.
 - [ ] **Descargador de Carátulas (Album Art Fetcher):** Búsqueda y descarga automática de portadas en alta resolución desde servicios abiertos (Cover Art Archive / MusicBrainz).
 - [ ] **Descarga Offline de Playlists Completas:** Permitir descargar de Google Drive todos los archivos de una lista de reproducción con un solo toque.
 - [ ] **Gestor de Almacenamiento y Caché:** Pantalla en Ajustes que muestre el espacio ocupado por la caché de Drive/Letras con opción de limpieza rápida.

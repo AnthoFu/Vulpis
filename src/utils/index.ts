@@ -16,4 +16,5 @@ export * from './trackSort';
 export * from './equalizer';
 export * from './history';
 export * from './playlistIO';
+export * from './tagEditor';
 

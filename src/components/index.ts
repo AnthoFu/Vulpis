@@ -49,6 +49,8 @@ export { default as EqualizerModal } from './modals/EqualizerModal';
 export * from './modals/EqualizerModal';
 export { default as HistoryModal } from './modals/HistoryModal';
 export * from './modals/HistoryModal';
+export { default as TagEditorModal } from './modals/TagEditorModal';
+export * from './modals/TagEditorModal';
 
 
 // Biblioteca musical

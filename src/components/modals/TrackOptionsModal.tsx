@@ -16,6 +16,7 @@ export interface TrackOptionsModalProps {
   onDownloadDriveTrack?: (track: Track) => void;
   onDeleteDriveTrack?: (track: Track) => void;
   onDeleteLocalTrack?: (track: Track) => void;
+  onEditTagsPress?: (track: Track) => void;
 }
 
 /**
@@ -33,6 +34,7 @@ export default function TrackOptionsModal({
   onDownloadDriveTrack,
   onDeleteDriveTrack,
   onDeleteLocalTrack,
+  onEditTagsPress,
 }: TrackOptionsModalProps): React.JSX.Element | null {
   if (!track) return null;
 
@@ -132,6 +134,20 @@ export default function TrackOptionsModal({
             <MaterialCommunityIcons name="playlist-music-outline" size={22} color="#A78BFA" />
             <Text style={styles.modalOptionText}>Añadir a una playlist...</Text>
           </TouchableOpacity>
+
+          {onEditTagsPress && (
+            <TouchableOpacity
+              onPress={() => {
+                onClose();
+                onEditTagsPress(track);
+              }}
+              style={styles.modalOption}
+              activeOpacity={0.7}
+            >
+              <MaterialCommunityIcons name="tag-edit-outline" size={22} color="#A78BFA" />
+              <Text style={styles.modalOptionText}>Editar información / etiquetas</Text>
+            </TouchableOpacity>
+          )}
 
           {!track.mediaId?.startsWith('drive-') && onUploadLocalTrackToDrive && (
             <TouchableOpacity

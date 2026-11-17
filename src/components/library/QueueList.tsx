@@ -4,6 +4,7 @@ import useQueueList from '../../hooks/useQueueList';
 import TrackOptionsModal from '../modals/TrackOptionsModal';
 import PlaylistPickerModal from '../modals/PlaylistPickerModal';
 import SortModal from '../modals/SortModal';
+import TagEditorModal from '../modals/TagEditorModal';
 
 // Subcomponentes modulares de la biblioteca
 import TrackItem from './TrackItem';
@@ -56,6 +57,10 @@ export interface QueueListProps {
   onDeleteLocalTrack?: (track: Track) => void;
   onExportPlaylist?: (playlist: Playlist, format: 'm3u' | 'json') => Promise<boolean>;
   onImportPlaylist?: () => Promise<Playlist | null | boolean>;
+  onUpdateTrackTags?: (
+    track: Track,
+    newTags: { title: string; artist: string; album: string; genre: string }
+  ) => Promise<boolean>;
 }
 
 /**
@@ -101,6 +106,9 @@ export default function QueueList(props: QueueListProps): React.JSX.Element {
   const onDeleteLocalTrack = props.onDeleteLocalTrack || player?.handleDeleteLocalTrack;
   const onExportPlaylist = props.onExportPlaylist || player?.handleExportPlaylist;
   const onImportPlaylist = props.onImportPlaylist || player?.handleImportPlaylist;
+  const onUpdateTrackTags = props.onUpdateTrackTags || player?.handleUpdateTrackTags;
+
+  const [trackForTagEditing, setTrackForTagEditing] = React.useState<Track | null>(null);
 
   const {
     activeTab,
@@ -340,6 +348,15 @@ export default function QueueList(props: QueueListProps): React.JSX.Element {
         onDownloadDriveTrack={onDownloadDriveTrack}
         onDeleteDriveTrack={onDeleteDriveTrack}
         onDeleteLocalTrack={onDeleteLocalTrack}
+        onEditTagsPress={onUpdateTrackTags ? (t) => setTrackForTagEditing(t) : undefined}
+      />
+
+      {/* Modal de edición de etiquetas ID3 */}
+      <TagEditorModal
+        visible={trackForTagEditing !== null}
+        track={trackForTagEditing}
+        onClose={() => setTrackForTagEditing(null)}
+        onSaveTags={onUpdateTrackTags || (async () => false)}
       />
 
       {/* Modal de selección de playlist */}

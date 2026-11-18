@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,10 @@ import { Playlist } from '../../models/Playlist';
 import { Track } from '../../models/Track';
 import { SortConfig } from '../../models/SortOptions';
 import { sortTracks } from '../../utils/trackSort';
+import {
+  getPlaylistDownloadStats,
+  PlaylistDownloadProgress,
+} from '../../services/playlist';
 
 export interface PlaylistDetailViewProps {
   playlist: Playlist;
@@ -37,6 +41,8 @@ export interface PlaylistDetailViewProps {
   onSelectTrack?: (item: Track, index: number, tracks?: Track[]) => void;
   onClearSearch?: () => void;
   onExportPlaylist?: (playlist: Playlist, format: 'm3u' | 'json') => Promise<boolean>;
+  onDownloadPlaylistOffline?: (playlist: Playlist) => Promise<boolean | void>;
+  downloadProgress?: PlaylistDownloadProgress | null;
 }
 
 /**
@@ -59,6 +65,8 @@ export default function PlaylistDetailView({
   onSelectTrack,
   onClearSearch,
   onExportPlaylist,
+  onDownloadPlaylistOffline,
+  downloadProgress,
   sortConfig,
 }: PlaylistDetailViewProps): React.JSX.Element {
   const filteredPlaylistTracks = playlist.tracks
@@ -70,6 +78,15 @@ export default function PlaylistDetailView({
     : filteredPlaylistTracks;
 
   const isFavPlaylist = playlist.id === 'favorites' || playlist.isFavorites;
+
+  const downloadStats = useMemo(
+    () => getPlaylistDownloadStats(playlist),
+    [playlist]
+  );
+
+  const isDownloadingThisPlaylist = Boolean(
+    downloadProgress?.isDownloading && downloadProgress?.playlistId === playlist.id
+  );
 
   const handleExportPress = () => {
     if (!onExportPlaylist) return;
@@ -164,7 +181,83 @@ export default function PlaylistDetailView({
                     <Text style={styles.playlistHeroExportBtnText}>Exportar</Text>
                   </TouchableOpacity>
                 )}
+
+                {/* Botón de Descarga Offline si hay pistas de Google Drive pendientes */}
+                {onDownloadPlaylistOffline && downloadStats.drivePendingCount > 0 && (
+                  <TouchableOpacity
+                    onPress={() => onDownloadPlaylistOffline(playlist)}
+                    disabled={isDownloadingThisPlaylist}
+                    style={[
+                      styles.playlistHeroDownloadBtn,
+                      isDownloadingThisPlaylist && styles.playlistHeroDownloadBtnDisabled,
+                    ]}
+                    activeOpacity={0.8}
+                  >
+                    <MaterialCommunityIcons
+                      name={isDownloadingThisPlaylist ? 'cloud-sync' : 'cloud-download-outline'}
+                      size={18}
+                      color="#A78BFA"
+                      style={{ marginRight: 4 }}
+                    />
+                    <Text style={styles.playlistHeroDownloadBtnText}>
+                      {isDownloadingThisPlaylist
+                        ? 'Descargando...'
+                        : `Descargar (${downloadStats.drivePendingCount})`}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* Distintivo de Disponibilidad Offline Completa */}
+                {downloadStats.total > 0 && downloadStats.isFullyOffline && (
+                  <View style={styles.playlistHeroDownloadedBadge}>
+                    <MaterialCommunityIcons
+                      name="check-circle-outline"
+                      size={16}
+                      color="#34D399"
+                      style={{ marginRight: 2 }}
+                    />
+                    <Text style={styles.playlistHeroDownloadedBadgeText}>
+                      Disponible Offline
+                    </Text>
+                  </View>
+                )}
               </View>
+
+              {/* Indicador y Barra de Progreso de Descarga en Lote */}
+              {isDownloadingThisPlaylist && downloadProgress && (
+                <View style={styles.playlistDownloadProgressCard}>
+                  <View style={styles.playlistDownloadProgressTextRow}>
+                    <Text style={styles.playlistDownloadProgressTitle} numberOfLines={1}>
+                      {`Descargando (${downloadProgress.completed}/${downloadProgress.total}): ${downloadProgress.currentTrackTitle || ''}`}
+                    </Text>
+                    <Text style={styles.playlistDownloadProgressPercent}>
+                      {`${Math.round(
+                        downloadProgress.total > 0
+                          ? (downloadProgress.completed / downloadProgress.total) * 100
+                          : 0
+                      )}%`}
+                    </Text>
+                  </View>
+                  <View style={styles.playlistDownloadProgressBarBg}>
+                    <View
+                      style={[
+                        styles.playlistDownloadProgressBarFill,
+                        {
+                          width: `${Math.min(
+                            100,
+                            Math.max(
+                              0,
+                              downloadProgress.total > 0
+                                ? (downloadProgress.completed / downloadProgress.total) * 100
+                                : 0
+                            )
+                          )}%`,
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
+              )}
             </View>
           </View>
 

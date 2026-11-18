@@ -277,7 +277,13 @@
   - [x] Almacenar metadatos reales (artista, título, álbum) en las propiedades del archivo en Google Drive (`appProperties`) al subir canciones.
   - [x] Deducir y normalizar `Artista - Canción` a partir del nombre del archivo como fallback en lugar de asignar 'Google Drive' como artista.
   - [x] Al descargar o reproducir desde Drive, extraer y persistir los metadatos reales de ID3.
-- [ ] **Descarga Offline de Playlists Completas:** Permitir descargar de Google Drive todos los archivos de una lista de reproducción con un solo toque.
+- [x] **Descarga Offline de Playlists Completas:** Permitir descargar de Google Drive todos los archivos de una lista de reproducción con un solo toque.
+  - [x] Servicio modular `playlistDownloadService.ts` con cálculo de disponibilidad (`getPlaylistDownloadStats`) y descarga por lotes secuencial con reporte de progreso (`downloadPlaylistOffline`).
+  - [x] Interfaz de usuario en `PlaylistDetailView.tsx` con botón heroico "Descargar (N)", distintivo "Disponible Offline" cuando el 100% de pistas están en local, y tarjeta con barra de progreso en tiempo real.
+  - [x] Integración reactiva en `useAppController.ts`, `usePlaylists.ts` y `QueueList.tsx`, persistiendo rutas locales en `vulpis_playlists` (AsyncStorage con sanitización preventiva de CursorWindow) y sincronizando la cola activa de `TrackPlayer` en tiempo real.
+  - [x] Extracción automática de metadatos ID3 en cada pista descargada para enriquecer carátula, artista y álbum reales sin etiquetas genéricas.
+  - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores), compilación web limpia (`npm run build:web`, 472 módulos) y empaquetado Expo nativo (`npx expo export -p android --no-minify`, 857 módulos).
+  - [x] Incremento de versión del proyecto a `0.5.34` en `app.config.js`.
 - [ ] **Gestor de Almacenamiento y Caché:** Pantalla en Ajustes que muestre el espacio ocupado por la caché de Drive/Letras con opción de limpieza rápida.
 - [ ] **Soporte para Nuevas Fuentes en la Nube:** Opción para conectar servidores WebDAV, Nextcloud o OneDrive.
 - [ ] **Selector de Temas Visuales:** Opciones de personalización como Tema AMOLED Black, Cyberpunk, Violeta Vulpis o Tema Dinámico que se adapta al color dominante de la carátula de la canción.

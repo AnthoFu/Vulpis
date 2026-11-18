@@ -17,6 +17,7 @@ import { Playlist } from '../../models/Playlist';
 import { Track } from '../../models/Track';
 import { AudioSource } from '../../hooks/useAppController';
 import { SortConfig } from '../../models/SortOptions';
+import { PlaylistDownloadProgress } from '../../services/playlist';
 
 export { renderPlaylistArtwork };
 
@@ -49,6 +50,8 @@ export interface PlaylistsTabProps {
   currentSource?: AudioSource;
   onExportPlaylist?: (playlist: Playlist, format: 'm3u' | 'json') => Promise<boolean>;
   onImportPlaylist?: () => Promise<Playlist | null | boolean>;
+  onDownloadPlaylistOffline?: (playlist: Playlist) => Promise<boolean | void>;
+  downloadProgress?: PlaylistDownloadProgress | null;
 }
 
 /**
@@ -83,6 +86,8 @@ export default function PlaylistsTab({
   currentSource,
   onExportPlaylist,
   onImportPlaylist,
+  onDownloadPlaylistOffline,
+  downloadProgress,
 }: PlaylistsTabProps): React.JSX.Element {
   const selectedPlaylist = playlists.find((p) => p.id === selectedPlaylistId);
 
@@ -107,6 +112,8 @@ export default function PlaylistsTab({
         onSelectTrack={onSelectTrack}
         onClearSearch={onClearSearch}
         onExportPlaylist={onExportPlaylist}
+        onDownloadPlaylistOffline={onDownloadPlaylistOffline}
+        downloadProgress={downloadProgress}
       />
     );
   }

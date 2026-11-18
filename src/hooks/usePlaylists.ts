@@ -27,6 +27,7 @@ export interface UsePlaylistsReturn {
   handleAddTrackToPlaylist: (playlistId: string, track: Track) => Promise<void>;
   handleRemoveTrackFromPlaylist: (playlistId: string, trackId: string) => Promise<void>;
   handleUpdateTrackInPlaylists: (mediaId: string, updatedFields: Partial<Track>) => Promise<void>;
+  handleUpdatePlaylist: (updatedPlaylist: Playlist) => Promise<void>;
   handleExportPlaylist: (playlist: Playlist, format: PlaylistExportFormat) => Promise<boolean>;
   handleImportPlaylist: () => Promise<Playlist | null>;
 }
@@ -223,6 +224,17 @@ export default function usePlaylists(showToast?: (message: string) => void): Use
     });
   };
 
+  const handleUpdatePlaylist = async (updatedPlaylist: Playlist): Promise<void> => {
+    setPlaylists((prev) => {
+      const next = prev.map((p) => (p.id === updatedPlaylist.id ? updatedPlaylist : p));
+      AsyncStorage.setItem(
+        'vulpis_playlists',
+        JSON.stringify(sanitizePlaylistsForStorage(next))
+      ).catch((e) => console.error('[usePlaylists] Error guardando lista actualizada:', e));
+      return next;
+    });
+  };
+
   const handleExportPlaylist = async (
     playlist: Playlist,
     format: PlaylistExportFormat = 'm3u'
@@ -292,6 +304,7 @@ export default function usePlaylists(showToast?: (message: string) => void): Use
     handleAddTrackToPlaylist,
     handleRemoveTrackFromPlaylist,
     handleUpdateTrackInPlaylists,
+    handleUpdatePlaylist,
     handleExportPlaylist,
     handleImportPlaylist,
   };

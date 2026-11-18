@@ -28,6 +28,10 @@ import { Playlist } from '../models/Playlist';
 import { CrossfadeSettings, ReplayGainSettings } from '../models/AudioSettings';
 import { EqualizerSettings, EqualizerPresetId } from '../models/EqualizerSettings';
 import { PlaybackHistoryItem } from '../models/History';
+import {
+  downloadPlaylistOffline,
+  PlaylistDownloadProgress,
+} from '../services/playlist';
 
 export type AudioSource = 'local' | 'private' | string;
 
@@ -125,6 +129,9 @@ export interface AppControllerResult {
     track: Track,
     newArtworkUrl: string
   ) => Promise<boolean>;
+  downloadingPlaylistId: string | null;
+  playlistDownloadProgress: PlaylistDownloadProgress | null;
+  handleDownloadPlaylistOffline: (playlist: Playlist) => Promise<boolean>;
 }
 
 /**
@@ -248,9 +255,14 @@ export default function useAppController(): AppControllerResult {
     handleAddTrackToPlaylist,
     handleRemoveTrackFromPlaylist,
     handleUpdateTrackInPlaylists,
+    handleUpdatePlaylist,
     handleExportPlaylist,
     handleImportPlaylist,
   } = usePlaylists(showToast);
+
+  // Estados para seguimiento de descarga offline de playlists completas
+  const [downloadingPlaylistId, setDownloadingPlaylistId] = useState<string | null>(null);
+  const [playlistDownloadProgress, setPlaylistDownloadProgress] = useState<PlaylistDownloadProgress | null>(null);
 
   // Hook de biblioteca local (escaneo de almacenamiento y archivos MP3)
   const {
@@ -582,6 +594,131 @@ export default function useAppController(): AppControllerResult {
     [handleUpdateLocalTrackArtwork, handleUpdateTrackInPlaylists]
   );
 
+  /**
+   * Descarga secuencialmente todas las canciones remotas de Google Drive de una playlist
+   * para asegurar disponibilidad 100% offline, extrayendo metadatos ID3 y sincronizando la cola.
+   */
+  const handleDownloadPlaylistOffline = useCallback(
+    async (playlist: Playlist): Promise<boolean> => {
+      if (!playlist || !playlist.tracks || playlist.tracks.length === 0) {
+        if (showToast) showToast('La playlist está vacía');
+        return false;
+      }
+
+      if (downloadingPlaylistId) {
+        if (showToast) showToast('Ya hay una descarga en curso');
+        return false;
+      }
+
+      try {
+        const token = await getStoredToken();
+        if (!token) {
+          Alert.alert(
+            'Google Drive no conectado',
+            'Debes conectar tu cuenta de Google Drive para descargar canciones de la nube.'
+          );
+          return false;
+        }
+
+        setDownloadingPlaylistId(playlist.id);
+        setPlaylistDownloadProgress({
+          playlistId: playlist.id,
+          total: playlist.tracks.length,
+          completed: 0,
+          failed: 0,
+          isDownloading: true,
+          currentTrackTitle: 'Iniciando descarga...',
+        });
+
+        if (showToast) {
+          showToast(`Iniciando descarga de "${playlist.name}"...`);
+        }
+
+        const result = await downloadPlaylistOffline(
+          playlist,
+          token,
+          (progress) => {
+            setPlaylistDownloadProgress(progress);
+          }
+        );
+
+        if (result.success || result.downloadedCount > 0) {
+          await handleUpdatePlaylist(result.updatedPlaylist);
+
+          // Sincronizar cola activa de TrackPlayer si contiene pistas recién descargadas
+          try {
+            const activeQueue = (TrackPlayer.getQueue() || []) as Track[];
+            if (activeQueue && activeQueue.length > 0) {
+              let hasChanges = false;
+              const newQueue = activeQueue.map((qTrack: any) => {
+                const match = result.updatedPlaylist.tracks.find(
+                  (dt) => dt.mediaId === qTrack.mediaId && dt.url !== qTrack.url
+                );
+                if (match) {
+                  hasChanges = true;
+                  return {
+                    ...qTrack,
+                    url: match.url,
+                    title: match.title,
+                    artist: match.artist,
+                    album: match.album,
+                    artworkUrl: match.artworkUrl,
+                  };
+                }
+                return qTrack;
+              });
+
+              if (hasChanges) {
+                const currentIdx = TrackPlayer.getActiveMediaItemIndex();
+                const currentPos = TrackPlayer.getProgress()?.position || 0;
+                const isCurrentlyPlaying = isPlaying;
+
+                await TrackPlayer.setMediaItems(newQueue as any);
+                if (typeof currentIdx === 'number' && currentIdx >= 0) {
+                  await TrackPlayer.skipToIndex(currentIdx);
+                  if (currentPos > 0) {
+                    await TrackPlayer.seekTo(currentPos);
+                  }
+                  if (isCurrentlyPlaying) {
+                    TrackPlayer.play();
+                  }
+                }
+              }
+            }
+          } catch (queueErr) {
+            console.warn('[useAppController] No se pudo sincronizar cola activa tras descarga offline:', queueErr);
+          }
+
+          if (showToast) {
+            showToast(
+              `"${playlist.name}" disponible offline (${result.downloadedCount} descargadas)`
+            );
+          }
+          return true;
+        } else {
+          if (showToast) {
+            showToast(
+              result.failedCount > 0
+                ? `Fallaron ${result.failedCount} descargas en "${playlist.name}"`
+                : 'No se descargó ninguna canción'
+            );
+          }
+          return false;
+        }
+      } catch (err: any) {
+        console.error('[useAppController] Error al descargar playlist offline:', err);
+        if (showToast) {
+          showToast(err.message || 'Error al descargar playlist');
+        }
+        return false;
+      } finally {
+        setDownloadingPlaylistId(null);
+        setPlaylistDownloadProgress(null);
+      }
+    },
+    [downloadingPlaylistId, showToast, handleUpdatePlaylist, isPlaying]
+  );
+
   return {
     insets,
     defaultCover,
@@ -670,5 +807,8 @@ export default function useAppController(): AppControllerResult {
     handleClearHistory,
     handleUpdateTrackTags,
     handleUpdateTrackArtwork,
+    downloadingPlaylistId,
+    playlistDownloadProgress,
+    handleDownloadPlaylistOffline,
   };
 }

@@ -20,6 +20,7 @@ import { PlayerContext } from '../../context/PlayerContext';
 import { Track } from '../../models/Track';
 import { Playlist } from '../../models/Playlist';
 import { AudioSource } from '../../hooks/useAppController';
+import { PlaylistDownloadProgress } from '../../services/playlist';
 
 export interface QueueListProps {
   activeTrack?: Track | null;
@@ -58,6 +59,8 @@ export interface QueueListProps {
   onDeleteLocalTrack?: (track: Track) => void;
   onExportPlaylist?: (playlist: Playlist, format: 'm3u' | 'json') => Promise<boolean>;
   onImportPlaylist?: () => Promise<Playlist | null | boolean>;
+  onDownloadPlaylistOffline?: (playlist: Playlist) => Promise<boolean | void>;
+  downloadProgress?: PlaylistDownloadProgress | null;
   onUpdateTrackTags?: (
     track: Track,
     newTags: { title: string; artist: string; album: string; genre: string }
@@ -111,6 +114,8 @@ export default function QueueList(props: QueueListProps): React.JSX.Element {
   const onDeleteLocalTrack = props.onDeleteLocalTrack || player?.handleDeleteLocalTrack;
   const onExportPlaylist = props.onExportPlaylist || player?.handleExportPlaylist;
   const onImportPlaylist = props.onImportPlaylist || player?.handleImportPlaylist;
+  const onDownloadPlaylistOffline = props.onDownloadPlaylistOffline || player?.handleDownloadPlaylistOffline;
+  const downloadProgress = props.downloadProgress !== undefined ? props.downloadProgress : player?.playlistDownloadProgress;
   const onUpdateTrackTags = props.onUpdateTrackTags || player?.handleUpdateTrackTags;
   const onUpdateTrackArtwork = props.onUpdateTrackArtwork || player?.handleUpdateTrackArtwork;
 
@@ -313,6 +318,8 @@ export default function QueueList(props: QueueListProps): React.JSX.Element {
         currentSource={currentSource}
         onExportPlaylist={onExportPlaylist}
         onImportPlaylist={onImportPlaylist}
+        onDownloadPlaylistOffline={onDownloadPlaylistOffline}
+        downloadProgress={downloadProgress}
       />
     );
   } else {

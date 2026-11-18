@@ -281,10 +281,27 @@ export class WebAudioPlayer {
           track.url = audioUrl;
 
           // Extraer metadatos ID3 en segundo plano si aún no los tiene
-          if (!track.artwork && res.blob) {
-            extractMetadataFromBlob(res.blob, track.title).then((meta) => {
-              if (meta.artwork) {
+          if (res.blob) {
+            extractMetadataFromBlob(res.blob, track.title, track.artist, track.album).then((meta) => {
+              let changed = false;
+              if (meta.artwork && !track.artwork) {
                 track.artwork = meta.artwork;
+                changed = true;
+              }
+              if (
+                meta.artist &&
+                (track.artist === 'Google Drive' ||
+                  track.artist === 'Nube Privada (Drive)' ||
+                  !track.artist)
+              ) {
+                track.artist = meta.artist;
+                changed = true;
+              }
+              if (meta.album && (track.album === 'Nube Privada' || !track.album)) {
+                track.album = meta.album;
+                changed = true;
+              }
+              if (changed) {
                 this._notify();
               }
             });

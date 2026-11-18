@@ -128,12 +128,25 @@ export const saveDriveTrackToDevice = async ({
       }
 
       const meta = await extractMetadata(persistentLocalUri);
+      const resolvedArtist =
+        meta.artist && meta.artist !== 'Desconocido'
+          ? meta.artist
+          : track.artist !== 'Nube Privada (Drive)' && track.artist !== 'Google Drive'
+          ? track.artist
+          : 'Artista desconocido';
+      const resolvedAlbum =
+        meta.album && meta.album !== 'Desconocido'
+          ? meta.album
+          : track.album !== 'Google Drive' && track.album !== 'Nube Privada'
+          ? track.album
+          : 'Descargas';
+
       const newLocalTrack = createTrack({
         mediaId: `local-drive-${Date.now()}`,
         url: persistentLocalUri,
         title: meta.title || track.title || tempFilename.replace(/\.mp3$/i, ''),
-        artist: meta.artist || track.artist || 'Descargado de Drive',
-        album: meta.album || track.album || 'Google Drive',
+        artist: resolvedArtist,
+        album: resolvedAlbum,
         genre: meta.genre || track.genre || null,
         artworkUrl: meta.artworkUrl || track.artworkUrl || defaultCover,
         lyrics: meta.lyrics || null,

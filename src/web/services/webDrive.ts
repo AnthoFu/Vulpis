@@ -1,6 +1,7 @@
 import jsmediatags from 'jsmediatags/dist/jsmediatags.min.js';
 import { getCachedAudioBlob, saveAudioBlob } from './webCache';
 import { WebGoogleConfig, WebDriveFile } from '../types';
+import { parseTrackFilename } from '../../utils/tagEditor';
 
 const CLIENT_ID_KEY = 'vulpis_web_google_client_id';
 const TOKEN_KEY = 'vulpis_web_google_access_token';
@@ -256,7 +257,7 @@ export const fetchWebDriveMp3Files = async (
     }
   }
 
-  const fields = 'files(id,name,size,webContentLink,createdTime)';
+  const fields = 'files(id,name,size,webContentLink,createdTime,appProperties,description)';
   const driveUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=${encodeURIComponent(fields)}&orderBy=name`;
 
   const response = await fetch(driveUrl, {
@@ -347,15 +348,31 @@ export interface ExtractedBlobMetadata {
 }
 
 /**
- * Extrae metadatos ID3 (título, artista, álbum, carátula) desde un Blob en el navegador.
+ * Extrae metadatos ID3 (título, artista, álbum, carátula) desde un Blob en el navegador,
+ * utilizando fallbacks inteligentes deducidos del nombre del archivo y propiedades de Drive.
  */
-export const extractMetadataFromBlob = (blob: Blob, defaultTitle: string): Promise<ExtractedBlobMetadata> => {
+export const extractMetadataFromBlob = (
+  blob: Blob,
+  defaultTitle: string,
+  fallbackArtist = 'Artista desconocido',
+  fallbackAlbum = 'Nube Privada'
+): Promise<ExtractedBlobMetadata> => {
   return new Promise((resolve) => {
+    const parsed = parseTrackFilename(defaultTitle);
+    const resolvedFallbackArtist =
+      fallbackArtist !== 'Google Drive' && fallbackArtist !== 'Artista desconocido'
+        ? fallbackArtist
+        : parsed.artist !== 'Artista desconocido'
+        ? parsed.artist
+        : 'Artista desconocido';
+    const resolvedFallbackTitle = parsed.title || defaultTitle;
+    const resolvedFallbackAlbum = fallbackAlbum || parsed.album || 'Nube Privada';
+
     if (!blob || typeof jsmediatags === 'undefined') {
       return resolve({
-        title: defaultTitle,
-        artist: 'Google Drive',
-        album: 'Nube Privada',
+        title: resolvedFallbackTitle,
+        artist: resolvedFallbackArtist,
+        album: resolvedFallbackAlbum,
         artwork: null,
       });
     }
@@ -380,26 +397,26 @@ export const extractMetadataFromBlob = (blob: Blob, defaultTitle: string): Promi
           }
 
           resolve({
-            title: tags.title || defaultTitle,
-            artist: tags.artist || 'Google Drive',
-            album: tags.album || 'Nube Privada',
+            title: tags.title || resolvedFallbackTitle,
+            artist: tags.artist || resolvedFallbackArtist,
+            album: tags.album || resolvedFallbackAlbum,
             artwork: artworkUrl,
           });
         },
         onError: () => {
           resolve({
-            title: defaultTitle,
-            artist: 'Google Drive',
-            album: 'Nube Privada',
+            title: resolvedFallbackTitle,
+            artist: resolvedFallbackArtist,
+            album: resolvedFallbackAlbum,
             artwork: null,
           });
         },
       });
     } catch (_) {
       resolve({
-        title: defaultTitle,
-        artist: 'Google Drive',
-        album: 'Nube Privada',
+        title: resolvedFallbackTitle,
+        artist: resolvedFallbackArtist,
+        album: resolvedFallbackAlbum,
         artwork: null,
       });
     }

@@ -6,6 +6,7 @@ import { useSafeAreaInsets, EdgeInsets } from 'react-native-safe-area-context';
 import { localTracks } from '../constants/tracks';
 import { getStoredToken } from '../services/drive';
 import { smoothTrackTransition } from '../utils/crossfade';
+import { extractMetadata } from '../utils/metadata';
 
 // Hooks personalizados del ecosistema modular
 import useToast from './useToast';
@@ -439,9 +440,36 @@ export default function useAppController(): AppControllerResult {
         const localUri = await downloadDriveFile(fileId, item.title, token);
 
         if (localUri) {
+          // Extraer metadatos ID3 completos del archivo MP3 recién descargado a caché
+          const meta = await extractMetadata(localUri);
+          const enrichedArtist =
+            meta.artist && meta.artist !== 'Desconocido'
+              ? meta.artist
+              : item.artist !== 'Nube Privada (Drive)' && item.artist !== 'Google Drive'
+              ? item.artist
+              : 'Artista desconocido';
+          const enrichedTitle = meta.title || item.title;
+          const enrichedAlbum = meta.album || item.album || 'Nube Privada';
+          const enrichedArtwork = meta.artworkUrl || item.artworkUrl || defaultCover;
+          const enrichedGenre = meta.genre || item.genre || null;
+          const enrichedLyrics = meta.lyrics || item.lyrics || null;
+          const enrichedReplayGain = meta.replayGain || item.replayGain || null;
+
+          const updatedTrack: Track = {
+            ...item,
+            url: localUri,
+            title: enrichedTitle,
+            artist: enrichedArtist,
+            album: enrichedAlbum,
+            artworkUrl: enrichedArtwork,
+            genre: enrichedGenre,
+            lyrics: enrichedLyrics,
+            replayGain: enrichedReplayGain,
+          };
+
           const updatedTracks = trackListToLoad.map((t) => {
             if (t.mediaId === item.mediaId) {
-              return { ...t, url: localUri };
+              return updatedTrack;
             }
             return t;
           });
@@ -450,13 +478,13 @@ export default function useAppController(): AppControllerResult {
             setTracks(updatedTracks);
           }
 
-          // Actualizar las URIs locales dentro de todas las playlists que contengan esta pista
+          // Actualizar las URIs locales y metadatos dentro de todas las playlists que contengan esta pista
           const updatedPlaylists = playlists.map((p) => {
             const hasTrack = p.tracks.some((t) => t.mediaId === item.mediaId);
             if (hasTrack) {
               return {
                 ...p,
-                tracks: p.tracks.map((t) => (t.mediaId === item.mediaId ? { ...t, url: localUri } : t)),
+                tracks: p.tracks.map((t) => (t.mediaId === item.mediaId ? updatedTrack : t)),
               };
             }
             return p;
@@ -484,9 +512,35 @@ export default function useAppController(): AppControllerResult {
     } else {
       // Caso 2: Pista local o ya guardada en caché
       try {
+        let tracksToPlay = trackListToLoad;
+        // Auto-sanación de pistas de Drive en caché que aún muestren etiquetas genéricas
+        if (
+          item.mediaId.startsWith('drive-') &&
+          item.url.startsWith('file://') &&
+          (item.artist === 'Nube Privada (Drive)' || item.artist === 'Google Drive')
+        ) {
+          const meta = await extractMetadata(item.url);
+          if (meta.artist && meta.artist !== 'Desconocido') {
+            const healedTrack: Track = {
+              ...item,
+              title: meta.title || item.title,
+              artist: meta.artist,
+              album: meta.album || item.album,
+              artworkUrl: meta.artworkUrl || item.artworkUrl || defaultCover,
+              genre: meta.genre || item.genre,
+              lyrics: meta.lyrics || item.lyrics,
+              replayGain: meta.replayGain || item.replayGain,
+            };
+            tracksToPlay = trackListToLoad.map((t) =>
+              t.mediaId === item.mediaId ? healedTrack : t
+            );
+            if (!playlistTracks) setTracks(tracksToPlay);
+          }
+        }
+
         await smoothTrackTransition(async () => {
           await TrackPlayer.clear();
-          await TrackPlayer.setMediaItems(trackListToLoad as any);
+          await TrackPlayer.setMediaItems(tracksToPlay as any);
           await TrackPlayer.skipToIndex(index);
           TrackPlayer.play();
         }, crossfadeSettingsRef.current?.enabled);

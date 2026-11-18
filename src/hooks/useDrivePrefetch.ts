@@ -3,6 +3,7 @@ import TrackPlayer, { RepeatMode } from '@rntp/player';
 import * as FileSystem from 'expo-file-system/legacy';
 import { getStoredToken } from '../services/drive';
 import { Track } from '../models/Track';
+import { extractMetadata } from '../utils/metadata';
 
 export interface UseDrivePrefetchParams {
   activeTrack?: Track | null;
@@ -64,7 +65,25 @@ export default function useDrivePrefetch({
             console.log(
               `[Buffering] La siguiente pista ya está guardada en caché local en: ${localUri}. Actualizando cola...`
             );
-            const updatedTrack: Track = { ...nextTrack, url: localUri };
+            const meta = await extractMetadata(localUri);
+            const enrichedArtist =
+              meta.artist && meta.artist !== 'Desconocido'
+                ? meta.artist
+                : nextTrack.artist !== 'Nube Privada (Drive)' && nextTrack.artist !== 'Google Drive'
+                ? nextTrack.artist
+                : 'Artista desconocido';
+
+            const updatedTrack: Track = {
+              ...nextTrack,
+              url: localUri,
+              title: meta.title || nextTrack.title,
+              artist: enrichedArtist,
+              album: meta.album || nextTrack.album || 'Nube Privada',
+              artworkUrl: meta.artworkUrl || nextTrack.artworkUrl,
+              genre: meta.genre || nextTrack.genre,
+              lyrics: meta.lyrics || nextTrack.lyrics,
+              replayGain: meta.replayGain || nextTrack.replayGain,
+            };
 
             if (isMounted) {
               // Actualizar la cola nativa
@@ -98,7 +117,25 @@ export default function useDrivePrefetch({
 
           if (downloadedUri && isMounted) {
             console.log(`[Buffering] Predescarga en segundo plano finalizada: ${nextTrack.title}`);
-            const updatedTrack: Track = { ...nextTrack, url: downloadedUri };
+            const meta = await extractMetadata(downloadedUri);
+            const enrichedArtist =
+              meta.artist && meta.artist !== 'Desconocido'
+                ? meta.artist
+                : nextTrack.artist !== 'Nube Privada (Drive)' && nextTrack.artist !== 'Google Drive'
+                ? nextTrack.artist
+                : 'Artista desconocido';
+
+            const updatedTrack: Track = {
+              ...nextTrack,
+              url: downloadedUri,
+              title: meta.title || nextTrack.title,
+              artist: enrichedArtist,
+              album: meta.album || nextTrack.album || 'Nube Privada',
+              artworkUrl: meta.artworkUrl || nextTrack.artworkUrl,
+              genre: meta.genre || nextTrack.genre,
+              lyrics: meta.lyrics || nextTrack.lyrics,
+              replayGain: meta.replayGain || nextTrack.replayGain,
+            };
 
             // Actualizar la cola nativa
             const latestQueue = TrackPlayer.getQueue() as Track[];

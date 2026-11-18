@@ -9,6 +9,7 @@ import {
 } from '../services/webDrive';
 import webPlayer from '../services/webAudioPlayer';
 import { WebTrack } from '../types';
+import { parseTrackFilename } from '../../utils/tagEditor';
 
 export interface UseWebDriveReturn {
   isDriveConnected: boolean;
@@ -42,18 +43,30 @@ export default function useWebDrive(): UseWebDriveReturn {
 
     try {
       const files = await fetchWebDriveMp3Files(accessToken);
-      const mapped: WebTrack[] = files.map((file, idx) => ({
-        id: `drive-${file.id}`,
-        mediaId: `drive-${file.id}`,
-        driveFileId: file.id,
-        title: file.name.replace(/\.mp3$/i, ''),
-        artist: 'Google Drive',
-        album: 'Nube Privada',
-        artwork: null,
-        size: file.size ? `${(parseInt(file.size, 10) / (1024 * 1024)).toFixed(1)} MB` : '',
-        source: 'drive',
-        index: idx,
-      }));
+      const mapped: WebTrack[] = files.map((file, idx) => {
+        const parsed = parseTrackFilename(file.name);
+        const appProps = file.appProperties || {};
+        const title = appProps.title || parsed.title || file.name.replace(/\.mp3$/i, '');
+        const artist =
+          appProps.artist ||
+          (parsed.artist && parsed.artist !== 'Artista desconocido'
+            ? parsed.artist
+            : 'Nube Privada (Drive)');
+        const album = appProps.album || parsed.album || 'Nube Privada';
+
+        return {
+          id: `drive-${file.id}`,
+          mediaId: `drive-${file.id}`,
+          driveFileId: file.id,
+          title,
+          artist,
+          album,
+          artwork: null,
+          size: file.size ? `${(parseInt(file.size, 10) / (1024 * 1024)).toFixed(1)} MB` : '',
+          source: 'drive',
+          index: idx,
+        };
+      });
       setDriveTracks(mapped);
     } catch (err: any) {
       console.error('[useWebDrive] Error al cargar pistas:', err);

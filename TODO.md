@@ -273,10 +273,10 @@
 - [x] **Búsqueda Manual Interactiva de Letras:** Permitir al usuario buscar y seleccionar manualmente la letra en LRCLIB si la búsqueda automática no coincide.
 - [x] **Editor de Etiquetas ID3 (Tag Editor):** Editar título, artista, álbum y género directamente sobre los archivos MP3 locales.
 - [x] **Descargador de Carátulas (Album Art Fetcher):** Búsqueda y descarga automática de portadas en alta resolución desde servicios abiertos (Cover Art Archive, MusicBrainz, iTunes Search y Deezer), selector de imágenes locales y guardado optimizado en caché.
-- [ ] **Preservación y Sincronización de Metadatos en la Nube (Google Drive):**
-  - [ ] Almacenar metadatos reales (artista, título, álbum) en las propiedades del archivo en Google Drive (`appProperties`) al subir canciones.
-  - [ ] Deducir y normalizar `Artista - Canción` a partir del nombre del archivo como fallback en lugar de asignar 'Google Drive' como artista.
-  - [ ] Al descargar o reproducir desde Drive, extraer y persistir los metadatos reales de ID3.
+- [x] **Preservación y Sincronización de Metadatos en la Nube (Google Drive):**
+  - [x] Almacenar metadatos reales (artista, título, álbum) en las propiedades del archivo en Google Drive (`appProperties`) al subir canciones.
+  - [x] Deducir y normalizar `Artista - Canción` a partir del nombre del archivo como fallback en lugar de asignar 'Google Drive' como artista.
+  - [x] Al descargar o reproducir desde Drive, extraer y persistir los metadatos reales de ID3.
 - [ ] **Descarga Offline de Playlists Completas:** Permitir descargar de Google Drive todos los archivos de una lista de reproducción con un solo toque.
 - [ ] **Gestor de Almacenamiento y Caché:** Pantalla en Ajustes que muestre el espacio ocupado por la caché de Drive/Letras con opción de limpieza rápida.
 - [ ] **Soporte para Nuevas Fuentes en la Nube:** Opción para conectar servidores WebDAV, Nextcloud o OneDrive.

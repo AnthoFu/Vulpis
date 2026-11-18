@@ -58,4 +58,6 @@ export interface WebDriveFile {
   size?: string;
   webContentLink?: string;
   createdTime?: string;
+  appProperties?: Record<string, string>;
+  description?: string;
 }

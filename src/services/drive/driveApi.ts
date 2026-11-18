@@ -1,7 +1,39 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system/legacy';
-import { clearToken } from './driveAuth';
 import { Track } from '../../models/Track';
+import { parseTrackFilename } from '../../utils/tagEditor';
+
+// Carga perezosa de dependencias nativas para compatibilidad en entornos Node/Web
+let asyncStorageModule: typeof import('@react-native-async-storage/async-storage').default | null = null;
+function getAsyncStorage() {
+  if (!asyncStorageModule) {
+    try {
+      asyncStorageModule = require('@react-native-async-storage/async-storage').default;
+    } catch {
+      asyncStorageModule = null;
+    }
+  }
+  return asyncStorageModule;
+}
+
+let fileSystemModule: typeof import('expo-file-system/legacy') | null = null;
+function getFileSystem() {
+  if (!fileSystemModule) {
+    try {
+      fileSystemModule = require('expo-file-system/legacy');
+    } catch {
+      fileSystemModule = null;
+    }
+  }
+  return fileSystemModule;
+}
+
+async function handleClearToken(): Promise<void> {
+  try {
+    const { clearToken } = require('./driveAuth');
+    await clearToken();
+  } catch (e) {
+    // Silencioso
+  }
+}
 
 /**
  * Representación de un archivo retornado por la API de Google Drive.
@@ -11,6 +43,19 @@ export interface DriveFile {
   name: string;
   size?: string;
   webContentLink?: string;
+  appProperties?: Record<string, string>;
+  description?: string;
+}
+
+/**
+ * Metadatos extendidos para preservar en Google Drive al subir una canción.
+ */
+export interface DriveTrackMetadata {
+  title?: string;
+  artist?: string;
+  album?: string;
+  genre?: string;
+  duration?: number;
 }
 
 /**
@@ -27,25 +72,28 @@ export interface UploadTrackResult {
  */
 export const getOrCreateVulpisFolder = async (accessToken: string): Promise<string> => {
   const FOLDER_CACHE_KEY = 'vulpis_google_folder_id';
+  const AsyncStorage = getAsyncStorage();
   try {
-    const cachedId = await AsyncStorage.getItem(FOLDER_CACHE_KEY);
-    if (cachedId) {
-      // Verificar que la carpeta exista y no esté en la papelera
-      const verifyUrl = `https://www.googleapis.com/drive/v3/files/${cachedId}?fields=id,trashed`;
-      const verifyRes = await fetch(verifyUrl, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-      if (verifyRes.ok) {
-        const verifyData = await verifyRes.json();
-        if (!verifyData.trashed) {
-          console.log('[DriveApi] Usando ID de carpeta Vulpis en caché:', cachedId);
-          return cachedId;
+    if (AsyncStorage) {
+      const cachedId = await AsyncStorage.getItem(FOLDER_CACHE_KEY);
+      if (cachedId) {
+        // Verificar que la carpeta exista y no esté en la papelera
+        const verifyUrl = `https://www.googleapis.com/drive/v3/files/${cachedId}?fields=id,trashed`;
+        const verifyRes = await fetch(verifyUrl, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+        if (verifyRes.ok) {
+          const verifyData = await verifyRes.json();
+          if (!verifyData.trashed) {
+            console.log('[DriveApi] Usando ID de carpeta Vulpis en caché:', cachedId);
+            return cachedId;
+          }
         }
+        await AsyncStorage.removeItem(FOLDER_CACHE_KEY);
       }
-      await AsyncStorage.removeItem(FOLDER_CACHE_KEY);
     }
 
     // Buscar la carpeta Vulpis en Drive
@@ -67,7 +115,9 @@ export const getOrCreateVulpisFolder = async (accessToken: string): Promise<stri
     if (searchData.files && searchData.files.length > 0) {
       const folderId = searchData.files[0].id;
       console.log('[DriveApi] Se encontró la carpeta Vulpis existente:', folderId);
-      await AsyncStorage.setItem(FOLDER_CACHE_KEY, folderId);
+      if (AsyncStorage) {
+        await AsyncStorage.setItem(FOLDER_CACHE_KEY, folderId);
+      }
       return folderId;
     }
 
@@ -92,7 +142,9 @@ export const getOrCreateVulpisFolder = async (accessToken: string): Promise<stri
     const createData = await createRes.json();
     const newFolderId: string = createData.id;
     console.log('[DriveApi] Nueva carpeta Vulpis creada:', newFolderId);
-    await AsyncStorage.setItem(FOLDER_CACHE_KEY, newFolderId);
+    if (AsyncStorage) {
+      await AsyncStorage.setItem(FOLDER_CACHE_KEY, newFolderId);
+    }
     return newFolderId;
   } catch (err) {
     console.error('[DriveApi] Error en getOrCreateVulpisFolder:', err);
@@ -113,7 +165,7 @@ export const fetchDriveMp3Files = async (accessToken: string): Promise<DriveFile
 
   // Consulta: solo archivos MP3 dentro de la carpeta Vulpis, no en la papelera, ordenados por nombre
   const q = encodeURIComponent(`mimeType = 'audio/mpeg' and trashed = false and '${folderId}' in parents`);
-  const fields = 'files(id,name,size,webContentLink)';
+  const fields = 'files(id,name,size,webContentLink,appProperties,description)';
   const driveUrl = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=${encodeURIComponent(fields)}&orderBy=name`;
 
   console.log('[DriveApi] Obteniendo archivos desde URL:', driveUrl);
@@ -133,7 +185,7 @@ export const fetchDriveMp3Files = async (accessToken: string): Promise<DriveFile
 
       if (response.status === 401) {
         // Token expirado
-        await clearToken();
+        await handleClearToken();
         throw new Error('AUTH_EXPIRED');
       }
       throw new Error(`Error de Google Drive API: ${response.status}`);
@@ -193,6 +245,7 @@ export const getDriveRedirectUrl = async (
 
 /**
  * Convierte un objeto de archivo de Google Drive al modelo Track normalizado de Vulpis.
+ * Extrae metadatos preservados en `appProperties` o deduce artista y título a partir del nombre del archivo.
  */
 export const mapDriveFileToTrack = (
   file: DriveFile,
@@ -202,11 +255,27 @@ export const mapDriveFileToTrack = (
 ): Track => {
   const streamUrl = resolvedUrl || `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`;
 
+  const parsed = parseTrackFilename(file.name);
+  const appProps = file.appProperties || {};
+
+  const title = appProps.title || parsed.title || file.name.replace(/\.mp3$/i, '');
+  const artist =
+    appProps.artist ||
+    (parsed.artist && parsed.artist !== 'Artista desconocido'
+      ? parsed.artist
+      : 'Nube Privada (Drive)');
+  const album = appProps.album || parsed.album || 'Nube Privada';
+  const genre = appProps.genre || null;
+  const duration = appProps.duration ? Number(appProps.duration) : undefined;
+
   return {
     mediaId: `drive-${file.id}`,
     url: streamUrl,
-    title: file.name.replace(/\.mp3$/i, ''),
-    artist: 'Nube Privada (Drive)',
+    title,
+    artist,
+    album,
+    genre,
+    duration,
     artworkUrl: defaultCover,
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -215,12 +284,14 @@ export const mapDriveFileToTrack = (
 };
 
 /**
- * Sube un archivo MP3 a la carpeta dedicada Vulpis en Google Drive.
+ * Sube un archivo MP3 a la carpeta dedicada Vulpis en Google Drive,
+ * almacenando metadatos estructurados en `appProperties` y `description`.
  */
 export const uploadTrackToDrive = async (
   fileUri: string,
   fileName: string,
-  accessToken: string
+  accessToken: string,
+  metadata?: DriveTrackMetadata
 ): Promise<UploadTrackResult> => {
   if (!accessToken) {
     throw new Error('Token de acceso no válido.');
@@ -229,18 +300,37 @@ export const uploadTrackToDrive = async (
   // Asegurar que exista la carpeta Vulpis y obtener su ID
   const folderId = await getOrCreateVulpisFolder(accessToken);
 
-  console.log('[DriveApi] Creando metadatos para subir a Vulpis:', fileName);
+  // Construir mapa de propiedades extendidas para Google Drive
+  const appProperties: Record<string, string> = {};
+  if (metadata?.title) appProperties.title = metadata.title;
+  if (metadata?.artist) appProperties.artist = metadata.artist;
+  if (metadata?.album) appProperties.album = metadata.album;
+  if (metadata?.genre) appProperties.genre = metadata.genre;
+  if (metadata?.duration) appProperties.duration = String(metadata.duration);
+
+  const description = [metadata?.artist, metadata?.title].filter(Boolean).join(' - ');
+
+  console.log('[DriveApi] Creando metadatos para subir a Vulpis:', fileName, appProperties);
+  const metadataBody: any = {
+    name: fileName,
+    mimeType: 'audio/mpeg',
+    parents: [folderId],
+  };
+
+  if (Object.keys(appProperties).length > 0) {
+    metadataBody.appProperties = appProperties;
+  }
+  if (description) {
+    metadataBody.description = description;
+  }
+
   const createResponse = await fetch('https://www.googleapis.com/drive/v3/files', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      name: fileName,
-      mimeType: 'audio/mpeg',
-      parents: [folderId],
-    }),
+    body: JSON.stringify(metadataBody),
   });
 
   if (!createResponse.ok) {
@@ -255,6 +345,11 @@ export const uploadTrackToDrive = async (
 
   const uploadUrl = `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`;
   console.log('[DriveApi] Subiendo contenido multimedia a:', uploadUrl);
+
+  const FileSystem = getFileSystem();
+  if (!FileSystem) {
+    throw new Error('FileSystem no disponible para subida.');
+  }
 
   const uploadResult = await FileSystem.uploadAsync(uploadUrl, fileUri, {
     headers: {

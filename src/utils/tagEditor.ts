@@ -215,3 +215,68 @@ export function cleanTrackTitle(title: string): string {
   // Quitar espacios duplicados
   return cleaned.replace(/\s+/g, ' ').trim();
 }
+
+/**
+ * Deduce el artista, título y opcionalmente álbum a partir del nombre del archivo de audio.
+ * Maneja patrones comunes como:
+ * - "Artista - Canción.mp3"
+ * - "01 - Artista - Canción.mp3"
+ * - "Artista - Álbum - 01 - Canción.mp3"
+ * - "Canción.mp3"
+ *
+ * @param filename Nombre del archivo (ej: "Queen - Bohemian Rhapsody.mp3")
+ * @returns Objeto con título y artista normalizados
+ */
+export function parseTrackFilename(filename: string): {
+  title: string;
+  artist: string;
+  album?: string;
+} {
+  if (!filename) {
+    return { title: 'Sin título', artist: 'Artista desconocido' };
+  }
+
+  // Quitar extensión
+  let baseName = filename.replace(/\.(mp3|m4a|flac|wav|ogg|aac)$/i, '').trim();
+
+  // Quitar prefijo numérico de pista si está al inicio ("01 - ", "01. ", "01 ")
+  baseName = baseName.replace(/^\s*\d{1,3}[\s.\-_]+\s*/, '');
+
+  // Separar por delimitadores comunes con espacios (" - ", " – ", " — ") o guiones bajos (" _ ", "_")
+  let parts = baseName.split(/\s+[-–—]\s+|\s*_\s*/);
+  if (parts.length === 1 && /[-–—]/.test(baseName)) {
+    // Si contiene guión con al menos un espacio antes o después (ej: "Artista -Título")
+    const flexibleParts = baseName.split(/\s*[-–—]\s*/);
+    if (flexibleParts.length >= 2 && !flexibleParts[0].includes(' ') && !flexibleParts[1].includes(' ')) {
+      // Si ambos lados son palabras simples como "AC-DC", preservarlo sin partir
+    } else {
+      parts = flexibleParts;
+    }
+  }
+
+  if (parts.length >= 3) {
+    const isSecondPartTrackNumber = /^\d+$/.test(parts[1].trim());
+    if (isSecondPartTrackNumber) {
+      return {
+        artist: parts[0].trim() || 'Artista desconocido',
+        title: cleanTrackTitle(parts.slice(2).join(' - ')) || 'Sin título',
+      };
+    } else {
+      return {
+        artist: parts[0].trim() || 'Artista desconocido',
+        album: parts[1].trim(),
+        title: cleanTrackTitle(parts.slice(2).join(' - ')) || 'Sin título',
+      };
+    }
+  } else if (parts.length === 2) {
+    return {
+      artist: parts[0].trim() || 'Artista desconocido',
+      title: cleanTrackTitle(parts[1]) || 'Sin título',
+    };
+  }
+
+  return {
+    artist: 'Artista desconocido',
+    title: cleanTrackTitle(baseName) || baseName,
+  };
+}

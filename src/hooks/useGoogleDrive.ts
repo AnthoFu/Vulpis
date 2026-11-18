@@ -18,6 +18,8 @@ import {
   saveDriveTrackToDevice,
 } from '../services/drive';
 import { Track } from '../models/Track';
+import { extractMetadata } from '../utils/metadata';
+import { parseTrackFilename } from '../utils/tagEditor';
 
 export interface UseGoogleDriveParams {
   currentSource: string;
@@ -211,7 +213,24 @@ export default function useGoogleDrive({
       setIsDriveLoading(true);
       if (showToast) showToast(`Subiendo: ${asset.name}...`);
 
-      await uploadTrackToDrive(asset.uri, asset.name, token);
+      // Extraer metadatos ID3 para preservarlos en appProperties de Google Drive
+      const meta = await extractMetadata(asset.uri);
+      const parsed = parseTrackFilename(asset.name);
+
+      const title = meta.title || parsed.title || asset.name.replace(/\.mp3$/i, '');
+      const artist =
+        meta.artist && meta.artist !== 'Desconocido'
+          ? meta.artist
+          : parsed.artist !== 'Artista desconocido'
+          ? parsed.artist
+          : undefined;
+
+      await uploadTrackToDrive(asset.uri, asset.name, token, {
+        title,
+        artist,
+        album: meta.album || parsed.album || undefined,
+        genre: meta.genre || undefined,
+      });
 
       if (showToast) showToast('¡Subida completada!');
       await loadDriveFiles(token);
@@ -237,12 +256,31 @@ export default function useGoogleDrive({
     if (showToast) showToast(`Subiendo a Drive: ${track.title}...`);
 
     try {
+      // Normalizar nombre de archivo como "Artista - Canción.mp3" para legibilidad en Drive
+      const artistPrefix =
+        track.artist &&
+        track.artist !== 'Artista desconocido' &&
+        track.artist !== 'Nube Privada (Drive)' &&
+        track.artist !== 'Google Drive'
+          ? `${track.artist} - `
+          : '';
+
       let filename = track.title;
+      if (!filename.includes(' - ') && artistPrefix) {
+        filename = `${artistPrefix}${filename}`;
+      }
       if (!filename.toLowerCase().endsWith('.mp3')) {
         filename += '.mp3';
       }
 
-      await uploadTrackToDrive(track.url, filename, token);
+      await uploadTrackToDrive(track.url, filename, token, {
+        title: track.title,
+        artist: track.artist,
+        album: track.album || undefined,
+        genre: track.genre || undefined,
+        duration: track.duration,
+      });
+
       if (showToast) showToast('¡Subido a Drive exitosamente!');
       await loadDriveFiles(token);
     } catch (e) {

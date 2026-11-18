@@ -6,6 +6,7 @@ import { Track } from '../models/Track';
 import { CrossfadeSettings, ReplayGainSettings } from '../models/AudioSettings';
 import { EqualizerSettings } from '../models/EqualizerSettings';
 import { applyEqualizerSettingsToNative } from '../services/audio';
+import { updateWidgetState } from '../services/widget';
 import { SavePlayerStateParams } from './usePlayerPersistence';
 
 export interface ProgressState {
@@ -118,6 +119,8 @@ export default function usePlayerStateSync({
     let lastSavedTrackId: string | null = null;
     let lastSavedQueueLen = -1;
     let lastAppliedTrackId: string | null = null;
+    let lastWidgetTrackId: string | null = null;
+    let lastWidgetPlaying: boolean | null = null;
 
     /**
      * Ciclo principal de lectura síncrona JSI y actualización de estado React.
@@ -141,6 +144,13 @@ export default function usePlayerStateSync({
         setIsPlaying((prev) => (prev === currentPlaying ? prev : currentPlaying));
         setRepeatMode((prev) => (prev === currentRepeat ? prev : currentRepeat));
         setIsShuffleActive((prev) => (prev === currentShuffle ? prev : currentShuffle));
+
+        // Sincronización con el AppWidget de Android (solo ante cambios reales de pista o reproducción)
+        if (currentActive?.mediaId !== lastWidgetTrackId || currentPlaying !== lastWidgetPlaying) {
+          lastWidgetTrackId = currentActive?.mediaId || null;
+          lastWidgetPlaying = currentPlaying;
+          updateWidgetState(currentActive, currentPlaying);
+        }
 
         // 4. Sincronización de la cola (throttled a 1 segundo / cada 4 ticks)
         // CRÍTICO: No sincronizar si hay un drag-and-drop en curso (isReorderingRef)

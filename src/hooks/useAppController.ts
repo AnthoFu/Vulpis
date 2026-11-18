@@ -32,6 +32,7 @@ import {
   downloadPlaylistOffline,
   PlaylistDownloadProgress,
 } from '../services/playlist';
+import { setupWidgetListener } from '../services/widget';
 
 export type AudioSource = 'local' | 'private' | string;
 
@@ -382,6 +383,42 @@ export default function useAppController(): AppControllerResult {
     equalizerSettingsRef,
     savePlayerState,
   });
+
+  /**
+   * Escuchador de comandos táctiles enviados desde el AppWidget de Android.
+   */
+  useEffect(() => {
+    const unsubscribe = setupWidgetListener({
+      onPlayPause: async () => {
+        const isPlayingNow = TrackPlayer.isPlaying();
+        if (isPlayingNow) {
+          TrackPlayer.pause();
+        } else {
+          TrackPlayer.play();
+        }
+      },
+      onNext: async () => {
+        try {
+          await TrackPlayer.skipToNext();
+          TrackPlayer.play();
+        } catch {
+          TrackPlayer.play();
+        }
+      },
+      onPrevious: async () => {
+        try {
+          await TrackPlayer.skipToPrevious();
+          TrackPlayer.play();
+        } catch {
+          TrackPlayer.play();
+        }
+      },
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   /**
    * Respaldo automático: si la cola queda vacía pero la biblioteca contiene pistas,

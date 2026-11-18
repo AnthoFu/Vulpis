@@ -24,4 +24,7 @@ export * from './artwork';
 // Servicios de Gestión de Almacenamiento y Limpieza de Caché
 export * from './storage';
 
+// Servicios de AppWidget para Android
+export * from './widget';
+
 

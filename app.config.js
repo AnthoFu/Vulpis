@@ -5,7 +5,7 @@ module.exports = {
   expo: {
     name: "Vulpis",
     slug: "Vulpis",
-    version: "0.5.35",
+    version: "0.5.36",
     scheme: [
       "vulpis",
       clientIdPrefix ? `com.googleusercontent.apps.${clientIdPrefix}` : null
@@ -54,7 +54,8 @@ module.exports = {
       "expo-web-browser",
       "expo-asset",
       "expo-sharing",
-      "./plugins/withVulpisEqualizer.js"
+      "./plugins/withVulpisEqualizer.js",
+      "./plugins/withVulpisWidget.js"
     ]
   }
 };

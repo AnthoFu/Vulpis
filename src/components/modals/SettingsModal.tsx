@@ -10,13 +10,14 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import styles from '../../styles/SettingsModal.styles';
-import { getSettings, saveSettings, clearLyricsCache } from '../../services/lyrics/lyricsService';
+import { getSettings, saveSettings } from '../../services/lyrics/lyricsService';
 import { DEFAULT_REPLAYGAIN_SETTINGS } from '../../utils/replayGain';
 import SleepTimerModal from './SleepTimerModal';
 import OnlineLyricsSection from './settings/OnlineLyricsSection';
 import ReplayGainSection from './settings/ReplayGainSection';
 import CrossfadeSection from './settings/CrossfadeSection';
 import EqualizerSection from './settings/EqualizerSection';
+import StorageSection from './settings/StorageSection';
 import { PlayerContext } from '../../context/PlayerContext';
 import { CrossfadeSettings, ReplayGainSettings } from '../../models/AudioSettings';
 import { EqualizerSettings } from '../../models/EqualizerSettings';
@@ -104,26 +105,6 @@ export default function SettingsModal(props: SettingsModalProps): React.JSX.Elem
     if (onShowToast) {
       onShowToast(`Umbral de coincidencia: ${Math.round(val * 100)}%`);
     }
-  };
-
-  const handleClearCache = (): void => {
-    Alert.alert(
-      'Limpiar Caché de Letras',
-      '¿Deseas eliminar las letras guardadas localmente? Se volverán a consultar según sea necesario.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            await clearLyricsCache();
-            if (onShowToast) {
-              onShowToast('Caché de letras limpiado');
-            }
-          },
-        },
-      ]
-    );
   };
 
   if (!visible) return null;
@@ -217,18 +198,8 @@ export default function SettingsModal(props: SettingsModalProps): React.JSX.Elem
                   </View>
                 </View>
 
-                {/* Limpiar Caché */}
-                <View style={styles.settingSection}>
-                  <Text style={styles.subSectionTitle}>Almacenamiento</Text>
-                  <TouchableOpacity
-                    style={styles.dangerButton}
-                    onPress={handleClearCache}
-                    activeOpacity={0.7}
-                  >
-                    <MaterialCommunityIcons name="trash-can-outline" size={18} color="#F87171" />
-                    <Text style={styles.dangerButtonText}>Limpiar caché de letras en línea</Text>
-                  </TouchableOpacity>
-                </View>
+                {/* Gestor modular de Almacenamiento y Caché */}
+                <StorageSection onShowToast={onShowToast} />
               </ScrollView>
             </View>
           </TouchableWithoutFeedback>

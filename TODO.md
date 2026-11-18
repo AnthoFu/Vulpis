@@ -284,7 +284,12 @@
   - [x] Extracción automática de metadatos ID3 en cada pista descargada para enriquecer carátula, artista y álbum reales sin etiquetas genéricas.
   - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores), compilación web limpia (`npm run build:web`, 472 módulos) y empaquetado Expo nativo (`npx expo export -p android --no-minify`, 857 módulos).
   - [x] Incremento de versión del proyecto a `0.5.34` en `app.config.js`.
-- [ ] **Gestor de Almacenamiento y Caché:** Pantalla en Ajustes que muestre el espacio ocupado por la caché de Drive/Letras con opción de limpieza rápida.
+- [x] **Gestor de Almacenamiento y Caché:** Pantalla en Ajustes que muestre el espacio ocupado por la caché de Drive/Letras con opción de limpieza rápida.
+  - [x] Servicio modular `storageService.ts` para auditar el uso de disco (`getStorageBreakdown`) y liberar espacio selectiva o globalmente (`clearDriveAudioCache`, `clearArtworkCache`, `clearLyricsStorageCache`, `clearAllStorageCache`).
+  - [x] Componente modular `StorageSection.tsx` integrado en `SettingsModal.tsx` con desglose visual por categorías (Música de Drive, Portadas, Letras LRCLIB), distintivo de caché total y botón de actualización en tiempo real.
+  - [x] Diálogos interactivos de confirmación (`Alert.alert`) y notificaciones flotantes con el espacio exacto liberado en KB, MB o GB (`formatBytes`).
+  - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores), compilación web limpia (`npm run build:web`, 472 módulos) y empaquetado Expo nativo (`npx expo export -p android --no-minify`, 878 módulos).
+  - [x] Incremento de versión del proyecto a `0.5.35` en `app.config.js`.
 - [ ] **Soporte para Nuevas Fuentes en la Nube:** Opción para conectar servidores WebDAV, Nextcloud o OneDrive.
 - [ ] **Selector de Temas Visuales:** Opciones de personalización como Tema AMOLED Black, Cyberpunk, Violeta Vulpis o Tema Dinámico que se adapta al color dominante de la carátula de la canción.
 - [x] **Gestos Táctiles Avanzados en el Reproductor:** Deslizar horizontalmente la carátula para cambiar de pista (anterior/siguiente) y deslizar hacia abajo para minimizar `PlayerCard`.

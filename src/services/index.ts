@@ -21,4 +21,7 @@ export * from './playlist';
 // Servicios de Búsqueda y Descarga de Carátulas (Album Art Fetcher)
 export * from './artwork';
 
+// Servicios de Gestión de Almacenamiento y Limpieza de Caché
+export * from './storage';
+
 

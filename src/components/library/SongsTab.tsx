@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, FlatList, ActivityIndicator, TouchableOpacity, StyleProp, ViewStyle } from 'react-native';
+import { View, Text, ActivityIndicator, TouchableOpacity, StyleProp, ViewStyle } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import styles from '../../styles/QueueList.styles';
 import { Track } from '../../models/Track';
@@ -48,13 +49,9 @@ export default function SongsTab({
   const activeFilterObj = searchFilters.find((f) => f.id === searchFilter);
 
   return (
-    <FlatList
+    <FlashList
       data={listData}
       keyExtractor={(item, index) => `${item.mediaId}-${index}`}
-      initialNumToRender={12}
-      maxToRenderPerBatch={10}
-      windowSize={5}
-      removeClippedSubviews={true}
       ListHeaderComponent={
         <>
           {ListHeaderComponent}

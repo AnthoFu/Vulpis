@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image, FlatList, StyleProp, ViewStyle } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleProp, ViewStyle } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import styles from '../../styles/QueueList.styles';
@@ -49,15 +50,11 @@ export default function ArtistsTab({
       : selectedArtist.tracks;
 
     return (
-      <FlatList
+      <FlashList
         data={filteredArtistTracks}
         keyExtractor={(item, index) => `${item.mediaId}-${index}`}
         contentContainerStyle={[styles.listContent, contentContainerStyle]}
         showsVerticalScrollIndicator={false}
-        initialNumToRender={14}
-        maxToRenderPerBatch={10}
-        windowSize={5}
-        removeClippedSubviews={true}
         ListHeaderComponent={
           <>
             {ListHeaderComponent}
@@ -158,15 +155,11 @@ export default function ArtistsTab({
 
   // 1.B. Lista General de Artistas
   return (
-    <FlatList
+    <FlashList
       data={displayArtists}
       keyExtractor={(item) => item.id}
       contentContainerStyle={[styles.listContent, contentContainerStyle]}
       showsVerticalScrollIndicator={false}
-      initialNumToRender={14}
-      maxToRenderPerBatch={10}
-      windowSize={5}
-      removeClippedSubviews={true}
       ListHeaderComponent={
         <>
           {ListHeaderComponent}

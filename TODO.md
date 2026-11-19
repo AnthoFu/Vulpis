@@ -309,6 +309,15 @@
   - [x] Verificación de compilación nativa Android (`./gradlew compileDebugKotlin`, 0 errores), compilación TypeScript (`npx tsc --noEmit`, 0 errores), web limpia (`npm run build:web`, 472 módulos) y empaquetado Expo (`npx expo export -p android --no-minify`, 880 módulos).
   - [x] Incremento de versión del proyecto a `0.5.36` en `app.config.js`.
 - [ ] **Atajos y Controles Multimedia Avanzados:** Soporte extendido para eventos de auriculares Bluetooth (doble toque, triple toque).
-- [ ] **Migración a `@shopify/flash-list`:** Reemplazar `FlatList` tradicional por `FlashList` para optimizar el rendimiento y la fluidez del scroll con miles de canciones.
+- [x] **Migración a `@shopify/flash-list`:** Reemplazar `FlatList` tradicional por `FlashList` para optimizar el rendimiento y la fluidez del scroll con miles de canciones.
+  - [x] Instalación de `@shopify/flash-list` compatible con Expo SDK 56 y React Native 0.85 con soporte de AutoLayout v2 nativo.
+  - [x] Migración de la lista principal de canciones en `SongsTab.tsx` eliminando la sobrecarga de `initialNumToRender` y batches manuales.
+  - [x] Migración de la vista detallada de canciones de álbum y lista general de álbumes en `AlbumsTab.tsx`.
+  - [x] Migración de la vista detallada de canciones de artista y lista general de artistas en `ArtistsTab.tsx`.
+  - [x] Migración de la vista detallada de listas de reproducción en `PlaylistDetailView.tsx`.
+  - [x] Migración del listado de listas de reproducción en `PlaylistsTab.tsx`.
+  - [x] Migración del visor modal del historial de reproducción en `HistoryModal.tsx`.
+  - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores), compilación web limpia (`npm run build:web`, 452 módulos) y empaquetado Expo nativo (`npx expo export -p android --no-minify`, 934 módulos).
+  - [x] Incremento de versión del proyecto a `0.5.38` en `app.config.js`.
 - [x] **Migración Completa a TypeScript:** Tipado estricto culminado en toda la aplicación (Modelos, Servicios, Utilidades, Hooks, Contexto, Componentes y App).
 - [ ] **Suite de Pruebas Unitarias (Jest):** Implementar tests para lógica crítica como `drive.js`, `metadata.js` y `onlineLyrics.js`.

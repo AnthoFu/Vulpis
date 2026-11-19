@@ -4,11 +4,11 @@ import {
   Text,
   TouchableOpacity,
   Image,
-  FlatList,
   Alert,
   StyleProp,
   ViewStyle,
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import styles from '../../styles/QueueList.styles';
 import { filterTrackList } from '../../hooks/useQueueList';
@@ -108,15 +108,11 @@ export default function PlaylistDetailView({
   };
 
   return (
-    <FlatList
+    <FlashList
       data={displayPlaylistTracks}
       keyExtractor={(item, index) => `${item.mediaId}-${index}`}
       contentContainerStyle={[styles.listContent, contentContainerStyle]}
       showsVerticalScrollIndicator={false}
-      initialNumToRender={12}
-      maxToRenderPerBatch={10}
-      windowSize={5}
-      removeClippedSubviews={true}
       ListHeaderComponent={
         <>
           {ListHeaderComponent}

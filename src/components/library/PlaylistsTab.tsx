@@ -3,12 +3,12 @@ import {
   View,
   Text,
   TouchableOpacity,
-  FlatList,
   TextInput,
   Alert,
   StyleProp,
   ViewStyle,
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import styles from '../../styles/QueueList.styles';
 import { renderPlaylistArtwork } from './PlaylistArtwork';
@@ -145,15 +145,11 @@ export default function PlaylistsTab({
   });
 
   return (
-    <FlatList
+    <FlashList
       data={filteredPlaylists}
       keyExtractor={(item) => item.id}
       contentContainerStyle={[styles.listContent, contentContainerStyle]}
       showsVerticalScrollIndicator={false}
-      initialNumToRender={12}
-      maxToRenderPerBatch={10}
-      windowSize={5}
-      removeClippedSubviews={true}
       ListHeaderComponent={
         <>
           {ListHeaderComponent}

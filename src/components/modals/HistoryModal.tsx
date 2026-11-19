@@ -5,11 +5,11 @@ import {
   Text,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  FlatList,
   Image,
   TextInput,
   Alert,
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import styles from '../../styles/HistoryModal.styles';
 import { Colors } from '../../constants/colors';
@@ -155,7 +155,7 @@ export default function HistoryModal({
               )}
 
               {/* Lista de pistas reproducidas */}
-              <FlatList
+              <FlashList
                 data={filteredHistory}
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={styles.listContent}

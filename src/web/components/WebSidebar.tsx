@@ -4,10 +4,11 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import styles from '../styles/web.styles';
 
 export interface WebSidebarProps {
-  currentView: 'drive' | 'queue' | 'history';
-  onSelectView: (view: 'drive' | 'queue' | 'history') => void;
+  currentView: 'drive' | 'local' | 'queue' | 'history';
+  onSelectView: (view: 'drive' | 'local' | 'queue' | 'history') => void;
   queueCount?: number;
   driveTrackCount?: number;
+  localTrackCount?: number;
   historyCount?: number;
   onToggleLyrics: () => void;
   isLyricsOpen: boolean;
@@ -20,6 +21,7 @@ export default function WebSidebar({
   onSelectView,
   queueCount = 0,
   driveTrackCount = 0,
+  localTrackCount = 0,
   historyCount = 0,
   onToggleLyrics,
   isLyricsOpen,
@@ -50,6 +52,29 @@ export default function WebSidebar({
           ]}
         >
           Google Drive ({driveTrackCount})
+        </Text>
+      </TouchableOpacity>
+
+      {/* Pestaña: Canciones Locales */}
+      <TouchableOpacity
+        style={[
+          styles.sidebarItem,
+          currentView === 'local' && styles.sidebarItemActive,
+        ]}
+        onPress={() => onSelectView('local')}
+      >
+        <Feather
+          name="folder"
+          size={18}
+          color={currentView === 'local' ? '#A78BFA' : '#8E8F9E'}
+        />
+        <Text
+          style={[
+            styles.sidebarItemText,
+            currentView === 'local' && styles.sidebarItemTextActive,
+          ]}
+        >
+          Música Local ({localTrackCount})
         </Text>
       </TouchableOpacity>
 

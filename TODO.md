@@ -319,5 +319,13 @@
   - [x] Migración del visor modal del historial de reproducción en `HistoryModal.tsx`.
   - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores), compilación web limpia (`npm run build:web`, 452 módulos) y empaquetado Expo nativo (`npx expo export -p android --no-minify`, 934 módulos).
   - [x] Incremento de versión del proyecto a `0.5.38` en `app.config.js`.
+- [x] **Rediseño y Optimización de la GUI Web:**
+  - [x] Limpieza del modal de Google Drive (`WebDriveModal.tsx`): eliminación total de tutoriales de depuración (Error 401 origin, copiar localhost, notas .env) y diseño minimalista directo.
+  - [x] Rediseño de la tabla de canciones (`WebTrackList.tsx`): reemplazo de columna "Tamaño" por columnas musicales estándar ("Álbum" y "Duración"), reproducción con clic en toda la fila y feedback visual animado con checkmark al agregar a la cola.
+  - [x] Soporte para reproducción de música local en Web (`WebNavbar.tsx`, `WebSidebar.tsx`, `App.tsx`): botón "Abrir MP3s" con selector nativo de archivos múltiples (`URL.createObjectURL`) y vista dedicada "Música Local".
+  - [x] Sistema de notificaciones flotantes (Toast) integrado en la interfaz web para confirmación de acciones.
+  - [x] Barra superior pulida con distintivo de estado de Drive independiente del botón de sincronización.
+  - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores), compilación web limpia (`npm run build:web`, 472 módulos) y empaquetado Expo nativo (`npx expo export -p android --no-minify`, 934 módulos).
+  - [x] Incremento de versión del proyecto a `0.5.39` en `app.config.js`.
 - [x] **Migración Completa a TypeScript:** Tipado estricto culminado en toda la aplicación (Modelos, Servicios, Utilidades, Hooks, Contexto, Componentes y App).
 - [ ] **Suite de Pruebas Unitarias (Jest):** Implementar tests para lógica crítica como `drive.js`, `metadata.js` y `onlineLyrics.js`.

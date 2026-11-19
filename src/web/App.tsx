@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import styles from './styles/web.styles';
 
 // Hooks
@@ -8,6 +9,7 @@ import useWebDrive from './hooks/useWebDrive';
 import useWebLyrics from './hooks/useWebLyrics';
 import usePlaybackHistory from '../hooks/usePlaybackHistory';
 import { Track } from '../models/Track';
+import { parseTrackFilename } from '../utils/tagEditor';
 
 // Componentes
 import WebNavbar from './components/WebNavbar';
@@ -20,10 +22,52 @@ import EqualizerModal from '../components/modals/EqualizerModal';
 import { WebTrack } from './types';
 
 export default function WebApp(): React.JSX.Element {
-  const [currentView, setCurrentView] = useState<'drive' | 'queue' | 'history'>('drive');
+  const [currentView, setCurrentView] = useState<'drive' | 'local' | 'queue' | 'history'>('drive');
+  const [localTracks, setLocalTracks] = useState<WebTrack[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isDriveModalOpen, setIsDriveModalOpen] = useState<boolean>(false);
   const [isEqualizerOpen, setIsEqualizerOpen] = useState<boolean>(false);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const showToast = useCallback((msg: string) => {
+    setToast(msg);
+    setTimeout(() => {
+      setToast((curr) => (curr === msg ? null : curr));
+    }, 2500);
+  }, []);
+
+  const handleOpenLocalFiles = useCallback(() => {
+    if (typeof document === 'undefined') return;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'audio/*,.mp3,.m4a,.flac,.wav,.ogg';
+    input.multiple = true;
+    input.onchange = (e: any) => {
+      const files: File[] = Array.from(e.target.files || []);
+      if (files.length === 0) return;
+
+      const newTracks: WebTrack[] = files.map((file) => {
+        const parsed = parseTrackFilename(file.name);
+        const blobUrl = URL.createObjectURL(file);
+        return {
+          id: `local-${file.name}-${file.size}-${Date.now()}`,
+          mediaId: `local-${file.name}-${file.size}`,
+          title: parsed.title || file.name.replace(/\.[^/.]+$/, ''),
+          artist: parsed.artist && parsed.artist !== 'Artista desconocido' ? parsed.artist : 'Local',
+          album: parsed.album && parsed.album !== 'Desconocido' ? parsed.album : 'Música Local',
+          artwork: null,
+          size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
+          source: 'local',
+          url: blobUrl,
+        };
+      });
+
+      setLocalTracks((prev) => [...prev, ...newTracks]);
+      setCurrentView('local');
+      showToast(`${files.length} archivo(s) cargado(s)`);
+    };
+    input.click();
+  }, [showToast]);
 
   // Hook del reproductor de audio web
   const {
@@ -120,6 +164,8 @@ export default function WebApp(): React.JSX.Element {
       sourceList = queue;
     } else if (currentView === 'history') {
       sourceList = historyWebTracks;
+    } else if (currentView === 'local') {
+      sourceList = localTracks;
     }
 
     if (!searchQuery.trim()) return sourceList;
@@ -130,16 +176,25 @@ export default function WebApp(): React.JSX.Element {
         (t.title && t.title.toLowerCase().includes(q)) ||
         (t.artist && t.artist.toLowerCase().includes(q))
     );
-  }, [currentView, queue, driveTracks, historyWebTracks, searchQuery]);
+  }, [currentView, queue, driveTracks, localTracks, historyWebTracks, searchQuery]);
 
   return (
     <View style={styles.appContainer}>
+      {/* Notificación Toast flotante */}
+      {toast && (
+        <View style={styles.toastContainer}>
+          <Feather name="check-circle" size={16} color="#A78BFA" />
+          <Text style={styles.toastText}>{toast}</Text>
+        </View>
+      )}
+
       {/* 1. Barra de Navegación Superior */}
       <WebNavbar
         isDriveConnected={isDriveConnected}
         onOpenDriveModal={() => setIsDriveModalOpen(true)}
         onRefreshDrive={refreshTracks}
         onDisconnectDrive={disconnectDrive}
+        onOpenLocalFiles={handleOpenLocalFiles}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
       />
@@ -151,6 +206,7 @@ export default function WebApp(): React.JSX.Element {
           onSelectView={setCurrentView}
           queueCount={queue.length}
           driveTrackCount={driveTracks.length}
+          localTrackCount={localTracks.length}
           historyCount={historyItems.length}
           onToggleLyrics={toggleLyrics}
           isLyricsOpen={isLyricsOpen}
@@ -167,16 +223,20 @@ export default function WebApp(): React.JSX.Element {
                   ? 'Cola de Reproducción'
                   : currentView === 'history'
                   ? 'Historial de Reproducción'
-                  : 'Música en Google Drive'}
+                  : currentView === 'local'
+                  ? 'Música Local'
+                  : 'Biblioteca en Google Drive'}
               </Text>
               <Text style={styles.contentSubtitle}>
                 {currentView === 'queue'
-                  ? `${queue.length} canción(es) en cola`
+                  ? `${queue.length} ${queue.length === 1 ? 'canción' : 'canciones'}`
                   : currentView === 'history'
-                  ? `${historyItems.length} canción(es) escuchadas recientemente`
+                  ? `${historyItems.length} ${historyItems.length === 1 ? 'canción reciente' : 'canciones recientes'}`
+                  : currentView === 'local'
+                  ? `${localTracks.length} ${localTracks.length === 1 ? 'canción cargada' : 'canciones cargadas del dispositivo'}`
                   : isDriveConnected
-                  ? `${driveTracks.length} archivo(s) disponibles en tu nube privada`
-                  : 'Conecta tu cuenta de Google Drive para cargar tu música'}
+                  ? `${driveTracks.length} ${driveTracks.length === 1 ? 'canción sincronizada' : 'canciones sincronizadas en la nube'}`
+                  : 'Conectá tu cuenta de Google Drive para sincronizar tu música'}
               </Text>
             </View>
 
@@ -199,8 +259,11 @@ export default function WebApp(): React.JSX.Element {
             onRemoveFromQueue={removeFromQueue}
             isQueueView={currentView === 'queue'}
             isHistoryView={currentView === 'history'}
+            isLocalView={currentView === 'local'}
             isDriveConnected={isDriveConnected}
             onOpenDriveModal={() => setIsDriveModalOpen(true)}
+            onOpenLocalFiles={handleOpenLocalFiles}
+            onShowToast={showToast}
           />
         </View>
 

@@ -89,7 +89,11 @@ export default function WebPlayerBottomBar({
   return (
     <View style={styles.playerBottomBar}>
       {/* 1. Información de la Pista Activa */}
-      <View style={styles.playerTrackInfo}>
+      <TouchableOpacity
+        style={[styles.playerTrackInfo, { cursor: currentTrack ? 'pointer' : 'default' }]}
+        onPress={currentTrack ? onToggleLyrics : undefined}
+        activeOpacity={currentTrack ? 0.8 : 1}
+      >
         <Image
           source={currentTrack?.artwork ? { uri: currentTrack.artwork } : DEFAULT_COVER}
           style={styles.playerArtwork}
@@ -99,10 +103,14 @@ export default function WebPlayerBottomBar({
             {currentTrack?.title || 'Sin reproducción'}
           </Text>
           <Text style={styles.playerTrackArtist} numberOfLines={1}>
-            {currentTrack?.artist || 'Selecciona una canción'}
+            {currentTrack?.artist && currentTrack.artist !== 'Google Drive'
+              ? currentTrack.artist
+              : currentTrack
+              ? 'Artista desconocido'
+              : 'Elegí una canción para reproducir'}
           </Text>
         </View>
-      </View>
+      </TouchableOpacity>
 
       {/* 2. Controles Centrales y Barra de Progreso */}
       <View style={styles.playerCenterControls}>

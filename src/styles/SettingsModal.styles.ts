@@ -271,6 +271,76 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
   },
+  // Selector de Temas Visuales
+  themeGrid: {
+    gap: 10,
+    marginTop: 12,
+  },
+  themeCard: {
+    backgroundColor: Colors.bgCard,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: Colors.borderCard,
+    padding: 12,
+  },
+  themeCardActive: {
+    borderColor: Colors.accent,
+    backgroundColor: 'rgba(139, 92, 246, 0.08)',
+  },
+  themeCardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  themeCardTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  themeCardTitle: {
+    color: Colors.white,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  themeCardDescription: {
+    color: Colors.textDesc,
+    fontSize: 11,
+    lineHeight: 15,
+    marginBottom: 8,
+  },
+  themeCardBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
+  },
+  themeSwatchesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  themeSwatch: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  themeActiveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(139, 92, 246, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  themeActiveBadgeText: {
+    color: Colors.accentLight,
+    fontSize: 11,
+    fontWeight: '700',
+  },
 });
 
 export default styles;

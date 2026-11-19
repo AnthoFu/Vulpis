@@ -4,3 +4,5 @@
 
 export { PlayerContext, PlayerProvider, usePlayer } from './PlayerContext';
 export * from './PlayerContext';
+export { ThemeContext, ThemeProvider, useTheme } from './ThemeContext';
+export * from './ThemeContext';

@@ -291,7 +291,15 @@
   - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores), compilación web limpia (`npm run build:web`, 472 módulos) y empaquetado Expo nativo (`npx expo export -p android --no-minify`, 878 módulos).
   - [x] Incremento de versión del proyecto a `0.5.35` en `app.config.js`.
 - [ ] **Soporte para Nuevas Fuentes en la Nube:** Opción para conectar servidores WebDAV, Nextcloud o OneDrive.
-- [ ] **Selector de Temas Visuales:** Opciones de personalización como Tema AMOLED Black, Cyberpunk, Violeta Vulpis o Tema Dinámico que se adapta al color dominante de la carátula de la canción.
+- [x] **Selector de Temas Visuales:** Opciones de personalización como Tema AMOLED Black, Cyberpunk, Violeta Vulpis, Esmeralda o Tema Dinámico que se adapta al color dominante de la carátula de la canción.
+  - [x] Modelo de dominio y contratos TypeScript `src/models/Theme.ts` con tipos de tema (`ThemeId`), paletas estrictas (`ThemePalette`) y definiciones completas (`ThemeDefinition`).
+  - [x] Catálogo de temas y paletas calibradas en `src/constants/themes.ts` (Violeta Vulpis, AMOLED Black con negros puros #000000 para pantallas OLED, Cyberpunk Neon con cian eléctrico #00F0FF, Esmeralda relajante #10B981, y generador dinámico `buildDynamicPalette`).
+  - [x] Contexto global `ThemeContext.tsx` con proveedor `ThemeProvider`, hook `useTheme()`, persistencia atómica en AsyncStorage (`vulpis_theme_id`) y extracción adaptativa reactiva con `react-native-image-colors`.
+  - [x] Componente modular `ThemeSection.tsx` integrado en `SettingsModal.tsx` con tarjetas interactivas, muestras de color (swatches), descripción de estilo, distintivo de tema activo e iconos contextuales.
+  - [x] Sincronización visual dinámica del contenedor raíz, barra de estado (`StatusBar`) y fondos modales en `App.tsx` y `SettingsModal.tsx`.
+  - [x] Suite de pruebas unitarias `scratch/test_theme_service.ts` verificando catálogos, tokens de color, conversión HEX a RGBA y generación de paletas adaptativas.
+  - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores), compilación web limpia (`npm run build:web`, 472 módulos) y empaquetado Expo nativo (`npx expo export -p android --no-minify`, 883 módulos).
+  - [x] Incremento de versión del proyecto a `0.5.37` en `app.config.js`.
 - [x] **Gestos Táctiles Avanzados en el Reproductor:** Deslizar horizontalmente la carátula para cambiar de pista (anterior/siguiente) y deslizar hacia abajo para minimizar `PlayerCard`.
 - [x] **Soporte de Widget para Android:** Widget de pantalla de inicio con controles de reproducción y carátula.
   - [x] Implementación nativa de `AppWidgetProvider` (`VulpisWidgetProvider.kt`) con persistencia en `SharedPreferences`, soporte de esquinas redondeadas en carátulas y layout moderno (`vulpis_widget_layout.xml`) adaptable a 4x1 y 4x2.

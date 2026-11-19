@@ -18,7 +18,7 @@ import {
   EqualizerModal,
   HistoryModal,
 } from './src/components';
-import { PlayerProvider, usePlayer } from './src/context';
+import { PlayerProvider, usePlayer, ThemeProvider, useTheme } from './src/context';
 
 /**
  * Contenedor visual principal de Vulpis.
@@ -50,19 +50,20 @@ function MainApp(): React.JSX.Element {
     handleSelectTrack,
     handleAddToQueue,
   } = usePlayer();
+  const { palette } = useTheme();
 
   if (!isPlayerInitialized) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#8B5CF6" />
-        <Text style={styles.loadingText}>Cargando Vulpis Player...</Text>
+      <View style={[styles.loadingContainer, { backgroundColor: palette.bgBase }]}>
+        <ActivityIndicator size="large" color={palette.accent} />
+        <Text style={[styles.loadingText, { color: palette.textSecondary }]}>Cargando Vulpis Player...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#090A0F" />
+    <View style={[styles.container, { backgroundColor: palette.bgBase }]}>
+      <StatusBar barStyle="light-content" backgroundColor={palette.bgBase} />
       
       {/* Notificación flotante Toast */}
       {toast && (
@@ -138,7 +139,9 @@ export default function App(): React.JSX.Element {
   return (
     <SafeAreaProvider>
       <PlayerProvider>
-        <MainApp />
+        <ThemeProvider>
+          <MainApp />
+        </ThemeProvider>
       </PlayerProvider>
     </SafeAreaProvider>
   );

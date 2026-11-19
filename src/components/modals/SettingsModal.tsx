@@ -18,7 +18,9 @@ import ReplayGainSection from './settings/ReplayGainSection';
 import CrossfadeSection from './settings/CrossfadeSection';
 import EqualizerSection from './settings/EqualizerSection';
 import StorageSection from './settings/StorageSection';
+import ThemeSection from './settings/ThemeSection';
 import { PlayerContext } from '../../context/PlayerContext';
+import { useTheme } from '../../context/ThemeContext';
 import { CrossfadeSettings, ReplayGainSettings } from '../../models/AudioSettings';
 import { EqualizerSettings } from '../../models/EqualizerSettings';
 import { DEFAULT_EQUALIZER_SETTINGS } from '../../utils/equalizer';
@@ -48,6 +50,7 @@ export interface SettingsModalProps {
  */
 export default function SettingsModal(props: SettingsModalProps): React.JSX.Element | null {
   const player = React.useContext(PlayerContext);
+  const { palette } = useTheme();
 
   const visible = props.visible !== undefined ? props.visible : (player?.isSettingsOpen || false);
   const onClose = props.onClose || (() => player?.setIsSettingsOpen?.(false));
@@ -119,11 +122,11 @@ export default function SettingsModal(props: SettingsModalProps): React.JSX.Elem
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.overlay}>
           <TouchableWithoutFeedback onPress={() => {}}>
-            <View style={styles.modalContainer}>
+            <View style={[styles.modalContainer, { backgroundColor: palette.bgModal, borderColor: palette.borderSubtle }]}>
               {/* Encabezado */}
               <View style={styles.header}>
                 <View style={styles.headerTitleRow}>
-                  <MaterialCommunityIcons name="cog" size={22} color="#8B5CF6" />
+                  <MaterialCommunityIcons name="cog" size={22} color={palette.accent} />
                   <Text style={styles.title}>Ajustes de Vulpis</Text>
                 </View>
                 <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -131,13 +134,16 @@ export default function SettingsModal(props: SettingsModalProps): React.JSX.Elem
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.divider} />
+              <View style={[styles.divider, { backgroundColor: palette.borderDivider }]} />
 
               <ScrollView
                 style={styles.scrollView}
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
               >
+                {/* Sección modular: Temas Visuales */}
+                <ThemeSection onShowToast={onShowToast} />
+
                 {/* Sección modular: Letras en línea */}
                 <OnlineLyricsSection
                   enabled={settings.onlineLyricsEnabled}

@@ -20,3 +20,6 @@ export * from './SortOptions';
 // Historial de Reproducción
 export * from './History';
 
+// Temas Visuales
+export * from './Theme';
+

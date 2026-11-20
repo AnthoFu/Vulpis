@@ -7,6 +7,7 @@ import playlistsTabStyles from './library/PlaylistsTab.styles';
 import libraryModalsStyles from './library/LibraryModals.styles';
 import artistsTabStyles from './library/ArtistsTab.styles';
 import albumsTabStyles from './library/AlbumsTab.styles';
+import batchActionBarStyles from './library/BatchActionBar.styles';
 
 /**
  * Hoja de estilos principal unificada para la sección de biblioteca y listas.
@@ -21,6 +22,7 @@ const styles = StyleSheet.create({
   ...libraryModalsStyles,
   ...artistsTabStyles,
   ...albumsTabStyles,
+  ...batchActionBarStyles,
 });
 
 export {
@@ -32,6 +34,7 @@ export {
   libraryModalsStyles,
   artistsTabStyles,
   albumsTabStyles,
+  batchActionBarStyles,
 };
 
 export default styles;

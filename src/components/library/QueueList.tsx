@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleProp, ViewStyle } from 'react-native';
 import useQueueList from '../../hooks/useQueueList';
+import useBatchSelection from '../../hooks/useBatchSelection';
 import TrackOptionsModal from '../modals/TrackOptionsModal';
 import PlaylistPickerModal from '../modals/PlaylistPickerModal';
 import SortModal from '../modals/SortModal';
@@ -9,6 +10,7 @@ import ArtworkPickerModal from '../modals/ArtworkPickerModal';
 
 // Subcomponentes modulares de la biblioteca
 import TrackItem from './TrackItem';
+import BatchActionBar from './BatchActionBar';
 import LibraryTabs from './LibraryTabs';
 import LibrarySearchBar from './LibrarySearchBar';
 import GoogleDrivePanel from './GoogleDrivePanel';
@@ -69,6 +71,11 @@ export interface QueueListProps {
     track: Track,
     newArtworkUrl: string
   ) => Promise<boolean>;
+  onBatchUploadLocalTracksToDrive?: (tracks: Track[]) => Promise<void> | void;
+  onBatchDeleteDriveTracks?: (tracks: Track[]) => Promise<void> | void;
+  onBatchDeleteLocalTracks?: (tracks: Track[]) => Promise<void> | void;
+  onBatchAddToQueue?: (tracks: Track[]) => Promise<void> | void;
+  onBatchAddTracksToPlaylist?: (playlistId: string, tracks: Track[]) => Promise<void> | void;
 }
 
 /**
@@ -118,9 +125,30 @@ export default function QueueList(props: QueueListProps): React.JSX.Element {
   const downloadProgress = props.downloadProgress !== undefined ? props.downloadProgress : player?.playlistDownloadProgress;
   const onUpdateTrackTags = props.onUpdateTrackTags || player?.handleUpdateTrackTags;
   const onUpdateTrackArtwork = props.onUpdateTrackArtwork || player?.handleUpdateTrackArtwork;
+  const onBatchUploadLocalTracksToDrive =
+    props.onBatchUploadLocalTracksToDrive || player?.handleBatchUploadLocalTracksToDrive;
+  const onBatchDeleteDriveTracks =
+    props.onBatchDeleteDriveTracks || player?.handleBatchDeleteDriveTracks;
+  const onBatchDeleteLocalTracks =
+    props.onBatchDeleteLocalTracks || player?.handleBatchDeleteLocalTracks;
+  const onBatchAddToQueue = props.onBatchAddToQueue || player?.handleBatchAddToQueue;
+  const onBatchAddTracksToPlaylist =
+    props.onBatchAddTracksToPlaylist || player?.handleBatchAddTracksToPlaylist;
 
   const [trackForTagEditing, setTrackForTagEditing] = React.useState<Track | null>(null);
   const [trackForArtworkPicker, setTrackForArtworkPicker] = React.useState<Track | null>(null);
+  const [batchTracksForPlaylist, setBatchTracksForPlaylist] = React.useState<Track[] | null>(null);
+
+  const {
+    isSelectionMode,
+    selectedTracks,
+    isSelected,
+    toggleTrackSelection,
+    selectAll,
+    clearSelection,
+    enterSelectionMode,
+    exitSelectionMode,
+  } = useBatchSelection();
 
   const {
     activeTab,
@@ -190,13 +218,17 @@ export default function QueueList(props: QueueListProps): React.JSX.Element {
       key={`${item.mediaId}-${index}`}
       item={item}
       index={index}
-      contextTracks={contextTracks}
+      contextTracks={contextTracks || displayTracks}
       showTrackNumber={showTrackNumber}
       activeTrack={activeTrack}
       isProcessing={isProcessing}
       defaultArtwork={defaultArtwork}
       onSelectTrack={selectTrack}
       onOpenOptions={setSelectedTrackForOptions}
+      isSelectionMode={isSelectionMode}
+      isSelected={isSelected(item.mediaId)}
+      onToggleSelect={toggleTrackSelection}
+      onLongPress={enterSelectionMode}
     />
   );
 
@@ -231,6 +263,8 @@ export default function QueueList(props: QueueListProps): React.JSX.Element {
       onCloseDropdown={() => setIsDropdownOpen(false)}
       onOpenSort={() => setIsSortModalVisible(true)}
       currentSortConfig={sortConfig}
+      isSelectionMode={isSelectionMode}
+      onToggleSelectionMode={() => (isSelectionMode ? exitSelectionMode() : enterSelectionMode())}
     />
   );
 
@@ -396,14 +430,43 @@ export default function QueueList(props: QueueListProps): React.JSX.Element {
         visible={isPlaylistPickerVisible}
         playlists={playlists}
         track={selectedTrackForOptions}
+        tracks={batchTracksForPlaylist || undefined}
         onClose={() => {
           setIsPlaylistPickerVisible(false);
           setSelectedTrackForOptions(null);
+          setBatchTracksForPlaylist(null);
         }}
         onAddTrackToPlaylist={onAddTrackToPlaylist}
+        onAddBatchTracksToPlaylist={async (playlistId, batchTracks) => {
+          if (onBatchAddTracksToPlaylist) {
+            await onBatchAddTracksToPlaylist(playlistId, batchTracks);
+          } else if (onAddTrackToPlaylist) {
+            for (const t of batchTracks) {
+              await onAddTrackToPlaylist(playlistId, t);
+            }
+          }
+          setIsPlaylistPickerVisible(false);
+          setBatchTracksForPlaylist(null);
+          exitSelectionMode();
+        }}
         inlineNewPlaylistName={inlineNewPlaylistName}
         setInlineNewPlaylistName={setInlineNewPlaylistName}
-        handleCreateAndAdd={handleCreateAndAdd}
+        handleCreateAndAdd={async () => {
+          if (batchTracksForPlaylist && batchTracksForPlaylist.length > 0 && onCreatePlaylist) {
+            const newPl = await onCreatePlaylist(inlineNewPlaylistName);
+            if (newPl) {
+              if (onBatchAddTracksToPlaylist) {
+                await onBatchAddTracksToPlaylist(newPl.id, batchTracksForPlaylist);
+              }
+              setInlineNewPlaylistName('');
+              setIsPlaylistPickerVisible(false);
+              setBatchTracksForPlaylist(null);
+              exitSelectionMode();
+            }
+          } else {
+            handleCreateAndAdd();
+          }
+        }}
       />
 
       {/* Modal de ordenamiento multicriterio */}
@@ -412,6 +475,47 @@ export default function QueueList(props: QueueListProps): React.JSX.Element {
         onClose={() => setIsSortModalVisible(false)}
         currentConfig={sortConfig}
         onSelectConfig={handleSortChange}
+      />
+
+      {/* Barra contextual flotante para selección múltiple por lote */}
+      <BatchActionBar
+        visible={isSelectionMode}
+        selectedTracks={selectedTracks}
+        totalVisibleTracksCount={displayTracks.length}
+        isDriveConnected={isDriveConnected}
+        currentSource={currentSource}
+        bottomOffset={activeTrack ? 84 : 16}
+        onSelectAll={() => selectAll(displayTracks)}
+        onClearSelection={clearSelection}
+        onExitSelectionMode={exitSelectionMode}
+        onBatchUploadToDrive={async (tracksToUpload) => {
+          if (onBatchUploadLocalTracksToDrive) {
+            await onBatchUploadLocalTracksToDrive(tracksToUpload);
+            exitSelectionMode();
+          }
+        }}
+        onBatchDeleteFromDrive={async (tracksToDelete) => {
+          if (onBatchDeleteDriveTracks) {
+            await onBatchDeleteDriveTracks(tracksToDelete);
+            exitSelectionMode();
+          }
+        }}
+        onBatchDeleteLocal={async (tracksToDelete) => {
+          if (onBatchDeleteLocalTracks) {
+            await onBatchDeleteLocalTracks(tracksToDelete);
+            exitSelectionMode();
+          }
+        }}
+        onBatchAddToPlaylist={(tracksToAdd) => {
+          setBatchTracksForPlaylist(tracksToAdd);
+          setIsPlaylistPickerVisible(true);
+        }}
+        onBatchAddToQueue={async (tracksToAdd) => {
+          if (onBatchAddToQueue) {
+            await onBatchAddToQueue(tracksToAdd);
+            exitSelectionMode();
+          }
+        }}
       />
     </>
   );

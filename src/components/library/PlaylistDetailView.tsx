@@ -318,7 +318,7 @@ export default function PlaylistDetailView({
           <View style={[styles.queueItem, isCurrent && styles.queueItemActive]}>
             <TouchableOpacity
               disabled={isProcessing}
-              onPress={() => onSelectTrack && onSelectTrack(item, index, playlist.tracks)}
+              onPress={() => onSelectTrack && onSelectTrack(item, index, displayPlaylistTracks)}
               style={styles.itemMainContent}
               activeOpacity={0.7}
             >

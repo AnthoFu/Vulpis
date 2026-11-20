@@ -75,6 +75,19 @@ export const trackItemStyles = StyleSheet.create({
     backgroundColor: Colors.surfaceWhiteAlpha03,
     borderRadius: 8,
   },
+  queueItemSelected: {
+    backgroundColor: Colors.accentAlpha12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.accentAlpha30,
+  },
+  selectionCheckbox: {
+    width: 32,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
   queueItemDisabled: {
     opacity: 0.5,
   },

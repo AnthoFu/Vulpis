@@ -199,13 +199,17 @@ export default function useQueueList({
     if (isProcessing) return;
     setIsProcessing(true);
     try {
+      const tracksToUse = playlistTracks || displayTracks || tracks;
       if (onSelectTrack) {
-        await onSelectTrack(item, index, playlistTracks);
+        await onSelectTrack(item, index, tracksToUse);
       } else {
-        const trackList = playlistTracks || tracks;
+        let targetIndex = tracksToUse.findIndex((t) => t.mediaId === item.mediaId);
+        if (targetIndex === -1) {
+          targetIndex = index >= 0 && index < tracksToUse.length ? index : 0;
+        }
         await TrackPlayer.clear();
-        await TrackPlayer.setMediaItems(trackList as any);
-        await TrackPlayer.skipToIndex(index);
+        await TrackPlayer.setMediaItems(tracksToUse as any);
+        await TrackPlayer.skipToIndex(targetIndex);
         TrackPlayer.play();
       }
     } catch (e) {

@@ -31,6 +31,8 @@ export interface LibrarySearchBarProps {
   onCloseDropdown?: () => void;
   onOpenSort?: () => void;
   currentSortConfig?: SortConfig;
+  isSelectionMode?: boolean;
+  onToggleSelectionMode?: () => void;
 }
 
 /**
@@ -55,6 +57,8 @@ export default function LibrarySearchBar({
   onCloseDropdown,
   onOpenSort,
   currentSortConfig,
+  isSelectionMode = false,
+  onToggleSelectionMode,
 }: LibrarySearchBarProps): React.JSX.Element {
   const isTyping = searchQuery.trim().length > 0;
   const activeFilterObj = searchFilters.find((f) => f.id === searchFilter);
@@ -126,6 +130,22 @@ export default function LibrarySearchBar({
               name={sortIcon}
               size={20}
               color={isCustomSort ? '#A78BFA' : '#8E8F9E'}
+            />
+          </TouchableOpacity>
+        )}
+
+        {/* Botón para alternar modo de selección múltiple */}
+        {onToggleSelectionMode && (
+          <TouchableOpacity
+            onPress={onToggleSelectionMode}
+            style={[styles.sortButton, isSelectionMode && styles.sortButtonActive]}
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+          >
+            <MaterialCommunityIcons
+              name={isSelectionMode ? 'checkbox-marked-circle-outline' : 'checkbox-multiple-blank-outline'}
+              size={20}
+              color={isSelectionMode ? '#A78BFA' : '#8E8F9E'}
             />
           </TouchableOpacity>
         )}

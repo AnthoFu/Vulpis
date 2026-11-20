@@ -8,28 +8,37 @@ import { Playlist } from '../../models/Playlist';
 export interface PlaylistPickerModalProps {
   visible: boolean;
   playlists: Playlist[];
-  track: Track | null;
+  track?: Track | null;
+  tracks?: Track[];
   onClose: () => void;
   onAddTrackToPlaylist?: (playlistId: string, track: Track) => Promise<void> | void;
+  onAddBatchTracksToPlaylist?: (playlistId: string, tracks: Track[]) => Promise<void> | void;
   inlineNewPlaylistName: string;
   setInlineNewPlaylistName: (name: string) => void;
   handleCreateAndAdd: () => void;
 }
 
 /**
- * Modal para seleccionar o crear una lista de reproducción y añadir una pista.
+ * Modal para seleccionar o crear una lista de reproducción y añadir una o varias pistas.
  */
 export default function PlaylistPickerModal({
   visible,
   playlists,
   track,
+  tracks,
   onClose,
   onAddTrackToPlaylist,
+  onAddBatchTracksToPlaylist,
   inlineNewPlaylistName,
   setInlineNewPlaylistName,
   handleCreateAndAdd,
 }: PlaylistPickerModalProps): React.JSX.Element | null {
   if (!visible) return null;
+
+  const isBatch = Boolean(tracks && tracks.length > 0);
+  const subtitle = isBatch
+    ? `Añadir ${tracks?.length} canciones seleccionadas`
+    : 'Selecciona una lista de reproducción';
 
   return (
     <Modal
@@ -46,7 +55,7 @@ export default function PlaylistPickerModal({
         <View style={[styles.modalContent, { maxHeight: '75%' }]}>
           <Text style={styles.modalTitle}>Añadir a playlist</Text>
           <Text style={styles.modalSubtitle} numberOfLines={1}>
-            Selecciona una lista de reproducción
+            {subtitle}
           </Text>
 
           <View style={styles.modalDivider} />
@@ -63,7 +72,9 @@ export default function PlaylistPickerModal({
             renderItem={({ item }) => (
               <TouchableOpacity
                 onPress={async () => {
-                  if (onAddTrackToPlaylist && track) {
+                  if (isBatch && onAddBatchTracksToPlaylist && tracks && tracks.length > 0) {
+                    await onAddBatchTracksToPlaylist(item.id, tracks);
+                  } else if (onAddTrackToPlaylist && track) {
                     await onAddTrackToPlaylist(item.id, track);
                   }
                   onClose();

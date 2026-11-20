@@ -66,6 +66,7 @@ export interface AppControllerResult {
   handleCreatePlaylist: (name: string) => Promise<Playlist | null>;
   handleDeletePlaylist: (id: string) => Promise<void>;
   handleAddTrackToPlaylist: (playlistId: string, track: Track) => Promise<void>;
+  handleBatchAddTracksToPlaylist: (playlistId: string, tracks: Track[]) => Promise<void>;
   handleRemoveTrackFromPlaylist: (playlistId: string, trackId: string) => Promise<void>;
   handleExportPlaylist: (playlist: Playlist, format: 'm3u' | 'json') => Promise<boolean>;
   handleImportPlaylist: () => Promise<Playlist | null>;
@@ -74,6 +75,7 @@ export interface AppControllerResult {
   handleImportMp3: () => Promise<void>;
   handleResetLocal: () => Promise<void>;
   handleDeleteLocalTrack: (track: Track) => Promise<void>;
+  handleBatchDeleteLocalTracks: (tracks: Track[]) => Promise<void>;
   isDriveConnected: boolean;
   googleClientId: string;
   googleRedirectUri: string;
@@ -83,9 +85,12 @@ export interface AppControllerResult {
   handleRefreshDrive: () => Promise<void>;
   handleUploadTrackToDrive: () => Promise<void>;
   handleUploadLocalTrackToDrive: (track: Track) => Promise<void>;
+  handleBatchUploadLocalTracksToDrive: (tracks: Track[]) => Promise<void>;
   handleDeleteDriveTrack: (track: Track) => Promise<void>;
+  handleBatchDeleteDriveTracks: (tracks: Track[]) => Promise<void>;
   handleDownloadDriveTrack: (track: Track) => Promise<void>;
   handleAddToQueue: (item: Track) => Promise<void>;
+  handleBatchAddToQueue: (tracks: Track[]) => Promise<void>;
   handleRemoveFromQueue: (item: Track, index: number) => Promise<void>;
   handleMoveQueueItem: (fromIndex: number, toIndex: number) => Promise<void>;
   handleClearUpcomingQueue: () => Promise<void>;
@@ -254,6 +259,7 @@ export default function useAppController(): AppControllerResult {
     handleCreatePlaylist,
     handleDeletePlaylist,
     handleAddTrackToPlaylist,
+    handleBatchAddTracksToPlaylist,
     handleRemoveTrackFromPlaylist,
     handleUpdateTrackInPlaylists,
     handleUpdatePlaylist,
@@ -276,6 +282,7 @@ export default function useAppController(): AppControllerResult {
     handleImportMp3,
     handleResetLocal,
     handleDeleteLocalTrack,
+    handleBatchDeleteLocalTracks,
     handleUpdateLocalTrackMetadata,
     handleUpdateLocalTrackArtwork,
   } = useLocalLibrary({
@@ -304,7 +311,9 @@ export default function useAppController(): AppControllerResult {
     handleDisconnectDrive,
     handleUploadTrackToDrive,
     handleUploadLocalTrackToDrive,
+    handleBatchUploadLocalTracksToDrive,
     handleDeleteDriveTrack,
+    handleBatchDeleteDriveTracks,
     handleDownloadDriveTrack,
     handleRefreshDrive,
   } = useGoogleDrive({
@@ -542,11 +551,17 @@ export default function useAppController(): AppControllerResult {
           await AsyncStorage.setItem('vulpis_playlists', JSON.stringify(updatedPlaylists));
 
           console.log('[useAppController] Cargando pista con archivo local guardado en caché:', localUri);
+          let finalTracksToPlay = updatedTracks;
+          let targetIndex = finalTracksToPlay.findIndex((t) => t.mediaId === item.mediaId);
+          if (targetIndex === -1) {
+            finalTracksToPlay = [updatedTrack, ...finalTracksToPlay];
+            targetIndex = 0;
+          }
+
           await smoothTrackTransition(async () => {
             await TrackPlayer.clear();
-            await TrackPlayer.setMediaItems(updatedTracks as any);
-            const newIdx = updatedTracks.findIndex((t) => t.mediaId === item.mediaId);
-            await TrackPlayer.skipToIndex(newIdx !== -1 ? newIdx : index);
+            await TrackPlayer.setMediaItems(finalTracksToPlay as any);
+            await TrackPlayer.skipToIndex(targetIndex);
             TrackPlayer.play();
           }, crossfadeSettingsRef.current?.enabled);
         } else {
@@ -587,10 +602,19 @@ export default function useAppController(): AppControllerResult {
           }
         }
 
+        // CRÍTICO: Resolver el índice real de la pista mediante mediaId en tracksToPlay.
+        // NUNCA depender a ciegas del parámetro `index` posicional de la UI, ya que
+        // la lista visual puede estar filtrada por búsqueda o reordenada por sortConfig.
+        let targetIndex = tracksToPlay.findIndex((t) => t.mediaId === item.mediaId);
+        if (targetIndex === -1) {
+          tracksToPlay = [item, ...tracksToPlay];
+          targetIndex = 0;
+        }
+
         await smoothTrackTransition(async () => {
           await TrackPlayer.clear();
           await TrackPlayer.setMediaItems(tracksToPlay as any);
-          await TrackPlayer.skipToIndex(index);
+          await TrackPlayer.skipToIndex(targetIndex);
           TrackPlayer.play();
         }, crossfadeSettingsRef.current?.enabled);
       } catch (e) {
@@ -756,6 +780,14 @@ export default function useAppController(): AppControllerResult {
     [downloadingPlaylistId, showToast, handleUpdatePlaylist, isPlaying]
   );
 
+  const handleBatchAddToQueue = async (tracksToAdd: Track[]): Promise<void> => {
+    if (!tracksToAdd || tracksToAdd.length === 0) return;
+    setPlayQueue((prev) => [...prev, ...tracksToAdd]);
+    if (showToast) {
+      showToast(`${tracksToAdd.length} canciones añadidas a la cola`);
+    }
+  };
+
   return {
     insets,
     defaultCover,
@@ -786,6 +818,7 @@ export default function useAppController(): AppControllerResult {
     handleCreatePlaylist,
     handleDeletePlaylist,
     handleAddTrackToPlaylist,
+    handleBatchAddTracksToPlaylist,
     handleRemoveTrackFromPlaylist,
     handleExportPlaylist,
     handleImportPlaylist,
@@ -794,6 +827,7 @@ export default function useAppController(): AppControllerResult {
     handleImportMp3,
     handleResetLocal,
     handleDeleteLocalTrack,
+    handleBatchDeleteLocalTracks,
     isDriveConnected,
     googleClientId,
     googleRedirectUri,
@@ -803,9 +837,12 @@ export default function useAppController(): AppControllerResult {
     handleRefreshDrive,
     handleUploadTrackToDrive,
     handleUploadLocalTrackToDrive,
+    handleBatchUploadLocalTracksToDrive,
     handleDeleteDriveTrack,
+    handleBatchDeleteDriveTracks,
     handleDownloadDriveTrack,
     handleAddToQueue,
+    handleBatchAddToQueue,
     handleRemoveFromQueue,
     handleMoveQueueItem,
     handleClearUpcomingQueue,

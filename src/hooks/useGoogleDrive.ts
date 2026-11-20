@@ -49,7 +49,9 @@ export interface UseGoogleDriveReturn {
   handleDisconnectDrive: () => Promise<void>;
   handleUploadTrackToDrive: () => Promise<void>;
   handleUploadLocalTrackToDrive: (track: Track) => Promise<void>;
+  handleBatchUploadLocalTracksToDrive: (tracks: Track[]) => Promise<void>;
   handleDeleteDriveTrack: (track: Track) => Promise<void>;
+  handleBatchDeleteDriveTracks: (tracks: Track[]) => Promise<void>;
   handleDownloadDriveTrack: (track: Track) => Promise<void>;
   handleRefreshDrive: () => Promise<void>;
 }
@@ -336,6 +338,152 @@ export default function useGoogleDrive({
     }
   };
 
+  const handleBatchUploadLocalTracksToDrive = async (tracksToUpload: Track[]): Promise<void> => {
+    const token = await getStoredToken();
+    if (!token) {
+      Alert.alert(
+        'Google Drive no conectado',
+        'Por favor, conéctate a Google Drive en la pestaña de Nube Privada primero.'
+      );
+      return;
+    }
+
+    if (!tracksToUpload || tracksToUpload.length === 0) return;
+
+    setIsDriveLoading(true);
+    let successCount = 0;
+
+    try {
+      for (let i = 0; i < tracksToUpload.length; i++) {
+        const track = tracksToUpload[i];
+        if (showToast) {
+          showToast(`Subiendo a Drive (${i + 1}/${tracksToUpload.length}): ${track.title}...`);
+        }
+
+        try {
+          const artistPrefix =
+            track.artist &&
+            track.artist !== 'Artista desconocido' &&
+            track.artist !== 'Nube Privada (Drive)' &&
+            track.artist !== 'Google Drive'
+              ? `${track.artist} - `
+              : '';
+
+          let filename = track.title;
+          if (!filename.includes(' - ') && artistPrefix) {
+            filename = `${artistPrefix}${filename}`;
+          }
+          if (!filename.toLowerCase().endsWith('.mp3')) {
+            filename += '.mp3';
+          }
+
+          await uploadTrackToDrive(track.url, filename, token, {
+            title: track.title,
+            artist: track.artist,
+            album: track.album || undefined,
+            genre: track.genre || undefined,
+            duration: track.duration,
+          });
+          successCount++;
+        } catch (uploadErr) {
+          console.error(`[useGoogleDrive] Error al subir canción ${track.title}:`, uploadErr);
+        }
+      }
+
+      await loadDriveFiles(token);
+      if (showToast) {
+        showToast(`¡${successCount} de ${tracksToUpload.length} canciones subidas a Drive!`);
+      }
+    } catch (e) {
+      console.error('[useGoogleDrive] Error general en subida por lote a Drive:', e);
+      Alert.alert('Error', 'Hubo un problema al subir algunas canciones a Google Drive.');
+    } finally {
+      setIsDriveLoading(false);
+    }
+  };
+
+  const handleBatchDeleteDriveTracks = async (tracksToDelete: Track[]): Promise<void> => {
+    const token = await getStoredToken();
+    if (!token) {
+      Alert.alert('No Conectado', 'Por favor, conéctate a Google Drive primero.');
+      return;
+    }
+
+    const driveTracks = tracksToDelete.filter((t) => t.mediaId.startsWith('drive-'));
+    if (driveTracks.length === 0) {
+      if (showToast) showToast('No hay canciones de Google Drive seleccionadas');
+      return;
+    }
+
+    Alert.alert(
+      'Eliminar de Google Drive',
+      `¿Estás seguro de que deseas eliminar permanentemente las ${driveTracks.length} canciones seleccionadas de Google Drive?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            setIsDriveLoading(true);
+            if (showToast) showToast(`Eliminando ${driveTracks.length} canciones de Drive...`);
+
+            let deletedCount = 0;
+            const deletedMediaIds = new Set<string>();
+
+            try {
+              for (const track of driveTracks) {
+                const fileId = track.mediaId.replace(/^drive-/, '');
+                try {
+                  await deleteTrackFromDrive(fileId, token);
+                  deletedCount++;
+                  deletedMediaIds.add(track.mediaId);
+
+                  const cacheUri = `${FileSystem.cacheDirectory}${fileId}.mp3`;
+                  try {
+                    const cacheInfo = await FileSystem.getInfoAsync(cacheUri);
+                    if (cacheInfo.exists) {
+                      await FileSystem.deleteAsync(cacheUri);
+                    }
+                  } catch (cacheErr) {
+                    console.warn('[useGoogleDrive] Error al eliminar archivo en caché:', cacheErr);
+                  }
+                } catch (delErr) {
+                  console.error(`[useGoogleDrive] Error al eliminar ${track.title}:`, delErr);
+                }
+              }
+
+              // Detener reproducción si la pista activa está entre las eliminadas
+              try {
+                const active = TrackPlayer.getActiveMediaItem() as Track | null;
+                if (active && deletedMediaIds.has(active.mediaId)) {
+                  await TrackPlayer.stop();
+                  await TrackPlayer.clear();
+                  setActiveTrack(null);
+                  setIsPlaying(false);
+                }
+              } catch (playerErr) {
+                console.warn('[useGoogleDrive] Error al detener reproductor:', playerErr);
+              }
+
+              const updatedQueue = playQueue.filter((t) => !deletedMediaIds.has(t.mediaId));
+              setPlayQueue(updatedQueue);
+
+              await loadDriveFiles(token);
+              if (showToast) {
+                showToast(`¡${deletedCount} canciones eliminadas de Drive!`);
+              }
+            } catch (e) {
+              console.error('[useGoogleDrive] Error general en eliminación de Drive:', e);
+              Alert.alert('Error', 'No se pudieron eliminar todas las canciones de Google Drive.');
+            } finally {
+              setIsDriveLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleDownloadDriveTrack = async (track: Track): Promise<void> => {
     const token = await getStoredToken();
     if (!token) {
@@ -379,7 +527,9 @@ export default function useGoogleDrive({
     handleDisconnectDrive,
     handleUploadTrackToDrive,
     handleUploadLocalTrackToDrive,
+    handleBatchUploadLocalTracksToDrive,
     handleDeleteDriveTrack,
+    handleBatchDeleteDriveTracks,
     handleDownloadDriveTrack,
     handleRefreshDrive,
   };

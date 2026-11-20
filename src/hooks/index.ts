@@ -56,4 +56,6 @@ export { default as useSidebarDrawer } from './useSidebarDrawer';
 export * from './useSidebarDrawer';
 export { default as usePlaybackHistory } from './usePlaybackHistory';
 export * from './usePlaybackHistory';
+export { default as useBatchSelection } from './useBatchSelection';
+export * from './useBatchSelection';
 

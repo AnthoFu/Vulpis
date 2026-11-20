@@ -135,7 +135,7 @@ export default function AlbumsTab({
           </View>
         }
         renderItem={({ item, index }) =>
-          renderTrackItem ? renderTrackItem(item, index, selectedAlbum.tracks, true) : null
+          renderTrackItem ? renderTrackItem(item, index, filteredAlbumTracks, true) : null
         }
       />
     );

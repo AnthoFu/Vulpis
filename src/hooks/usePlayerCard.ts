@@ -304,6 +304,23 @@ export default function usePlayerCard({
   const selectTrackFromQueue = useCallback(async (indexOrItem: number | Track, maybeIndexOrTrack?: number | Track): Promise<void> => {
     try {
       let index = typeof indexOrItem === 'number' ? indexOrItem : (typeof maybeIndexOrTrack === 'number' ? maybeIndexOrTrack : undefined);
+      const trackObj = (typeof indexOrItem === 'object' ? indexOrItem : (typeof maybeIndexOrTrack === 'object' ? maybeIndexOrTrack : null)) as Track | null;
+
+      // Si tenemos el objeto de pista, verificar su índice exacto en la cola nativa activa
+      if (trackObj?.mediaId) {
+        try {
+          const currentQueue = (await TrackPlayer.getQueue()) as Track[];
+          if (currentQueue && currentQueue.length > 0) {
+            const foundIdx = currentQueue.findIndex((t) => t.mediaId === trackObj.mediaId);
+            if (foundIdx !== -1) {
+              index = foundIdx;
+            }
+          }
+        } catch (queueErr) {
+          console.warn('[usePlayerCard Queue] No se pudo consultar la cola nativa:', queueErr);
+        }
+      }
+
       if (typeof index !== 'number' || isNaN(index)) {
         console.error('[usePlayerCard Queue] Índice inválido recibido:', indexOrItem, maybeIndexOrTrack);
         return;

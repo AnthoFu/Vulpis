@@ -25,6 +25,7 @@ export interface UsePlaylistsReturn {
   handleCreatePlaylist: (name: string) => Promise<Playlist | null>;
   handleDeletePlaylist: (id: string) => Promise<void>;
   handleAddTrackToPlaylist: (playlistId: string, track: Track) => Promise<void>;
+  handleBatchAddTracksToPlaylist: (playlistId: string, tracks: Track[]) => Promise<void>;
   handleRemoveTrackFromPlaylist: (playlistId: string, trackId: string) => Promise<void>;
   handleUpdateTrackInPlaylists: (mediaId: string, updatedFields: Partial<Track>) => Promise<void>;
   handleUpdatePlaylist: (updatedPlaylist: Playlist) => Promise<void>;
@@ -186,6 +187,35 @@ export default function usePlaylists(showToast?: (message: string) => void): Use
     }
   };
 
+  const handleBatchAddTracksToPlaylist = async (playlistId: string, newTracks: Track[]): Promise<void> => {
+    if (!newTracks || newTracks.length === 0) return;
+    const sanitizedList = newTracks
+      .map(sanitizeTrackForStorage)
+      .filter((t): t is Track => t !== null);
+
+    let addedCount = 0;
+    const updated = playlists.map((p) => {
+      if (p.id === playlistId) {
+        const existingIds = new Set(p.tracks.map((t) => t.mediaId));
+        const toAdd = sanitizedList.filter((t) => !existingIds.has(t.mediaId));
+        addedCount = toAdd.length;
+        return {
+          ...p,
+          tracks: [...toAdd, ...p.tracks],
+        };
+      }
+      return p;
+    });
+
+    if (addedCount > 0) {
+      setPlaylists(updated);
+      await AsyncStorage.setItem('vulpis_playlists', JSON.stringify(sanitizePlaylistsForStorage(updated)));
+    }
+    if (showToast) {
+      showToast(`${addedCount} canción(es) añadida(s) a la playlist`);
+    }
+  };
+
   const handleRemoveTrackFromPlaylist = async (playlistId: string, trackId: string): Promise<void> => {
     const updated = playlists.map((p) => {
       if (p.id === playlistId) {
@@ -302,6 +332,7 @@ export default function usePlaylists(showToast?: (message: string) => void): Use
     handleCreatePlaylist,
     handleDeletePlaylist,
     handleAddTrackToPlaylist,
+    handleBatchAddTracksToPlaylist,
     handleRemoveTrackFromPlaylist,
     handleUpdateTrackInPlaylists,
     handleUpdatePlaylist,

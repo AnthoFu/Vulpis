@@ -21,6 +21,10 @@ export interface TrackItemProps {
   defaultArtwork?: string;
   onSelectTrack?: (item: Track, index: number, contextTracks?: Track[]) => void;
   onOpenOptions?: (item: Track) => void;
+  isSelectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (item: Track) => void;
+  onLongPress?: (item: Track) => void;
 }
 
 /**
@@ -36,9 +40,29 @@ export default function TrackItem({
   defaultArtwork,
   onSelectTrack,
   onOpenOptions,
+  isSelectionMode = false,
+  isSelected = false,
+  onToggleSelect,
+  onLongPress,
 }: TrackItemProps): React.JSX.Element {
   const isCurrent = activeTrack ? activeTrack.mediaId === item.mediaId : false;
   const durStr = formatDuration(item.duration);
+
+  const handlePress = () => {
+    if (isSelectionMode) {
+      onToggleSelect?.(item);
+    } else if (onSelectTrack) {
+      onSelectTrack(item, index, contextTracks);
+    }
+  };
+
+  const handleLongPress = () => {
+    if (onLongPress) {
+      onLongPress(item);
+    } else if (isSelectionMode && onToggleSelect) {
+      onToggleSelect(item);
+    }
+  };
 
   return (
     <View
@@ -46,12 +70,29 @@ export default function TrackItem({
       style={[
         styles.queueItem,
         isCurrent && styles.queueItemActive,
+        isSelected && styles.queueItemSelected,
         isProcessing && styles.queueItemDisabled,
       ]}
     >
+      {isSelectionMode && (
+        <TouchableOpacity
+          onPress={() => onToggleSelect?.(item)}
+          style={styles.selectionCheckbox}
+          activeOpacity={0.7}
+        >
+          <MaterialCommunityIcons
+            name={isSelected ? 'checkbox-marked-circle' : 'checkbox-blank-circle-outline'}
+            size={22}
+            color={isSelected ? '#8B5CF6' : '#6B7280'}
+          />
+        </TouchableOpacity>
+      )}
+
       <TouchableOpacity
         disabled={isProcessing}
-        onPress={() => onSelectTrack && onSelectTrack(item, index, contextTracks)}
+        onPress={handlePress}
+        onLongPress={handleLongPress}
+        delayLongPress={300}
         style={styles.itemMainContent}
         activeOpacity={0.7}
       >
@@ -111,13 +152,15 @@ export default function TrackItem({
             style={{ marginRight: 8 }}
           />
         )}
-        <TouchableOpacity
-          onPress={() => onOpenOptions && onOpenOptions(item)}
-          style={styles.addToQueueButton}
-          activeOpacity={0.6}
-        >
-          <MaterialCommunityIcons name="dots-vertical" size={24} color="#8E8F9E" />
-        </TouchableOpacity>
+        {!isSelectionMode && onOpenOptions && (
+          <TouchableOpacity
+            onPress={() => onOpenOptions(item)}
+            style={styles.addToQueueButton}
+            activeOpacity={0.6}
+          >
+            <MaterialCommunityIcons name="dots-vertical" size={24} color="#8E8F9E" />
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );

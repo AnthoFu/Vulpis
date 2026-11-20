@@ -123,7 +123,7 @@ export default function SongsTab({
       contentContainerStyle={[styles.listContent, contentContainerStyle]}
       showsVerticalScrollIndicator={false}
       renderItem={({ item, index }) =>
-        renderTrackItem ? renderTrackItem(item, index, tracks) : null
+        renderTrackItem ? renderTrackItem(item, index, displayTracks) : null
       }
     />
   );

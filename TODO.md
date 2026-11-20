@@ -327,5 +327,17 @@
   - [x] Barra superior pulida con distintivo de estado de Drive independiente del botón de sincronización.
   - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores), compilación web limpia (`npm run build:web`, 472 módulos) y empaquetado Expo nativo (`npx expo export -p android --no-minify`, 934 módulos).
   - [x] Incremento de versión del proyecto a `0.5.39` en `app.config.js`.
+- [x] **Selección Múltiple y Acciones por Lotes (Batch Multi-Selection):**
+  - [x] Activación intuitiva del modo selección mediante pulsación prolongada (`long-press`) sobre cualquier canción o botón dedicado en `LibrarySearchBar`.
+  - [x] Indicadores visuales de selección: casillas de verificación circular animadas (`checkbox-marked-circle`) y resaltado cromático de filas seleccionadas (`queueItemSelected`).
+  - [x] Barra contextual flotante (`BatchActionBar.tsx`) posicionada por encima del MiniPlayer con contador en tiempo real y selector/deselector masivo.
+  - [x] Subida en lote a Google Drive (`handleBatchUploadLocalTracksToDrive`) con transferencias secuenciales, prevención de rate limits y toasts de progreso (`Subiendo X/N`).
+  - [x] Eliminación en lote de Google Drive (`handleBatchDeleteDriveTracks`) con diálogo de confirmación `Alert.alert`, purga de caché local y resincronización de la cola.
+  - [x] Eliminación en lote del dispositivo (`handleBatchDeleteLocalTracks`) con soporte para archivos públicos (`MediaLibrary`) y privados de la app (`FileSystem`).
+  - [x] Inserción en lote a listas de reproducción (`handleBatchAddTracksToPlaylist`) integrada en `PlaylistPickerModal` para listas existentes o creación instantánea.
+  - [x] Inserción en bloque a la cola de reproducción activa (`handleBatchAddToQueue`).
+  - [x] Manejador nativo del botón físico Atrás de Android para salir limpiamente del modo selección.
+  - [x] Verificación de compilación estricta con `npx tsc --noEmit` (0 errores), compilación web limpia (`npm run build:web`, 472 módulos) y empaquetado Expo nativo (`npx expo export -p android --no-minify`, 937 módulos).
+  - [x] Incremento de versión del proyecto a `0.5.40` en `app.config.js`.
 - [x] **Migración Completa a TypeScript:** Tipado estricto culminado en toda la aplicación (Modelos, Servicios, Utilidades, Hooks, Contexto, Componentes y App).
 - [ ] **Suite de Pruebas Unitarias (Jest):** Implementar tests para lógica crítica como `drive.js`, `metadata.js` y `onlineLyrics.js`.

@@ -33,6 +33,7 @@ export interface UseLocalLibraryReturn {
   handleImportMp3: () => Promise<void>;
   handleResetLocal: () => Promise<void>;
   handleDeleteLocalTrack: (track: Track) => Promise<void>;
+  handleBatchDeleteLocalTracks: (tracks: Track[]) => Promise<void>;
   handleUpdateLocalTrackMetadata: (
     track: Track,
     newTags: { title: string; artist: string; album: string; genre: string }
@@ -324,6 +325,95 @@ export default function useLocalLibrary({
     }
   };
 
+  const handleBatchDeleteLocalTracks = async (tracksToDelete: Track[]): Promise<void> => {
+    const localTracks = tracksToDelete.filter((t) => !t.mediaId.startsWith('drive-'));
+    if (localTracks.length === 0) {
+      if (showToast) showToast('No hay canciones locales seleccionadas');
+      return;
+    }
+
+    Alert.alert(
+      'Eliminar canciones locales',
+      `¿Deseas eliminar las ${localTracks.length} canciones seleccionadas del dispositivo?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            setIsSourceChanging(true);
+            try {
+              const systemAssetIds: string[] = [];
+              const deletedMediaIds = new Set<string>();
+
+              for (const track of localTracks) {
+                const isSystemAsset =
+                  track.mediaId &&
+                  !track.mediaId.startsWith('imported-') &&
+                  !track.mediaId.startsWith('local-drive-') &&
+                  !track.mediaId.startsWith('local-track-');
+
+                if (isSystemAsset) {
+                  systemAssetIds.push(track.mediaId);
+                } else if (track.url && track.url.startsWith('file://')) {
+                  try {
+                    const fileInfo = await FileSystem.getInfoAsync(track.url);
+                    if (fileInfo.exists) {
+                      await FileSystem.deleteAsync(track.url);
+                    }
+                  } catch (fileErr) {
+                    console.warn('[useLocalLibrary] Error al borrar archivo privado:', fileErr);
+                  }
+                }
+                deletedMediaIds.add(track.mediaId);
+              }
+
+              if (systemAssetIds.length > 0) {
+                try {
+                  await MediaLibrary.deleteAssetsAsync(systemAssetIds);
+                } catch (mediaErr) {
+                  console.warn('[useLocalLibrary] Error al borrar lote de MediaLibrary:', mediaErr);
+                }
+              }
+
+              // Detener si la pista activa fue eliminada
+              try {
+                const active = TrackPlayer.getActiveMediaItem() as Track | null;
+                if (active && deletedMediaIds.has(active.mediaId)) {
+                  await TrackPlayer.stop();
+                  await TrackPlayer.clear();
+                  if (setActiveTrack) setActiveTrack(null);
+                  if (setIsPlaying) setIsPlaying(false);
+                }
+              } catch (playerErr) {
+                console.warn('[useLocalLibrary] Error al detener reproductor:', playerErr);
+              }
+
+              // Quitar de la cola
+              if (playQueue && setPlayQueue) {
+                setPlayQueue(playQueue.filter((t) => !deletedMediaIds.has(t.mediaId)));
+              }
+
+              // Quitar de la biblioteca local
+              const existingCustom = hasCustomLocalTracks ? localLibraryTracks : [];
+              const updatedTracks = existingCustom.filter((t) => !deletedMediaIds.has(t.mediaId));
+              await saveLocalTracks(updatedTracks);
+
+              if (showToast) {
+                showToast(`¡${deletedMediaIds.size} canción(es) eliminada(s)!`);
+              }
+            } catch (e) {
+              console.error('[useLocalLibrary] Error al borrar lote de canciones locales:', e);
+              Alert.alert('Error', 'No se pudieron eliminar algunas canciones del dispositivo.');
+            } finally {
+              setIsSourceChanging(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleUpdateLocalTrackMetadata = async (
     track: Track,
     newTags: { title: string; artist: string; album: string; genre: string }
@@ -435,6 +525,7 @@ export default function useLocalLibrary({
     handleImportMp3,
     handleResetLocal,
     handleDeleteLocalTrack,
+    handleBatchDeleteLocalTracks,
     handleUpdateLocalTrackMetadata,
     handleUpdateLocalTrackArtwork,
   };

@@ -60,6 +60,8 @@ export { default as QueueList } from './library/QueueList';
 export * from './library/QueueList';
 export { default as TrackItem } from './library/TrackItem';
 export * from './library/TrackItem';
+export { default as BatchActionBar } from './library/BatchActionBar';
+export * from './library/BatchActionBar';
 export { default as LibraryTabs } from './library/LibraryTabs';
 export * from './library/LibraryTabs';
 export { default as LibrarySearchBar } from './library/LibrarySearchBar';
